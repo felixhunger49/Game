@@ -10,6 +10,7 @@ class_name Roster
 ## anim_overrides: einzelne Animationen, die von den Standard-Animationen abweichen
 ## scale:    Größe des Modells (Standard 0.8)
 ## voice:    Stimmlage der Kampfrufe (1 = normal, kleiner = tiefer)
+## flip:     Kunststück am höchsten Punkt eines Sprungs (siehe Player.FLIPS)
 
 const SPECIALS := {
 	"feuerball": "Feuerball: fliegt geradeaus",
@@ -29,53 +30,53 @@ const KAYKIT_WEAPONS := "res://assets/kaykit/weapons/"
 
 const FIGHTERS := [
 	{
-		"name": "Ritter", "voice": 1.0, "scene": KAYKIT_CHARS + "Knight.glb",
+		"name": "Ritter", "flip": "salto", "voice": 1.0, "scene": KAYKIT_CHARS + "Knight.glb",
 		"keep": ["1H_Sword", "Badge_Shield"], "special": "aufwaerts",
 		"weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Barbar", "voice": 0.85, "scene": KAYKIT_CHARS + "Barbarian.glb",
+		"name": "Barbar", "flip": "rad", "voice": 0.85, "scene": KAYKIT_CHARS + "Barbarian.glb",
 		"keep": ["2H_Axe"], "special": "wirbel",
 		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Magier", "voice": 1.1, "scene": KAYKIT_CHARS + "Mage.glb",
+		"name": "Magier", "flip": "pirouette", "voice": 1.1, "scene": KAYKIT_CHARS + "Mage.glb",
 		"keep": ["2H_Staff"], "special": "feuerball",
 		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Stab",
 	},
 	{
-		"name": "Schurke", "voice": 1.2, "scene": KAYKIT_CHARS + "Rogue.glb",
+		"name": "Schurke", "flip": "doppelsalto", "voice": 1.2, "scene": KAYKIT_CHARS + "Rogue.glb",
 		"keep": ["Knife", "Knife_Offhand"], "special": "sturm",
 		"weak": "Dualwield_Melee_Attack_Stab", "strong": "Dualwield_Melee_Attack_Chop",
 	},
 	{
-		"name": "Kapuzen-Schurke", "voice": 1.15, "scene": KAYKIT_CHARS + "Rogue_Hooded.glb",
+		"name": "Kapuzen-Schurke", "flip": "rueckwaerts", "voice": 1.15, "scene": KAYKIT_CHARS + "Rogue_Hooded.glb",
 		"keep": ["Knife", "Knife_Offhand"], "special": "sturm",
 		"weak": "Dualwield_Melee_Attack_Slice", "strong": "Dualwield_Melee_Attack_Chop",
 	},
 	{
-		"name": "Skelett-Krieger", "voice": 0.7, "scene": KAYKIT_CHARS + "Skeleton_Warrior.glb",
+		"name": "Skelett-Krieger", "flip": "schraube", "voice": 0.7, "scene": KAYKIT_CHARS + "Skeleton_Warrior.glb",
 		"keep": ["Skeleton_Blade", "Skeleton_Shield_Small_A"],
 		"special": "wirbel", "weak": "1H_Melee_Attack_Slice_Diagonal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Skelett-Magier", "voice": 0.8, "scene": KAYKIT_CHARS + "Skeleton_Mage.glb",
+		"name": "Skelett-Magier", "flip": "schweben", "voice": 0.8, "scene": KAYKIT_CHARS + "Skeleton_Mage.glb",
 		"keep": ["Skeleton_Staff"],
 		"special": "feuerball", "weak": "1H_Melee_Attack_Stab", "strong": "2H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Skelett-Schurke", "voice": 0.75, "scene": KAYKIT_CHARS + "Skeleton_Rogue.glb",
+		"name": "Skelett-Schurke", "flip": "doppel_rueckwaerts", "voice": 0.75, "scene": KAYKIT_CHARS + "Skeleton_Rogue.glb",
 		"keep": ["Skeleton_Axe"],
 		"special": "sturm", "weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Skelett-Diener", "voice": 0.9, "scene": KAYKIT_CHARS + "Skeleton_Minion.glb",
+		"name": "Skelett-Diener", "flip": "purzeln", "voice": 0.9, "scene": KAYKIT_CHARS + "Skeleton_Minion.glb",
 		"keep": ["Skeleton_Blade"],
 		"special": "aufwaerts", "weak": "1H_Melee_Attack_Stab", "strong": "1H_Melee_Attack_Slice_Diagonal",
 		"anim_overrides": {"aufwaerts": "1H_Melee_Attack_Jump_Chop"},
 	},
 	{
-		"name": "Robo", "voice": 1.5, "scene": "res://assets/kenney/character.glb", "special": "feuerball",
+		"name": "Robo", "flip": "propeller", "voice": 1.5, "scene": "res://assets/kenney/character.glb", "special": "feuerball",
 		"anims": {"idle": "idle", "run": "walk", "jump": "jump"},
 	},
 ]

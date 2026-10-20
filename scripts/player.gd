@@ -47,6 +47,25 @@ const SPECIAL_PER_DAMAGE_DEALT := 2.5
 const SPECIAL_PER_DAMAGE_TAKEN := 1.2
 const SHOUTS := ["ha", "hja", "hah"]
 
+## Kunststücke am höchsten Punkt eines Sprungs. axis: Drehachse der Figur (x = Salto vorwärts,
+## -x = rückwärts, y = Pirouette, z = Rad), turns = Umdrehungen, time = Dauer in Sekunden.
+## hover: schwebt währenddessen kurz in der Luft.
+const FLIPS := {
+	"salto": {"axis": Vector3(1, 0, 0), "turns": 1.0, "time": 0.45},
+	"rueckwaerts": {"axis": Vector3(-1, 0, 0), "turns": 1.0, "time": 0.5},
+	"doppelsalto": {"axis": Vector3(1, 0, 0), "turns": 2.0, "time": 0.6},
+	"doppel_rueckwaerts": {"axis": Vector3(-1, 0, 0), "turns": 2.0, "time": 0.65},
+	"rad": {"axis": Vector3(0, 0, 1), "turns": 1.0, "time": 0.5},
+	"pirouette": {"axis": Vector3(0, 1, 0), "turns": 2.0, "time": 0.55},
+	"schraube": {"axis": Vector3(1, 1, 0), "turns": 1.0, "time": 0.6},
+	"purzeln": {"axis": Vector3(1, 0, 1), "turns": 1.0, "time": 0.6},
+	"schweben": {"axis": Vector3(0, 1, 0), "turns": 1.0, "time": 0.9, "hover": true},
+	"propeller": {"axis": Vector3(0, 1, 0), "turns": 3.0, "time": 0.6},
+}
+## Höhe der Körpermitte: um diesen Punkt drehen sich die Kunststücke.
+const FLIP_PIVOT_HEIGHT := 0.9
+const CLOTH_SHADER := preload("res://scripts/cloth.gdshader")
+
 var opponent: CharacterBody3D
 var fighter: Dictionary = {}
 var controls_enabled := false
@@ -72,6 +91,14 @@ var wind_speed := 0.0
 var spawn_position := Vector3.ZERO
 var anim_player: AnimationPlayer
 var current_anim := ""
+## Drehpunkt in der Körpermitte für Saltos; darunter hängt das Modell.
+var flip_pivot: Node3D
+var flip_time := -1.0
+var jumped := false
+var was_rising := false
+## Materialien der flatternden Teile (Umhänge, Hutspitzen, Haare).
+var cloth_materials: Array[ShaderMaterial] = []
+var fall_wind := 0.0
 
 @onready var model_root: Node3D = $Model
 @onready var tag: Label3D = $Tag
@@ -97,10 +124,16 @@ func set_fighter(index: int) -> void:
 		model_root.remove_child(child)
 		child.queue_free()
 	current_anim = ""
+	flip_time = -1.0
 
+	flip_pivot = Node3D.new()
+	flip_pivot.position.y = FLIP_PIVOT_HEIGHT
+	model_root.add_child(flip_pivot)
 	var model: Node3D = load(fighter.scene).instantiate()
-	model_root.add_child(model)
+	flip_pivot.add_child(model)
+	model.position.y = -FLIP_PIVOT_HEIGHT
 	_setup_weapons(model)
+	_setup_cloth(model)
 	model.scale = Vector3.ONE * fighter.get("scale", 0.8)
 
 	anim_player = model.find_child("AnimationPlayer", true, false)
@@ -127,6 +160,7 @@ func _physics_process(delta: float) -> void:
 	if is_on_floor():
 		jumps_left = max_jumps
 		special_air_used = false
+		jumped = false
 
 	_update_pending_attack(delta)
 	_update_dash(delta)
@@ -152,6 +186,15 @@ func _physics_process(delta: float) -> void:
 			jumps_left -= 1
 			Audio.sfx("jump")
 
+	# Kunststück am höchsten Punkt eines Sprungs (nicht beim Wegfliegen nach einem Treffer).
+	var rising := velocity.y > 0.0 and not is_on_floor()
+	if was_rising and not rising and jumped and flip_time < 0.0 and hitstun == 0.0 and dash_time <= 0.0 \
+			and pending_attack == "" and not is_on_floor():
+		_start_flip()
+	was_rising = rising
+	if flip_time >= 0.0 and FLIPS[fighter.get("flip", "salto")].get("hover", false):
+		velocity.y = maxf(velocity.y, -1.5)
+
 	move_and_slide()
 	_update_visuals(delta)
 
@@ -176,6 +219,10 @@ func _handle_input(delta: float) -> void:
 		velocity.y = jump_velocity * (1.12 if speed_time > 0.0 else 1.0)
 		Audio.sfx("jump", 1.0 if jumps_left == max_jumps else 1.25)
 		jumps_left -= 1
+		jumped = true
+		# Ein neuer Sprung bricht ein laufendes Kunststück nicht ab, startet aber oben ein neues.
+		if flip_time >= 0.0:
+			_end_flip()
 
 	if attack_timer > 0.0:
 		return
@@ -193,6 +240,7 @@ func start_attack(kind: String) -> void:
 	attack_timer = atk.cooldown
 	pending_attack = kind
 	pending_time = atk.startup
+	_end_flip()
 	_play(kind, atk.anim_speed)
 	match kind:
 		"weak":
@@ -332,6 +380,7 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false) -> bool:
 	hitstun = 0.12 + knockback * 0.02
 	pending_attack = ""
 	dash_time = 0.0
+	_end_flip()
 	_play("hit", 1.5)
 	add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_TAKEN)
 	var heavy: bool = atk.damage * multiplier >= 10.0
@@ -383,6 +432,9 @@ func _update_visuals(delta: float) -> void:
 	# Vor dem Kampf schauen die Figuren in die Kamera, im Kampf zum Gegner.
 	var target_angle := facing * SIDE_ANGLE if controls_enabled or hitstun > 0.0 else 0.0
 	model_root.rotation.y = lerp_angle(model_root.rotation.y, target_angle, 15.0 * delta)
+
+	_update_flip(delta)
+	_update_cloth(delta)
 
 	shield_bubble.visible = shielding
 	shield_bubble.scale = Vector3.ONE * lerpf(0.5, 1.0, shield_hp / SHIELD_MAX)
@@ -442,6 +494,71 @@ func _play(action: String, speed_scale := 1.0) -> void:
 	anim_player.play(anim_name, 0.08, speed_scale)
 	if is_attack:
 		anim_player.seek(0.0, true)
+
+
+func _start_flip() -> void:
+	flip_time = 0.0
+	Audio.sfx("swing_weak", 0.7, -6.0)
+
+
+func _end_flip() -> void:
+	flip_time = -1.0
+	if flip_pivot:
+		flip_pivot.rotation = Vector3.ZERO
+
+
+func _update_flip(delta: float) -> void:
+	if flip_time < 0.0:
+		return
+	if is_on_floor():
+		_end_flip()
+		return
+	var flip: Dictionary = FLIPS[fighter.get("flip", "salto")]
+	flip_time += delta
+	var progress := clampf(flip_time / flip.time, 0.0, 1.0)
+	# Langsam rein, schnell durch, langsam raus.
+	var eased := progress * progress * (3.0 - 2.0 * progress)
+	flip_pivot.rotation = flip.axis * flip.turns * TAU * eased
+	if progress >= 1.0:
+		_end_flip()
+
+
+## Teile mit eingebackener Flatter-Stärke (Vertex-Farbe) bekommen den Stoff-Shader.
+func _setup_cloth(model: Node3D) -> void:
+	cloth_materials.clear()
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = node.mesh
+		if mesh == null or mesh.get_surface_count() == 0:
+			continue
+		if not (mesh.surface_get_format(0) & Mesh.ARRAY_FORMAT_COLOR):
+			continue
+		if _max_red(mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]) <= 0.0:
+			continue
+		var original := mesh.surface_get_material(0) as BaseMaterial3D
+		var mat := ShaderMaterial.new()
+		mat.shader = CLOTH_SHADER
+		if original:
+			mat.set_shader_parameter("albedo_tex", original.albedo_texture)
+		node.material_override = mat
+		cloth_materials.append(mat)
+
+
+func _max_red(colors: PackedColorArray) -> float:
+	var m := 0.0
+	for c in colors:
+		m = maxf(m, c.r)
+	return m
+
+
+func _update_cloth(delta: float) -> void:
+	if cloth_materials.is_empty():
+		return
+	var target := clampf(-velocity.y / 14.0, 0.0, 1.0) if not is_on_floor() else 0.0
+	fall_wind = lerpf(fall_wind, target, 8.0 * delta)
+	var run := clampf(absf(velocity.x) / 12.0, 0.0, 1.0)
+	for mat in cloth_materials:
+		mat.set_shader_parameter("fall_wind", fall_wind)
+		mat.set_shader_parameter("run_wind", run)
 
 
 func _lunge() -> void:
