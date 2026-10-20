@@ -62,6 +62,15 @@ const FLIPS := {
 	"schweben": {"axis": Vector3(0, 1, 0), "turns": 1.0, "time": 0.9, "hover": true},
 	"propeller": {"axis": Vector3(0, 1, 0), "turns": 3.0, "time": 0.6},
 }
+## Doppelt tippen: zwei Tastendrücke innerhalb dieser Zeit (Sekunden).
+const DOUBLE_TAP_TIME := 0.25
+## Ausweichrolle: Dauer, Geschwindigkeit und Wartezeit bis zur nächsten Rolle.
+const ROLL_TIME := 0.35
+const ROLL_SPEED := 12.0
+const ROLL_COOLDOWN := 0.6
+## So lange fällt man nach doppeltem Runter durch eine Plattform.
+const DROP_TIME := 0.45
+
 ## Höhe der Körpermitte: um diesen Punkt drehen sich die Kunststücke.
 const FLIP_PIVOT_HEIGHT := 0.9
 const CLOTH_SHADER := preload("res://scripts/cloth.gdshader")
@@ -99,6 +108,13 @@ var was_rising := false
 ## Materialien der flatternden Teile (Umhänge, Hutspitzen, Haare).
 var cloth_materials: Array[ShaderMaterial] = []
 var fall_wind := 0.0
+## Zeitpunkt des letzten Tastendrucks je Richtung, um doppeltes Tippen zu erkennen.
+var last_tap := {"left": -1.0, "right": -1.0, "shield": -1.0}
+var roll_time := 0.0
+var roll_dir := 1
+var roll_cooldown := 0.0
+var drop_time := 0.0
+var on_platform := false
 
 @onready var model_root: Node3D = $Model
 @onready var tag: Label3D = $Tag
@@ -151,12 +167,15 @@ func _physics_process(delta: float) -> void:
 	stunned = max(stunned - delta, 0.0)
 	power_time = max(power_time - delta, 0.0)
 	speed_time = max(speed_time - delta, 0.0)
+	roll_cooldown = max(roll_cooldown - delta, 0.0)
+	drop_time = max(drop_time - delta, 0.0)
 	if controls_enabled:
 		add_special_energy(SPECIAL_PER_SECOND * delta)
 
 	velocity.y -= gravity * delta
 	# Von unten durch die schwebenden Plattformen springen, beim Fallen darauf landen.
-	set_collision_mask_value(PLATFORM_LAYER, velocity.y <= 0.0)
+	# Nach doppeltem Runter fällt man kurz durch sie hindurch.
+	set_collision_mask_value(PLATFORM_LAYER, velocity.y <= 0.0 and drop_time <= 0.0)
 	if is_on_floor():
 		jumps_left = max_jumps
 		special_air_used = false
@@ -166,7 +185,10 @@ func _physics_process(delta: float) -> void:
 	_update_dash(delta)
 
 	var can_act := controls_enabled and hitstun == 0.0 and stunned == 0.0
-	shielding = can_act and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0
+	if can_act and roll_time <= 0.0 and dash_time <= 0.0:
+		_check_double_taps()
+	shielding = can_act and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0 \
+		and roll_time <= 0.0 and drop_time <= 0.0
 	if shielding:
 		shield_hp = max(shield_hp - 18.0 * delta, 0.0)
 	else:
@@ -177,6 +199,8 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0.0, 8.0 * delta) + wind_speed * delta
 	elif dash_time > 0.0:
 		pass
+	elif roll_time > 0.0:
+		_update_roll(delta)
 	elif can_act and not shielding:
 		_handle_input(delta)
 	else:
@@ -196,6 +220,12 @@ func _physics_process(delta: float) -> void:
 		velocity.y = maxf(velocity.y, -1.5)
 
 	move_and_slide()
+	on_platform = false
+	if is_on_floor():
+		for i in get_slide_collision_count():
+			var body := get_slide_collision(i).get_collider() as CollisionObject3D
+			if body and body.get_collision_layer_value(PLATFORM_LAYER):
+				on_platform = true
 	_update_visuals(delta)
 
 	if not BLAST_ZONE.has_point(Vector2(position.x, position.y)):
@@ -359,6 +389,10 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 ## Getroffen werden. Je mehr Schaden die Figur schon hat, desto weiter fliegt sie.
 ## Gibt false zurück, wenn der Treffer abgewehrt wurde.
 func take_hit(atk: Dictionary, direction: Vector3, powered := false) -> bool:
+	if roll_time > 0.0:
+		# Mitten in der Ausweichrolle: der Treffer geht ins Leere.
+		Audio.sfx("swing_weak", 1.4, -4.0)
+		return false
 	var multiplier := POWER_MULTIPLIER if powered else 1.0
 	if shielding:
 		shield_hp -= atk.damage * 3.0 * multiplier
@@ -418,6 +452,9 @@ func _lose_stock() -> void:
 	shield_hp = SHIELD_MAX
 	pending_attack = ""
 	dash_time = 0.0
+	roll_time = 0.0
+	drop_time = 0.0
+	_end_flip()
 	velocity = Vector3.ZERO
 	Audio.sfx("ko")
 	if stocks > 0:
@@ -433,7 +470,8 @@ func _update_visuals(delta: float) -> void:
 	var target_angle := facing * SIDE_ANGLE if controls_enabled or hitstun > 0.0 else 0.0
 	model_root.rotation.y = lerp_angle(model_root.rotation.y, target_angle, 15.0 * delta)
 
-	_update_flip(delta)
+	if roll_time <= 0.0:
+		_update_flip(delta)
 	_update_cloth(delta)
 
 	shield_bubble.visible = shielding
@@ -458,6 +496,8 @@ func _update_visuals(delta: float) -> void:
 		_play("hit", 1.5)
 	elif stunned > 0.0:
 		_play("stunned")
+	elif roll_time > 0.0:
+		return
 	elif current_anim in ATTACKS or current_anim in ["weak", "strong", "kick", "special"]:
 		if attack_timer > 0.0:
 			return
@@ -494,6 +534,53 @@ func _play(action: String, speed_scale := 1.0) -> void:
 	anim_player.play(anim_name, 0.08, speed_scale)
 	if is_attack:
 		anim_player.seek(0.0, true)
+
+
+## Doppelt links/rechts: Ausweichrolle. Doppelt runter auf einer Plattform: hindurchfallen.
+func _check_double_taps() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	for dir in last_tap:
+		if not Input.is_action_just_pressed(_action(dir)):
+			continue
+		var double: bool = now - last_tap[dir] <= DOUBLE_TAP_TIME
+		last_tap[dir] = -1.0 if double else now
+		if not double:
+			continue
+		if dir == "shield":
+			if on_platform:
+				_drop_through()
+		elif roll_cooldown <= 0.0 and attack_timer <= 0.0:
+			_start_roll(1 if dir == "right" else -1)
+
+
+func _start_roll(dir: int) -> void:
+	roll_dir = dir
+	facing = dir
+	roll_time = ROLL_TIME
+	roll_cooldown = ROLL_COOLDOWN
+	_end_flip()
+	pending_attack = ""
+	Audio.sfx("dash", 0.8, -3.0)
+	_play("dodge", 1.6)
+
+
+func _update_roll(delta: float) -> void:
+	roll_time = maxf(roll_time - delta, 0.0)
+	# Schnell los, zum Ende hin langsamer; in der Luft etwas kürzer.
+	var progress := 1.0 - roll_time / ROLL_TIME
+	var speed_now := ROLL_SPEED * (1.0 - progress * 0.6) * (1.0 if is_on_floor() else 0.75)
+	velocity.x = roll_dir * speed_now
+	# Die Figur rollt einmal vorwärts um ihre Körpermitte.
+	flip_pivot.rotation = Vector3(TAU * progress * progress * (3.0 - 2.0 * progress), 0, 0)
+	if roll_time <= 0.0:
+		flip_pivot.rotation = Vector3.ZERO
+
+
+func _drop_through() -> void:
+	drop_time = DROP_TIME
+	velocity.y = -3.0
+	shielding = false
+	Audio.sfx("swing_weak", 0.6, -4.0)
 
 
 func _start_flip() -> void:

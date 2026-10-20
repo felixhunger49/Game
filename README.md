@@ -37,6 +37,8 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 | Starker Angriff | G | K (oder Num 2) |
 | Tritt | H | L (oder Num 3) |
 | Spezialattacke | T | I (oder Num 5) |
+| Ausweichrolle | 2× schnell links oder rechts | 2× schnell Pfeil links oder rechts |
+| Durch eine Plattform fallen | 2× schnell S (auf einer Plattform) | 2× schnell Pfeil runter |
 | Nach dem Kampf nochmal | R | R |
 | Zurück ins Menü | Esc | Esc |
 
@@ -50,6 +52,8 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 | Spezial | 9–11 % | je nach Kämpfer, siehe unten |
 
 **Abwehr:** Solange du die Abwehr-Taste hältst, schützt dich eine Blase vor allen Treffern. Sie wird kleiner, je länger du sie hältst und je mehr Treffer sie abfängt. Zerbricht sie, bist du kurz betäubt.
+
+**Ausweichrolle:** Zweimal schnell in eine Richtung tippen: Die Figur rollt ein Stück in diese Richtung und kann dabei nicht getroffen werden. Danach kurz warten bis zur nächsten Rolle.
 
 **Spezial aufladen:** Unter den Namen oben zeigt eine Leiste die Spezial-Energie. Sie füllt sich langsam mit der Zeit,
 schneller durch eigene Treffer und etwas durch Treffer, die man einsteckt. Erst bei voller Leiste (sie blinkt, über der Figur

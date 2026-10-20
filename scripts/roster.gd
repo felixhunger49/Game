@@ -23,7 +23,7 @@ const KAYKIT_ANIMS := {
 	"idle": "Idle", "run": "Running_A", "jump": "Jump_Idle", "hit": "Hit_A", "cheer": "Cheer",
 	"kick": "Unarmed_Melee_Attack_Kick", "shield": "Blocking", "stunned": "Hit_B",
 	"feuerball": "Spellcast_Shoot", "sturm": "Dodge_Forward", "wirbel": "2H_Melee_Attack_Spin",
-	"aufwaerts": "1H_Melee_Attack_Chop",
+	"aufwaerts": "1H_Melee_Attack_Chop", "dodge": "Dodge_Forward",
 }
 const KAYKIT_CHARS := "res://assets/kaykit/characters/"
 const KAYKIT_WEAPONS := "res://assets/kaykit/weapons/"
