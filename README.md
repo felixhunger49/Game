@@ -1,31 +1,66 @@
-# Game
+# Arena-Kampf
 
 Ein Plattform-Kampfspiel für zwei Spieler an einer Tastatur, gebaut mit [Godot 4](https://godotengine.org) (getestet mit 4.3).
-Wie bei Super Smash Bros. sind Figuren und Arena 3D-Modelle, gekämpft wird aber nur nach links, rechts, oben und unten.
+Wie bei Super Smash Bros. sind Figuren und Arenen 3D-Modelle, gekämpft wird aber nur nach links, rechts, oben und unten.
 
-![Screenshot](docs/screenshot.png)
-
-## Kämpfer
-
-Zehn Figuren stehen zur Wahl: Ritter, Barbar, Magier, Schurke, Kapuzen-Schurke, Skelett-Krieger, Skelett-Magier, Skelett-Schurke, Skelett-Diener und Robo.
-Vor jeder Runde wählt jeder Spieler mit seinen Laufen-Tasten eine Figur und drückt Schlagen, wenn er bereit ist.
+![Burg](docs/burg.png)
+![Dorf](docs/dorf.png)
+![Friedhof](docs/friedhof.png)
 
 ## Regeln
 
-- Beide Spieler kämpfen auf einer Plattform.
-- Es gibt keine Lebenspunkte: Jeder Treffer erhöht den Schaden (in %). Je höher der Schaden, desto weiter fliegt man beim nächsten Treffer weg.
+- Es gibt keine Lebenspunkte: Jeder Treffer erhöht den Schaden (in %). Je höher der Schaden, desto weiter fliegt man beim nächsten Treffer.
 - Wer aus der Arena fällt oder geschleudert wird, verliert ein Leben und startet mit 0 % neu.
-- Wer dreimal heruntergefallen ist, hat verloren.
+- Wer keine Leben mehr hat, hat verloren. Wie viele Leben es gibt, stellst du in den Optionen ein (Standard: 3).
+
+## Menü
+
+- **Kampf starten**: Danach wählt jeder Spieler mit seinen Laufen-Tasten einen Kämpfer und drückt den schwachen Angriff, wenn er bereit ist.
+- **Map**: Burg, Dorf oder Friedhof.
+- **Optionen**: Items an oder aus, wie oft Items erscheinen (selten, normal, oft) und die Anzahl der Leben.
+- **Steuerung**: alle Tasten im Überblick.
+
+Im Menü: W/S oder Pfeile hoch/runter wählen, A/D oder Pfeile links/rechts ändern, F, J oder Enter bestätigen, Esc zurück.
 
 ## Steuerung
 
-| Aktion | Spieler 1 (gelb) | Spieler 2 (blau) |
+| Aktion | Spieler 1 | Spieler 2 |
 |---|---|---|
 | Laufen | A / D | Pfeil links / rechts |
 | Springen (2× in der Luft möglich) | W | Pfeil hoch |
-| Schlagen | F oder Leertaste | L oder Enter |
-| Figur wählen (vor der Runde) | A / D | Pfeil links / rechts |
-| Neustart nach Spielende | R | R |
+| Abwehren (gedrückt halten) | S | Pfeil runter |
+| Schwacher Angriff | F | J (oder Num 1) |
+| Starker Angriff | G | K (oder Num 2) |
+| Tritt | H | L (oder Num 3) |
+| Spezialattacke | T | I (oder Num 5) |
+| Nach dem Kampf nochmal | R | R |
+| Zurück ins Menü | Esc | Esc |
+
+## Angriffe
+
+| Angriff | Schaden | Besonderheit |
+|---|---|---|
+| Schwach | 4 % | sehr schnell, kaum Rückstoß |
+| Stark | 13 % | kurzes Ausholen, schleudert weit |
+| Tritt | 8 % | schleudert flach zur Seite |
+| Spezial | 9–11 % | je nach Kämpfer, siehe unten |
+
+**Abwehr:** Solange du die Abwehr-Taste hältst, schützt dich eine Blase vor allen Treffern. Sie wird kleiner, je länger du sie hältst und je mehr Treffer sie abfängt. Zerbricht sie, bist du kurz betäubt.
+
+**Spezialattacken:**
+- Feuerball (Magier, Skelett-Magier, Robo): fliegt geradeaus.
+- Sturmangriff (Schurke, Kapuzen-Schurke, Skelett-Schurke): schneller Stoß nach vorne.
+- Wirbel (Barbar, Skelett-Krieger): trifft vorne und hinten.
+- Aufwärtshieb (Ritter, Skelett-Diener): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
+
+## Items
+
+Wenn Items eingeschaltet sind, fallen sie im Kampf vom Himmel. Berühren reicht:
+
+- **Heiltrank**: 30 % weniger Schaden
+- **Goldschwert (Kraft)**: 10 Sekunden lang härter zuschlagen
+- **Goldmünzen (Tempo)**: 10 Sekunden lang schneller laufen und höher springen
+- **Bombe**: explodiert kurz nach der Berührung und schleudert alle in der Nähe weg
 
 ## Starten
 
@@ -35,9 +70,11 @@ Vor jeder Runde wählt jeder Spieler mit seinen Laufen-Tasten eine Figur und dr�
 
 ## Aufbau
 
-- `scenes/main.tscn` ist die Arena mit Hauptplattform, zwei Plattformen zum Draufspringen (von unten durchspringbar), Licht, Himmel und Anzeige.
-- `scenes/player.tscn` ist eine Kämpfer-Figur, die zweimal in der Arena steckt.
-- `scripts/roster.gd` ist die Liste aller Kämpfer: Modell, Waffen und Angriffs-Animation. Hier fügst du neue Figuren hinzu.
-- `scripts/player.gd` enthält Bewegung, Angriff, Schaden, Rückstoß und Animationen. Werte wie `attack_damage` oder `knockback_per_damage` lassen sich im Inspektor ändern.
-- `scripts/main.gd` steuert Figurenauswahl, Kamera, Anzeige und erkennt den Sieger.
-- `assets/` enthält die 3D-Modelle (alle CC0, siehe `assets/CREDITS.md`).
+- `scenes/menu.tscn` / `scripts/menu.gd`: Hauptmenü und Optionen.
+- `scenes/fight.tscn` / `scripts/fight.gd`: der Kampf mit Kämpferauswahl, Kamera, Anzeige und Items.
+- `scenes/maps/`: die drei Maps. Du kannst sie in Godot öffnen und Deko verschieben. Die Kollision steckt in `Stage`, `LeftPlatform` und `RightPlatform`.
+- `scenes/player.tscn` / `scripts/player.gd`: ein Kämpfer mit Bewegung, Angriffen, Abwehr und Animationen. Die Werte aller Angriffe stehen oben in `ATTACKS`.
+- `scripts/roster.gd`: die Liste aller Kämpfer mit Modell, Waffen, Animationen und Spezialattacke.
+- `scripts/item.gd`, `scripts/projectile.gd`: Items und Feuerbälle.
+- `scripts/settings.gd`: gespeicherte Einstellungen.
+- `assets/`: die 3D-Modelle (alle CC0, siehe `assets/CREDITS.md`).

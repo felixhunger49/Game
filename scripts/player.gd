@@ -12,20 +12,34 @@ signal fell_off(player)
 @export var gravity := 30.0
 @export var max_jumps := 2
 
-## Schaden pro Treffer in Prozent.
-@export var attack_damage := 10.0
-## Rückstoß bei 0 % Schaden und zusätzlicher Rückstoß pro Prozent Schaden.
-@export var base_knockback := 5.0
-@export var knockback_per_damage := 0.18
+## Die Angriffe. damage = Schaden in %, base/scale = Rückstoß (base + Schaden * scale),
+## range = Reichweite nach vorne und nach oben/unten, startup = Ausholzeit bis zum Treffer,
+## cooldown = Zeit bis zum nächsten Angriff, angle = Flugrichtung des Getroffenen.
+const ATTACKS := {
+	"weak": {"damage": 4.0, "base": 3.0, "scale": 0.07, "range": Vector2(1.5, 1.2), "startup": 0.05,
+		"cooldown": 0.25, "angle": Vector2(1, 0.35), "anim_speed": 2.2},
+	"strong": {"damage": 13.0, "base": 6.5, "scale": 0.22, "range": Vector2(1.9, 1.4), "startup": 0.3,
+		"cooldown": 0.75, "angle": Vector2(1, 0.7), "anim_speed": 1.4},
+	"kick": {"damage": 8.0, "base": 5.0, "scale": 0.15, "range": Vector2(1.7, 1.0), "startup": 0.12,
+		"cooldown": 0.45, "angle": Vector2(1, 0.25), "anim_speed": 1.8},
+	"feuerball": {"damage": 9.0, "base": 4.0, "scale": 0.12, "startup": 0.2, "cooldown": 1.0,
+		"angle": Vector2(1, 0.3), "anim_speed": 1.6},
+	"sturm": {"damage": 10.0, "base": 5.5, "scale": 0.16, "range": Vector2(1.3, 1.2), "startup": 0.05,
+		"cooldown": 1.0, "angle": Vector2(1, 0.4), "anim_speed": 1.6},
+	"wirbel": {"damage": 11.0, "base": 6.0, "scale": 0.18, "range": Vector2(2.2, 1.5), "startup": 0.15,
+		"cooldown": 1.1, "angle": Vector2(1, 0.8), "anim_speed": 1.5},
+	"aufwaerts": {"damage": 9.0, "base": 6.0, "scale": 0.15, "range": Vector2(1.4, 2.8), "startup": 0.1,
+		"cooldown": 0.9, "angle": Vector2(0.2, 1), "anim_speed": 1.6},
+}
 
 ## Alles außerhalb dieses Bereichs zählt als heruntergefallen (x links, y unten, Breite, Höhe).
-const BLAST_ZONE := Rect2(-17, -10, 34, 26)
-const ATTACK_RANGE := Vector2(1.7, 1.3)
-const ATTACK_COOLDOWN := 0.35
+const BLAST_ZONE := Rect2(-19, -10, 38, 28)
 ## Die Figuren drehen sich nicht ganz zur Seite, damit man ihr Gesicht sieht (wie bei Smash Bros.).
 const SIDE_ANGLE := deg_to_rad(70)
 ## Physik-Ebene, auf der die schwebenden Plattformen liegen (man kann von unten durchspringen).
 const PLATFORM_LAYER := 2
+const SHIELD_MAX := 100.0
+const POWER_MULTIPLIER := 1.4
 
 var opponent: CharacterBody3D
 var fighter: Dictionary = {}
@@ -35,21 +49,36 @@ var stocks := 3
 var facing := 1
 var jumps_left := 0
 var hitstun := 0.0
+var stunned := 0.0
 var attack_timer := 0.0
+var pending_attack := ""
+var pending_time := 0.0
+var dash_time := 0.0
+var dash_hit_done := false
+var special_air_used := false
+var shielding := false
+var shield_hp := SHIELD_MAX
+var power_time := 0.0
+var speed_time := 0.0
 var spawn_position := Vector3.ZERO
 var anim_player: AnimationPlayer
 var current_anim := ""
 
 @onready var model_root: Node3D = $Model
 @onready var tag: Label3D = $Tag
+@onready var shield_bubble: MeshInstance3D = $Shield
 
 
 func _ready() -> void:
 	spawn_position = position
 	facing = start_facing
 	jumps_left = max_jumps
-	tag.text = "P%d" % player_id
 	tag.modulate = color
+	var mat: StandardMaterial3D = shield_bubble.material_override.duplicate()
+	mat.albedo_color = Color(color, 0.35)
+	mat.emission = color
+	shield_bubble.material_override = mat
+	shield_bubble.visible = false
 
 
 ## Tauscht das 3D-Modell gegen den Kämpfer an Stelle `index` im Roster.
@@ -63,11 +92,11 @@ func set_fighter(index: int) -> void:
 	var model: Node3D = load(fighter.scene).instantiate()
 	model_root.add_child(model)
 	_setup_weapons(model)
-	_apply_scale(model)
+	model.scale = Vector3.ONE * fighter.get("scale", 0.8)
 
 	anim_player = model.find_child("AnimationPlayer", true, false)
 	if anim_player:
-		for action in ["idle", "run", "jump"]:
+		for action in ["idle", "run", "jump", "shield", "stunned"]:
 			var anim_name := Roster.anim_name(fighter, action)
 			if anim_player.has_animation(anim_name):
 				anim_player.get_animation(anim_name).loop_mode = Animation.LOOP_LINEAR
@@ -77,23 +106,42 @@ func set_fighter(index: int) -> void:
 func _physics_process(delta: float) -> void:
 	attack_timer = max(attack_timer - delta, 0.0)
 	hitstun = max(hitstun - delta, 0.0)
+	stunned = max(stunned - delta, 0.0)
+	power_time = max(power_time - delta, 0.0)
+	speed_time = max(speed_time - delta, 0.0)
 
 	velocity.y -= gravity * delta
 	# Von unten durch die schwebenden Plattformen springen, beim Fallen darauf landen.
 	set_collision_mask_value(PLATFORM_LAYER, velocity.y <= 0.0)
 	if is_on_floor():
 		jumps_left = max_jumps
+		special_air_used = false
+
+	_update_pending_attack(delta)
+	_update_dash(delta)
+
+	var can_act := controls_enabled and hitstun == 0.0 and stunned == 0.0
+	shielding = can_act and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0
+	if shielding:
+		shield_hp = max(shield_hp - 18.0 * delta, 0.0)
+	else:
+		shield_hp = min(shield_hp + 12.0 * delta, SHIELD_MAX)
 
 	if hitstun > 0.0:
 		# Getroffen: keine Kontrolle, die Figur fliegt weiter.
 		velocity.x = move_toward(velocity.x, 0.0, 8.0 * delta)
-	elif controls_enabled:
+	elif dash_time > 0.0:
+		pass
+	elif can_act and not shielding:
 		_handle_input(delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, 60.0 * delta)
+		if shielding and Input.is_action_just_pressed(_action("jump")):
+			velocity.y = jump_velocity
+			jumps_left -= 1
 
 	move_and_slide()
-	_update_model(delta)
+	_update_visuals(delta)
 
 	if not BLAST_ZONE.has_point(Vector2(position.x, position.y)):
 		_lose_stock()
@@ -101,36 +149,144 @@ func _physics_process(delta: float) -> void:
 
 func _handle_input(delta: float) -> void:
 	var direction := Input.get_axis(_action("left"), _action("right"))
+	var top_speed := speed * (1.4 if speed_time > 0.0 else 1.0)
 	var accel := 60.0 if is_on_floor() else 28.0
-	velocity.x = move_toward(velocity.x, direction * speed, accel * delta)
+	if attack_timer > 0.0 and is_on_floor():
+		# Beim Zuschlagen bleibt man fast stehen.
+		direction = 0.0
+	velocity.x = move_toward(velocity.x, direction * top_speed, accel * delta)
 	if direction != 0.0:
 		facing = int(sign(direction))
 
 	if Input.is_action_just_pressed(_action("jump")) and jumps_left > 0:
-		velocity.y = jump_velocity
+		velocity.y = jump_velocity * (1.12 if speed_time > 0.0 else 1.0)
 		jumps_left -= 1
 
-	if Input.is_action_just_pressed(_action("attack")) and attack_timer == 0.0:
-		attack()
-
-
-func attack() -> void:
-	attack_timer = ATTACK_COOLDOWN
-	_play("attack", 2.0)
-	if opponent == null or not opponent.visible:
+	if attack_timer > 0.0:
 		return
+	for kind in ["weak", "strong", "kick"]:
+		if Input.is_action_just_pressed(_action(kind)):
+			start_attack(kind)
+			return
+	if Input.is_action_just_pressed(_action("special")):
+		start_special()
+
+
+## Holt zum Angriff aus. Der Treffer kommt nach der Ausholzeit (startup).
+func start_attack(kind: String) -> void:
+	var atk: Dictionary = ATTACKS[kind]
+	attack_timer = atk.cooldown
+	pending_attack = kind
+	pending_time = atk.startup
+	_play(kind, atk.anim_speed)
+
+
+func start_special() -> void:
+	var kind: String = fighter.get("special", "feuerball")
+	if kind == "aufwaerts":
+		if special_air_used:
+			return
+		special_air_used = true
+		velocity.y = 14.0
+	elif kind == "sturm":
+		dash_time = 0.25
+		dash_hit_done = false
+	start_attack(kind)
+	_play("special", ATTACKS[kind].anim_speed)
+
+
+func _update_pending_attack(delta: float) -> void:
+	if pending_attack == "":
+		return
+	pending_time -= delta
+	if pending_time > 0.0:
+		return
+	var kind := pending_attack
+	pending_attack = ""
+	var atk: Dictionary = ATTACKS[kind]
+	match kind:
+		"feuerball":
+			var ball := Projectile.new()
+			get_parent().add_child(ball)
+			ball.launch(self, atk, global_position + Vector3(0.8 * facing, 1.1, 0), facing)
+		"sturm":
+			pass  # trifft während des Stoßes, siehe _update_dash
+		"wirbel":
+			_try_hit(atk, true)
+		_:
+			_try_hit(atk, false)
+
+
+func _update_dash(delta: float) -> void:
+	if dash_time <= 0.0:
+		return
+	dash_time -= delta
+	velocity.x = facing * 16.0
+	velocity.y = max(velocity.y, 0.0)
+	if not dash_hit_done and _try_hit(ATTACKS.sturm, false):
+		dash_hit_done = true
+		dash_time = 0.0
+		velocity.x = 0.0
+
+
+## Trifft den Gegner, wenn er in Reichweite ist. both_sides: trifft vorne und hinten.
+func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
+	if opponent == null or not opponent.visible:
+		return false
 	var offset := opponent.global_position - global_position
-	var in_front: bool = signf(offset.x) == facing or absf(offset.x) < 0.2
-	if in_front and absf(offset.x) <= ATTACK_RANGE.x and absf(offset.y) <= ATTACK_RANGE.y:
-		opponent.take_hit(attack_damage, Vector3(facing, 0.6, 0).normalized())
+	var forward := offset.x * facing
+	var reach: Vector2 = atk.range
+	var in_range := false
+	if both_sides:
+		in_range = absf(offset.x) <= reach.x and absf(offset.y) <= reach.y
+	elif atk == ATTACKS.aufwaerts:
+		in_range = absf(offset.x) <= reach.x and offset.y > -0.5 and offset.y <= reach.y
+	else:
+		in_range = forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y
+	if not in_range:
+		return false
+	var side := facing
+	if both_sides:
+		side = 1 if offset.x >= 0.0 else -1
+	var angle: Vector2 = atk.angle
+	opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0)
+	return true
 
 
-## Je mehr Schaden die Figur schon hat, desto weiter fliegt sie.
-func take_hit(amount: float, direction: Vector3) -> void:
-	damage += amount
-	velocity = direction * (base_knockback + damage * knockback_per_damage)
-	hitstun = 0.15 + damage * 0.004
+## Getroffen werden. Je mehr Schaden die Figur schon hat, desto weiter fliegt sie.
+## Gibt false zurück, wenn der Treffer abgewehrt wurde.
+func take_hit(atk: Dictionary, direction: Vector3, powered := false) -> bool:
+	var multiplier := POWER_MULTIPLIER if powered else 1.0
+	if shielding:
+		shield_hp -= atk.damage * 3.0 * multiplier
+		velocity.x = direction.x * 3.0
+		if shield_hp <= 0.0:
+			# Schild zerbrochen: kurz betäubt.
+			shield_hp = SHIELD_MAX * 0.4
+			shielding = false
+			stunned = 2.5
+			velocity.y = 6.0
+		return false
+	damage += atk.damage * multiplier
+	var knockback: float = (atk.base + damage * atk.scale) * multiplier
+	velocity = direction * knockback
+	hitstun = 0.12 + knockback * 0.02
+	pending_attack = ""
+	dash_time = 0.0
 	_play("hit", 1.5)
+	return true
+
+
+func heal(amount: float) -> void:
+	damage = max(damage - amount, 0.0)
+
+
+func give_power(seconds: float) -> void:
+	power_time = seconds
+
+
+func give_speed(seconds: float) -> void:
+	speed_time = seconds
 
 
 func cheer() -> void:
@@ -142,6 +298,12 @@ func _lose_stock() -> void:
 	stocks -= 1
 	damage = 0.0
 	hitstun = 0.0
+	stunned = 0.0
+	power_time = 0.0
+	speed_time = 0.0
+	shield_hp = SHIELD_MAX
+	pending_attack = ""
+	dash_time = 0.0
 	velocity = Vector3.ZERO
 	if stocks > 0:
 		position = spawn_position + Vector3(0, 4, 0)
@@ -151,18 +313,43 @@ func _lose_stock() -> void:
 	fell_off.emit(self)
 
 
-func _update_model(delta: float) -> void:
+func _update_visuals(delta: float) -> void:
 	# Vor dem Kampf schauen die Figuren in die Kamera, im Kampf zum Gegner.
 	var target_angle := facing * SIDE_ANGLE if controls_enabled or hitstun > 0.0 else 0.0
 	model_root.rotation.y = lerp_angle(model_root.rotation.y, target_angle, 15.0 * delta)
+
+	shield_bubble.visible = shielding
+	shield_bubble.scale = Vector3.ONE * lerpf(0.5, 1.0, shield_hp / SHIELD_MAX)
+
+	var text := "P%d" % player_id
+	if stunned > 0.0:
+		text += "\nBetäubt!"
+	elif power_time > 0.0 and speed_time > 0.0:
+		text += "\nKraft + Tempo"
+	elif power_time > 0.0:
+		text += "\nKraft!"
+	elif speed_time > 0.0:
+		text += "\nTempo!"
+	tag.text = text
 
 	if current_anim == "cheer":
 		return
 	if hitstun > 0.0:
 		_play("hit", 1.5)
-	elif current_anim == "attack" and attack_timer > 0.0:
-		return
-	elif not is_on_floor():
+	elif stunned > 0.0:
+		_play("stunned")
+	elif current_anim in ATTACKS or current_anim in ["weak", "strong", "kick", "special"]:
+		if attack_timer > 0.0:
+			return
+		_play_movement()
+	elif shielding:
+		_play("shield")
+	else:
+		_play_movement()
+
+
+func _play_movement() -> void:
+	if not is_on_floor():
 		_play("jump")
 	elif absf(velocity.x) > 0.5:
 		_play("run")
@@ -173,16 +360,20 @@ func _update_model(delta: float) -> void:
 func _play(action: String, speed_scale := 1.0) -> void:
 	if anim_player == null:
 		return
+	var is_attack := action in ["weak", "strong", "kick", "special"]
 	var anim_name := Roster.anim_name(fighter, action)
 	if anim_name == "" or not anim_player.has_animation(anim_name):
-		# Der Robo hat keine Schlag-Animation: dann kurz nach vorne stoßen.
-		if action == "attack":
+		# Der Robo hat keine Schlag-Animationen: dann kurz nach vorne stoßen.
+		if is_attack:
+			current_anim = action
 			_lunge()
 		return
-	if action == current_anim and action != "attack":
+	if action == current_anim and not is_attack:
 		return
 	current_anim = action
-	anim_player.play(anim_name, 0.1, speed_scale)
+	anim_player.play(anim_name, 0.08, speed_scale)
+	if is_attack:
+		anim_player.seek(0.0, true)
 
 
 func _lunge() -> void:
@@ -211,11 +402,6 @@ func _setup_weapons(model: Node3D) -> void:
 		slot.bone_name = bone_name
 		skeleton.add_child(slot)
 		slot.add_child(load(attach[bone_name]).instantiate())
-
-
-## Bringt das Modell auf eine einheitliche Größe (KayKit-Figuren sind größer als der Robo).
-func _apply_scale(model: Node3D) -> void:
-	model.scale = Vector3.ONE * fighter.get("scale", 0.8)
 
 
 func _action(action_name: String) -> String:

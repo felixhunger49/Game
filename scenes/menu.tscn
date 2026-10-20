@@ -1,0 +1,49 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/menu.gd" id="1_menu"]
+
+[node name="Menu" type="Node3D"]
+script = ExtResource("1_menu")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 19)
+fov = 50.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Shade" type="ColorRect" parent="UI"]
+offset_left = 340.0
+offset_top = 40.0
+offset_right = 940.0
+offset_bottom = 680.0
+color = Color(0, 0, 0, 0.35)
+
+[node name="Title" type="Label" parent="UI"]
+offset_top = 60.0
+offset_right = 1280.0
+offset_bottom = 160.0
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0.25, 0.1, 0, 1)
+theme_override_constants/outline_size = 18
+theme_override_font_sizes/font_size = 80
+text = "ARENA-KAMPF"
+horizontal_alignment = 1
+
+[node name="Entries" type="VBoxContainer" parent="UI"]
+offset_left = 340.0
+offset_top = 200.0
+offset_right = 940.0
+offset_bottom = 480.0
+theme_override_constants/separation = 8
+
+[node name="Info" type="Label" parent="UI"]
+offset_left = 140
+offset_top = 500
+offset_right = 1140
+offset_bottom = 676
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+

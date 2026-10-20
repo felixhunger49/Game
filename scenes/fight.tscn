@@ -1,0 +1,69 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/fight.gd" id="1_fight"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
+
+[node name="Fight" type="Node3D"]
+script = ExtResource("1_fight")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9928, -0.1197, 0, 0.1197, 0.9928, 0, 1.6, 9)
+fov = 45.0
+
+[node name="Player1" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.2, 0)
+player_id = 1
+color = Color(1, 0.82, 0.3, 1)
+
+[node name="Player2" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.2, 0)
+player_id = 2
+color = Color(0.4, 0.75, 1, 1)
+start_facing = -1
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="P1Label" type="Label" parent="HUD"]
+offset_left = 24
+offset_top = 16
+offset_right = 620
+offset_bottom = 140
+theme_override_colors/font_color = Color(1, 0.82, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 0
+
+[node name="P2Label" type="Label" parent="HUD"]
+offset_left = 660
+offset_top = 16
+offset_right = 1256
+offset_bottom = 140
+theme_override_colors/font_color = Color(0.4, 0.75, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 2
+
+[node name="CenterLabel" type="Label" parent="HUD"]
+offset_left = 0
+offset_top = 170
+offset_right = 1280
+offset_bottom = 330
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 44
+horizontal_alignment = 1
+
+[node name="BottomLabel" type="Label" parent="HUD"]
+offset_left = 0
+offset_top = 640
+offset_right = 1280
+offset_bottom = 712
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+

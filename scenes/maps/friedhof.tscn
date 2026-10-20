@@ -1,0 +1,404 @@
+[gd_scene load_steps=43 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/floor_dirt.gltf" id="1_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/floor_dirt_grave.gltf" id="2_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/candle_triple.gltf" id="3_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/gravestone.gltf" id="4_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/grave_A.gltf" id="5_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/gravemarker_A.gltf" id="6_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/gravemarker_B.gltf" id="7_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/grave_B.gltf" id="8_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/pumpkin_orange_jackolantern.gltf" id="9_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/pumpkin_yellow.gltf" id="10_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/skull_candle.gltf" id="11_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/bone_A.gltf" id="12_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/fence.gltf" id="13_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/fence_broken.gltf" id="14_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/fence_pillar.gltf" id="15_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/crypt.gltf" id="16_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/arch_gate.gltf" id="17_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/tree_dead_large_decorated.gltf" id="18_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/tree_dead_large.gltf" id="19_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/tree_dead_medium.gltf" id="20_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/post_lantern.gltf" id="21_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/post_skull.gltf" id="22_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/shrine_candles.gltf" id="23_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/coffin_decorated.gltf" id="24_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/bench.gltf" id="25_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/tree_pine_orange_large.gltf" id="26_res"]
+[ext_resource type="PackedScene" path="res://assets/maps/friedhof/tree_pine_yellow_medium.gltf" id="27_res"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+sky_top_color = Color(0.03, 0.04, 0.12, 1)
+sky_horizon_color = Color(0.16, 0.14, 0.3, 1)
+ground_bottom_color = Color(0.03, 0.03, 0.06, 1)
+ground_horizon_color = Color(0.16, 0.14, 0.3, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 2
+ambient_light_color = Color(0.45, 0.5, 0.8, 1)
+ambient_light_energy = 0.45
+tonemap_mode = 2
+tonemap_exposure = 1.0
+fog_enabled = true
+fog_light_color = Color(0.12, 0.12, 0.25, 1)
+fog_density = 0.015
+
+[sub_resource type="BoxShape3D" id="StageShape"]
+size = Vector3(16, 2.2, 4)
+
+[sub_resource type="BoxShape3D" id="PlatShape"]
+size = Vector3(3.5, 0.3, 2.4)
+
+[sub_resource type="StandardMaterial3D" id="Earth"]
+albedo_color = Color(0.18, 0.13, 0.12, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="EarthMesh"]
+size = Vector3(16, 3, 4)
+material = SubResource("Earth")
+
+[sub_resource type="BoxMesh" id="EarthBottomMesh"]
+size = Vector3(12, 2.5, 3.2)
+material = SubResource("Earth")
+
+[sub_resource type="StandardMaterial3D" id="Slab"]
+albedo_color = Color(0.38, 0.38, 0.45, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="SlabMesh"]
+size = Vector3(3.5, 0.3, 2.4)
+material = SubResource("Slab")
+
+[sub_resource type="BoxMesh" id="SlabMesh"]
+size = Vector3(3.5, 0.3, 2.4)
+material = SubResource("Slab")
+
+[sub_resource type="StandardMaterial3D" id="Ground"]
+albedo_color = Color(0.12, 0.1, 0.12, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="GroundMesh"]
+size = Vector3(200, 1, 120)
+material = SubResource("Ground")
+
+[sub_resource type="StandardMaterial3D" id="Moon"]
+albedo_color = Color(1, 0.97, 0.85, 1)
+shading_mode = 0
+emission_enabled = true
+emission = Color(1, 0.95, 0.8, 1)
+
+[sub_resource type="SphereMesh" id="MoonMesh"]
+radius = 6.0
+height = 12.0
+material = SubResource("Moon")
+
+[node name="Map" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.9063, 0, -0.4226, -0.2717, 0.766, -0.5826, 0.3237, 0.6428, 0.6943, 0, 10, 0)
+light_color = Color(0.65, 0.72, 1, 1)
+light_energy = 0.7
+shadow_enabled = true
+
+[node name="Spawn1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.2, 0)
+
+[node name="Spawn2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.2, 0)
+
+[node name="Stage" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Stage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.1, 0)
+shape = SubResource("StageShape")
+
+[node name="LeftPlatform" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.2, 2.45, 0)
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LeftPlatform"]
+shape = SubResource("PlatShape")
+
+[node name="RightPlatform" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, 2.45, 0)
+collision_layer = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RightPlatform"]
+shape = SubResource("PlatShape")
+
+[node name="StageLook" type="Node3D" parent="."]
+
+[node name="Platforms" type="Node3D" parent="."]
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="Background" type="Node3D" parent="."]
+
+[node name="Lights" type="Node3D" parent="."]
+
+[node name="floor_dirt" parent="StageLook" instance=ExtResource("1_res")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, -0.03, 0)
+
+[node name="floor_dirt2" parent="StageLook" instance=ExtResource("1_res")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -0.03, 0)
+
+[node name="floor_dirt_grave" parent="StageLook" instance=ExtResource("2_res")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, -0.03, 0)
+
+[node name="floor_dirt3" parent="StageLook" instance=ExtResource("1_res")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, -0.03, 0)
+
+[node name="Earth" type="MeshInstance3D" parent="StageLook"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
+mesh = SubResource("EarthMesh")
+
+[node name="EarthBottom" type="MeshInstance3D" parent="StageLook"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4.5, 0)
+mesh = SubResource("EarthBottomMesh")
+
+[node name="Slab" type="MeshInstance3D" parent="Platforms"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.2, 2.45, 0)
+mesh = SubResource("SlabMesh")
+
+[node name="candle_triple" parent="Platforms" instance=ExtResource("3_res")]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -3, 2.6, -0.8)
+
+[node name="Light" type="OmniLight3D" parent="Lights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 3.4, -0.6)
+light_color = Color(1, 0.65, 0.3, 1)
+light_energy = 1.2
+omni_range = 3.5
+
+[node name="Slab2" type="MeshInstance3D" parent="Platforms"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, 2.45, 0)
+mesh = SubResource("SlabMesh")
+
+[node name="candle_triple2" parent="Platforms" instance=ExtResource("3_res")]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 5.4, 2.6, -0.8)
+
+[node name="Light2" type="OmniLight3D" parent="Lights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.4, 3.4, -0.6)
+light_color = Color(1, 0.65, 0.3, 1)
+light_energy = 1.2
+omni_range = 3.5
+
+[node name="gravestone" parent="Props" instance=ExtResource("4_res")]
+transform = Transform3D(0.7997, 0, 0.02365, 0, 0.8, 0, -0.02365, 0, 0.7997, -6.7, 0, -1.5)
+
+[node name="grave_A" parent="Props" instance=ExtResource("5_res")]
+transform = Transform3D(0.7, 0, 0.003612, 0, 0.7, 0, -0.003612, 0, 0.7, -3.9, 0, -1.5)
+
+[node name="gravemarker_A" parent="Props" instance=ExtResource("6_res")]
+transform = Transform3D(0.8997, 0, 0.02502, 0, 0.9, 0, -0.02502, 0, 0.8997, -1.5, 0, -1.5)
+
+[node name="gravemarker_B" parent="Props" instance=ExtResource("7_res")]
+transform = Transform3D(0.8966, 0, 0.07766, 0, 0.9, 0, -0.07766, 0, 0.8966, 1.2, 0, -1.5)
+
+[node name="grave_B" parent="Props" instance=ExtResource("8_res")]
+transform = Transform3D(0.6936, 0, -0.09445, 0, 0.7, 0, 0.09445, 0, 0.6936, 4, 0, -1.5)
+
+[node name="gravestone2" parent="Props" instance=ExtResource("4_res")]
+transform = Transform3D(0.7999, 0, 0.01326, 0, 0.8, 0, -0.01326, 0, 0.7999, 6.8, 0, -1.5)
+
+[node name="pumpkin_orange_jackolantern" parent="Props" instance=ExtResource("9_res")]
+transform = Transform3D(-0.4985, 0, 0.2324, 0, 0.55, 0, -0.2324, 0, -0.4985, -7.3, 0, 1.2)
+
+[node name="Light3" type="OmniLight3D" parent="Lights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.3, 0.8, 1.6)
+light_color = Color(1, 0.55, 0.15, 1)
+light_energy = 2.0
+omni_range = 4
+
+[node name="pumpkin_orange_jackolantern2" parent="Props" instance=ExtResource("9_res")]
+transform = Transform3D(-0.4985, 0, -0.2324, 0, 0.55, 0, 0.2324, 0, -0.4985, 7.3, 0, 1.2)
+
+[node name="Light4" type="OmniLight3D" parent="Lights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.3, 0.8, 1.6)
+light_color = Color(1, 0.55, 0.15, 1)
+light_energy = 2.0
+omni_range = 4
+
+[node name="pumpkin_yellow" parent="Props" instance=ExtResource("10_res")]
+transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, -5.6, 0, 1.5)
+
+[node name="skull_candle" parent="Props" instance=ExtResource("11_res")]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, -0.1, 0, -1.6)
+
+[node name="Light5" type="OmniLight3D" parent="Lights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.2, -1.2)
+light_color = Color(1, 0.7, 0.35, 1)
+light_energy = 1.5
+omni_range = 3.5
+
+[node name="bone_A" parent="Props" instance=ExtResource("12_res")]
+transform = Transform3D(0.6928, 0, -0.4, 0, 0.8, 0, 0.4, 0, 0.6928, 2.8, 0.05, 1.5)
+
+[node name="fence" parent="Props" instance=ExtResource("13_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, -6, 0, -2.6)
+
+[node name="fence2" parent="Props" instance=ExtResource("13_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, -2, 0, -2.6)
+
+[node name="fence3" parent="Props" instance=ExtResource("13_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, 6, 0, -2.6)
+
+[node name="fence_broken" parent="Props" instance=ExtResource("14_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, 2, 0, -2.6)
+
+[node name="fence_pillar" parent="Props" instance=ExtResource("15_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, -8, 0, -2.6)
+
+[node name="fence_pillar2" parent="Props" instance=ExtResource("15_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, -4, 0, -2.6)
+
+[node name="fence_pillar3" parent="Props" instance=ExtResource("15_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, 0, 0, -2.6)
+
+[node name="fence_pillar4" parent="Props" instance=ExtResource("15_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, 4, 0, -2.6)
+
+[node name="fence_pillar5" parent="Props" instance=ExtResource("15_res")]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0, 0, 0, 1, 8, 0, -2.6)
+
+[node name="Ground" type="MeshInstance3D" parent="Background"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.5, -63)
+mesh = SubResource("GroundMesh")
+
+[node name="crypt" parent="Background" instance=ExtResource("16_res")]
+transform = Transform3D(0.9659, 0, -0.2588, 0, 1, 0, 0.2588, 0, 0.9659, -10, -3, -14)
+
+[node name="Light6" type="OmniLight3D" parent="Lights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -9)
+light_color = Color(0.4, 1, 0.5, 1)
+light_energy = 2.0
+omni_range = 7
+
+[node name="arch_gate" parent="Background" instance=ExtResource("17_res")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, -3, -9)
+
+[node name="tree_dead_large_decorated" parent="Background" instance=ExtResource("18_res")]
+transform = Transform3D(1.3, 0, 0, 0, 1.3, 0, 0, 0, 1.3, -16, -3, -7)
+
+[node name="tree_dead_large" parent="Background" instance=ExtResource("19_res")]
+transform = Transform3D(-1.072, 0, -0.8999, 0, 1.4, 0, 0.8999, 0, -1.072, 14, -3, -6)
+
+[node name="tree_dead_medium" parent="Background" instance=ExtResource("20_res")]
+transform = Transform3D(1.3, 0, 0, 0, 1.3, 0, 0, 0, 1.3, 1.5, -3, -10)
+
+[node name="post_lantern" parent="Background" instance=ExtResource("21_res")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, -1.7, -5)
+
+[node name="Light7" type="OmniLight3D" parent="Lights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2.8, -4.3)
+light_color = Color(1, 0.75, 0.4, 1)
+light_energy = 2.0
+omni_range = 6
+
+[node name="post_skull" parent="Background" instance=ExtResource("22_res")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, -1.7, -4.5)
+
+[node name="shrine_candles" parent="Background" instance=ExtResource("23_res")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 3.5, -3, -6)
+
+[node name="coffin_decorated" parent="Background" instance=ExtResource("24_res")]
+transform = Transform3D(0.1736, 0, -0.9848, 0, 1, 0, 0.9848, 0, 0.1736, -2, -3, -6)
+
+[node name="bench" parent="Background" instance=ExtResource("25_res")]
+transform = Transform3D(0.9848, 0, 0.1736, 0, 1, 0, -0.1736, 0, 0.9848, 10, -3, -11)
+
+[node name="tree_pine_orange_large" parent="Background" instance=ExtResource("26_res")]
+transform = Transform3D(0.6977, 0, -0.9765, 0, 1.2, 0, 0.9765, 0, 0.6977, -31.2057, -3, -25.5825)
+
+[node name="tree_pine_orange_large2" parent="Background" instance=ExtResource("26_res")]
+transform = Transform3D(0.328, 0, -1.213, 0, 1.256, 0, 1.213, 0, 0.328, -31.8829, -3, -31.2734)
+
+[node name="tree_dead_large2" parent="Background" instance=ExtResource("19_res")]
+transform = Transform3D(-1.66, 0, -0.2719, 0, 1.682, 0, 0.2719, 0, -1.66, -9.90165, -3, -24.7742)
+
+[node name="tree_pine_orange_large3" parent="Background" instance=ExtResource("26_res")]
+transform = Transform3D(-0.6003, 0, -1.466, 0, 1.584, 0, 1.466, 0, -0.6003, -30.7717, -3, -28.2864)
+
+[node name="tree_dead_large3" parent="Background" instance=ExtResource("19_res")]
+transform = Transform3D(-0.5636, 0, 1.479, 0, 1.583, 0, -1.479, 0, -0.5636, -28.4706, -3, -22.0078)
+
+[node name="tree_dead_large4" parent="Background" instance=ExtResource("19_res")]
+transform = Transform3D(-1.269, 0, 0.353, 0, 1.317, 0, -0.353, 0, -1.269, 1.30676, -3, -35.0748)
+
+[node name="tree_pine_orange_large4" parent="Background" instance=ExtResource("26_res")]
+transform = Transform3D(-0.1226, 0, -1.753, 0, 1.757, 0, 1.753, 0, -0.1226, -37.8366, -3, -27.3254)
+
+[node name="tree_pine_yellow_medium" parent="Background" instance=ExtResource("27_res")]
+transform = Transform3D(0.2952, 0, 1.599, 0, 1.626, 0, -1.599, 0, 0.2952, -10.664, -3, -35.991)
+
+[node name="tree_pine_yellow_medium2" parent="Background" instance=ExtResource("27_res")]
+transform = Transform3D(0.768, 0, 1.677, 0, 1.845, 0, -1.677, 0, 0.768, -13.6268, -3, -34.647)
+
+[node name="tree_pine_orange_large5" parent="Background" instance=ExtResource("26_res")]
+transform = Transform3D(1.46, 0, -0.2688, 0, 1.484, 0, 0.2688, 0, 1.46, 19.1898, -3, -34.5583)
+
+[node name="tree_dead_large5" parent="Background" instance=ExtResource("19_res")]
+transform = Transform3D(-1.07, 0, 0.8314, 0, 1.355, 0, -0.8314, 0, -1.07, -37.765, -3, -33.294)
+
+[node name="tree_dead_large6" parent="Background" instance=ExtResource("19_res")]
+transform = Transform3D(-1.295, 0, -1.476, 0, 1.964, 0, 1.476, 0, -1.295, -12.4575, -3, -20.5944)
+
+[node name="tree_pine_yellow_medium3" parent="Background" instance=ExtResource("27_res")]
+transform = Transform3D(-1.461, 0, -0.1599, 0, 1.47, 0, 0.1599, 0, -1.461, -22.363, -3, -34.5557)
+
+[node name="tree_pine_orange_large6" parent="Background" instance=ExtResource("26_res")]
+transform = Transform3D(-0.9067, 0, 1.298, 0, 1.584, 0, -1.298, 0, -0.9067, 38.8199, -3, -25.3537)
+
+[node name="tree_pine_orange_large7" parent="Background" instance=ExtResource("26_res")]
+transform = Transform3D(0.3886, 0, 1.888, 0, 1.928, 0, -1.888, 0, 0.3886, 23.9715, -3, -37.9653)
+
+[node name="tree_pine_yellow_medium4" parent="Background" instance=ExtResource("27_res")]
+transform = Transform3D(-1.017, 0, 1.166, 0, 1.547, 0, -1.166, 0, -1.017, 20.0112, -3, -28.5272)
+
+[node name="grave_A" parent="Background" instance=ExtResource("5_res")]
+transform = Transform3D(0.9998, 0, 0.01929, 0, 1, 0, -0.01929, 0, 0.9998, -16.53, -3, -5.48451)
+
+[node name="gravemarker_A" parent="Background" instance=ExtResource("6_res")]
+transform = Transform3D(0.9851, 0, 0.1719, 0, 1, 0, -0.1719, 0, 0.9851, 9.73411, -3, -13.2357)
+
+[node name="grave_A2" parent="Background" instance=ExtResource("5_res")]
+transform = Transform3D(0.9872, 0, -0.1598, 0, 1, 0, 0.1598, 0, 0.9872, -14.9185, -3, -12.6396)
+
+[node name="grave_A3" parent="Background" instance=ExtResource("5_res")]
+transform = Transform3D(0.9966, 0, -0.08225, 0, 1, 0, 0.08225, 0, 0.9966, -14.153, -3, -6.56141)
+
+[node name="gravemarker_A2" parent="Background" instance=ExtResource("6_res")]
+transform = Transform3D(0.9688, 0, 0.248, 0, 1, 0, -0.248, 0, 0.9688, -5.9837, -3, -9.06206)
+
+[node name="gravestone" parent="Background" instance=ExtResource("4_res")]
+transform = Transform3D(0.9999, 0, -0.01392, 0, 1, 0, 0.01392, 0, 0.9999, 11.9743, -3, -7.46267)
+
+[node name="gravemarker_A3" parent="Background" instance=ExtResource("6_res")]
+transform = Transform3D(0.9855, 0, -0.1699, 0, 1, 0, 0.1699, 0, 0.9855, 17.345, -3, -10.0957)
+
+[node name="grave_A4" parent="Background" instance=ExtResource("5_res")]
+transform = Transform3D(0.9847, 0, -0.1741, 0, 1, 0, 0.1741, 0, 0.9847, 3.45749, -3, -11.6657)
+
+[node name="grave_A5" parent="Background" instance=ExtResource("5_res")]
+transform = Transform3D(0.9964, 0, -0.08497, 0, 1, 0, 0.08497, 0, 0.9964, -17.5638, -3, -7.3407)
+
+[node name="gravemarker_A4" parent="Background" instance=ExtResource("6_res")]
+transform = Transform3D(0.9999, 0, -0.01666, 0, 1, 0, 0.01666, 0, 0.9999, 12.6019, -3, -9.34915)
+
+[node name="grave_A6" parent="Background" instance=ExtResource("5_res")]
+transform = Transform3D(0.9895, 0, -0.1443, 0, 1, 0, 0.1443, 0, 0.9895, 0.940263, -3, -13.8317)
+
+[node name="gravemarker_A5" parent="Background" instance=ExtResource("6_res")]
+transform = Transform3D(0.9853, 0, 0.1707, 0, 1, 0, -0.1707, 0, 0.9853, 4.34219, -3, -7.01565)
+
+[node name="Moon" type="MeshInstance3D" parent="Background"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 24, -80)
+mesh = SubResource("MoonMesh")
