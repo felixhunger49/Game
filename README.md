@@ -59,6 +59,8 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 schneller durch eigene Treffer und etwas durch Treffer, die man einsteckt. Erst bei voller Leiste (sie blinkt, über der Figur
 steht „Spezial bereit!“) geht die Spezialattacke, danach ist die Leiste wieder leer. In den Optionen lässt sich das ausschalten.
 
+Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtblitz und Schockwelle. Trifft eine, friert das Bild kurz ein, die Kamera wackelt und es knallt. Solange die Leiste voll ist, steigen Funken um die Figur auf.
+
 **Spezialattacken:**
 - Feuerball (Magier, Skelett-Magier, Robo): fliegt geradeaus.
 - Sturmangriff (Schurke, Kapuzen-Schurke, Skelett-Schurke): schneller Stoß nach vorne.

@@ -42,9 +42,10 @@ const SHIELD_MAX := 100.0
 const POWER_MULTIPLIER := 1.4
 ## Energie für die Spezialattacke: füllt sich mit der Zeit, durch Treffen und durch Getroffenwerden.
 const SPECIAL_MAX := 100.0
-const SPECIAL_PER_SECOND := 3.0
-const SPECIAL_PER_DAMAGE_DEALT := 2.5
-const SPECIAL_PER_DAMAGE_TAKEN := 1.2
+const SPECIAL_PER_SECOND := 5.0
+const SPECIAL_PER_DAMAGE_DEALT := 3.5
+const SPECIAL_PER_DAMAGE_TAKEN := 2.0
+const SPECIAL_KINDS := ["feuerball", "sturm", "wirbel", "aufwaerts"]
 const SHOUTS := ["ha", "hja", "hah"]
 
 ## Kunststücke am höchsten Punkt eines Sprungs. axis: Drehachse der Figur (x = Salto vorwärts,
@@ -115,6 +116,8 @@ var roll_dir := 1
 var roll_cooldown := 0.0
 var drop_time := 0.0
 var on_platform := false
+## Leuchtende Funken um die Füße, solange die Spezialattacke bereit ist.
+var ready_aura: CPUParticles3D
 
 @onready var model_root: Node3D = $Model
 @onready var tag: Label3D = $Tag
@@ -131,6 +134,7 @@ func _ready() -> void:
 	mat.emission = color
 	shield_bubble.material_override = mat
 	shield_bubble.visible = false
+	_create_ready_aura()
 
 
 ## Tauscht das 3D-Modell gegen den Kämpfer an Stelle `index` im Roster.
@@ -302,7 +306,48 @@ func start_special() -> void:
 	_play("special", ATTACKS[kind].anim_speed)
 	var sounds := {"feuerball": "fireball", "sturm": "dash", "wirbel": "whirl", "aufwaerts": "uppercut"}
 	Audio.sfx(sounds.get(kind, "swing_strong"))
+	Audio.sfx("special_start")
 	Audio.voice("spezial", voice_pitch())
+	SpecialFX.special_start(self, kind)
+	if kind == "sturm":
+		SpecialFX.dash_trail(self, dash_time)
+	elif kind == "aufwaerts":
+		SpecialFX.pillar(self)
+
+
+func _create_ready_aura() -> void:
+	ready_aura = CPUParticles3D.new()
+	ready_aura.amount = 40
+	ready_aura.lifetime = 0.9
+	ready_aura.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	ready_aura.emission_ring_axis = Vector3.UP
+	ready_aura.emission_ring_radius = 0.7
+	ready_aura.emission_ring_inner_radius = 0.5
+	ready_aura.emission_ring_height = 0.05
+	ready_aura.direction = Vector3.UP
+	ready_aura.spread = 5.0
+	ready_aura.initial_velocity_min = 1.5
+	ready_aura.initial_velocity_max = 3.0
+	ready_aura.gravity = Vector3.ZERO
+	ready_aura.orbit_velocity_min = 0.4
+	ready_aura.orbit_velocity_max = 0.8
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.12, 0.12)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.vertex_color_use_as_albedo = true
+	mat.albedo_color = color * 2.0
+	quad.material = mat
+	ready_aura.mesh = quad
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 1))
+	fade.set_color(1, Color(1, 1, 1, 0))
+	ready_aura.color_ramp = fade
+	ready_aura.emitting = false
+	add_child(ready_aura)
 
 
 func add_special_energy(amount: float) -> void:
@@ -344,6 +389,7 @@ func _update_pending_attack(delta: float) -> void:
 		"sturm":
 			pass  # trifft während des Stoßes, siehe _update_dash
 		"wirbel":
+			SpecialFX.whirl(self)
 			_try_hit(atk, true)
 		_:
 			_try_hit(atk, false)
@@ -372,7 +418,7 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 	if both_sides:
 		in_range = absf(offset.x) <= reach.x and absf(offset.y) <= reach.y
 	elif atk == ATTACKS.aufwaerts:
-		in_range = absf(offset.x) <= reach.x and offset.y > -0.5 and offset.y <= reach.y
+		in_range = absf(offset.x) <= reach.x and offset.y > -1.6 and offset.y <= reach.y
 	else:
 		in_range = forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y
 	if not in_range:
@@ -381,8 +427,12 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 	if both_sides:
 		side = 1 if offset.x >= 0.0 else -1
 	var angle: Vector2 = atk.angle
-	if opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0):
+	var landed: bool = opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0)
+	if landed:
 		add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
+	for kind in SPECIAL_KINDS:
+		if atk == ATTACKS[kind] and landed:
+			SpecialFX.impact(self, opponent.global_position + Vector3(0, 1.0, 0), color)
 	return true
 
 
@@ -489,6 +539,8 @@ func _update_visuals(delta: float) -> void:
 	elif Settings.special_charge and special_energy >= SPECIAL_MAX and controls_enabled:
 		text += "\nSpezial bereit!"
 	tag.text = text
+	if ready_aura:
+		ready_aura.emitting = controls_enabled and special_ready() and Settings.special_charge
 
 	if current_anim == "cheer":
 		return

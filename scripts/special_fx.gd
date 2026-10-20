@@ -1,0 +1,284 @@
+class_name SpecialFX
+## Effekte, die Spezialattacken spektakulär machen: Lichtblitze, Funken, Schockwellen,
+## Kamerawackeln, kurze Zeitlupe und ein großer Schriftzug.
+
+const NAMES := {"feuerball": "FEUERBALL!", "sturm": "STURMANGRIFF!", "wirbel": "WIRBELSTURM!",
+	"aufwaerts": "HIMMELSHIEB!"}
+
+
+## Beim Auslösen: Schriftzug, Aura-Ring, Lichtblitz und eine kurze Zeitlupe.
+static func special_start(player: Node3D, kind: String) -> void:
+	var world := player.get_parent()
+	var color: Color = player.get("color")
+	var center: Vector3 = player.global_position + Vector3(0, 1.0, 0)
+	_banner(world, NAMES.get(kind, "SPEZIAL!"), color, player.global_position + Vector3(0, 3.0, 0))
+	_ring(world, player.global_position + Vector3(0, 0.1, 0), color, 0.3, 3.2, 0.45)
+	_flash_light(world, center, color, 8.0, 6.0, 0.4)
+	_sparks(world, center, color, 50, 7.0, 0.6)
+	slow_motion(player, 0.35, 0.14)
+	shake(player, 0.12, 0.25)
+
+
+## Großer Treffer: Explosion aus Licht, Funken und Schockwelle, dazu Treffer-Stopp und Wackeln.
+static func impact(source: Node3D, pos: Vector3, color: Color) -> void:
+	var world := source.get_parent()
+	_flash_sphere(world, pos, color, 0.3, 2.2, 0.3)
+	_flash_sphere(world, pos, Color(1, 1, 1), 0.2, 1.2, 0.15)
+	_ring(world, pos, color, 0.4, 3.5, 0.35, true)
+	_sparks(world, pos, color, 90, 12.0, 0.7)
+	_sparks(world, pos, Color(1, 0.95, 0.7), 40, 8.0, 0.4)
+	_flash_light(world, pos, color, 14.0, 9.0, 0.35)
+	Audio.sfx("special_hit")
+	hit_stop(source, 0.09)
+	shake(source, 0.35, 0.4)
+
+
+## Wirbelsturm: zwei rotierende Klingenringe und ein Tornado aus Funken um die Figur.
+static func whirl(player: Node3D) -> void:
+	var color: Color = player.get("color")
+	for i in 2:
+		var ring := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 1.5 + i * 0.5
+		torus.outer_radius = 1.7 + i * 0.5
+		ring.mesh = torus
+		ring.material_override = _glow_material(Color(color, 0.8), 3.0)
+		ring.position = Vector3(0, 0.6 + i * 0.7, 0)
+		ring.rotation.x = 0.25 if i == 0 else -0.25
+		player.add_child(ring)
+		var tween := ring.create_tween().set_parallel()
+		tween.tween_property(ring, "rotation:y", TAU * 3.0 * (1 if i == 0 else -1), 0.6)
+		tween.tween_property(ring, "scale", Vector3.ONE * 1.3, 0.6)
+		tween.tween_property(ring.material_override, "albedo_color:a", 0.0, 0.6)
+		tween.chain().tween_callback(ring.queue_free)
+	var tornado := _particles(Color(color, 0.9), 120, 0.7, 0.12)
+	tornado.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	tornado.emission_ring_axis = Vector3.UP
+	tornado.emission_ring_radius = 1.6
+	tornado.emission_ring_inner_radius = 1.2
+	tornado.emission_ring_height = 0.3
+	tornado.direction = Vector3.UP
+	tornado.spread = 10.0
+	tornado.initial_velocity_min = 4.0
+	tornado.initial_velocity_max = 8.0
+	tornado.orbit_velocity_min = 1.5
+	tornado.orbit_velocity_max = 2.5
+	tornado.gravity = Vector3.ZERO
+	tornado.one_shot = false
+	tornado.position.y = 0.2
+	player.add_child(tornado)
+	tornado.emitting = true
+	player.get_tree().create_timer(0.55).timeout.connect(func(): tornado.emitting = false)
+	player.get_tree().create_timer(1.4).timeout.connect(tornado.queue_free)
+
+
+## Himmelshieb: eine Lichtsäule schießt aus dem Boden, Funken fliegen nach oben.
+static func pillar(player: Node3D) -> void:
+	var world := player.get_parent()
+	var color: Color = player.get("color")
+	var beam := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.9
+	cyl.bottom_radius = 0.6
+	cyl.height = 9.0
+	beam.mesh = cyl
+	beam.material_override = _glow_material(Color(color, 0.5), 2.2)
+	world.add_child(beam)
+	beam.global_position = player.global_position + Vector3(0, 4.5, 0)
+	beam.scale = Vector3(0.2, 1, 0.2)
+	var tween := beam.create_tween()
+	tween.tween_property(beam, "scale", Vector3(1.2, 1, 1.2), 0.08)
+	tween.tween_property(beam.material_override, "albedo_color:a", 0.0, 0.45)
+	tween.tween_callback(beam.queue_free)
+	var up := _particles(Color(color, 1.0), 80, 0.8, 0.1)
+	up.direction = Vector3.UP
+	up.spread = 15.0
+	up.initial_velocity_min = 10.0
+	up.initial_velocity_max = 18.0
+	up.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	up.emission_sphere_radius = 0.6
+	world.add_child(up)
+	up.global_position = player.global_position + Vector3(0, 0.3, 0)
+	up.emitting = true
+	player.get_tree().create_timer(1.2).timeout.connect(up.queue_free)
+	_ring(world, player.global_position + Vector3(0, 0.1, 0), color, 0.3, 2.5, 0.35)
+
+
+## Sturmangriff: leuchtende Geschwindigkeits-Spur hinter der Figur.
+static func dash_trail(player: Node3D, seconds: float) -> void:
+	var trail := _particles(Color(player.get("color"), 0.85), 70, 0.35, 0.2)
+	trail.local_coords = false
+	trail.one_shot = false
+	trail.explosiveness = 0.0
+	trail.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	trail.emission_box_extents = Vector3(0.2, 0.8, 0.2)
+	trail.initial_velocity_min = 0.0
+	trail.initial_velocity_max = 0.5
+	trail.gravity = Vector3.ZERO
+	trail.scale_amount_min = 1.5
+	trail.scale_amount_max = 2.5
+	trail.position.y = 0.9
+	player.add_child(trail)
+	trail.emitting = true
+	player.get_tree().create_timer(seconds).timeout.connect(func(): trail.emitting = false)
+	player.get_tree().create_timer(seconds + 0.6).timeout.connect(trail.queue_free)
+
+
+## Feuer-Spur für den Feuerball (hängt am Feuerball und bleibt als Glut in der Luft).
+static func fire_trail(ball: Node3D, color: Color) -> CPUParticles3D:
+	var trail := _particles(Color(color, 0.9), 60, 0.4, 0.16)
+	trail.local_coords = false
+	trail.one_shot = false
+	trail.explosiveness = 0.0
+	trail.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	trail.emission_sphere_radius = 0.3
+	trail.initial_velocity_min = 0.5
+	trail.initial_velocity_max = 1.5
+	trail.gravity = Vector3(0, 1.5, 0)
+	ball.add_child(trail)
+	trail.emitting = true
+	return trail
+
+
+## Kurze Zeitlupe für alles (in Echtzeit-Sekunden).
+static func slow_motion(node: Node, scale: float, seconds: float) -> void:
+	Engine.time_scale = scale
+	node.get_tree().create_timer(seconds, true, false, true).timeout.connect(func(): Engine.time_scale = 1.0)
+
+
+## Treffer-Stopp: das Bild friert für einen Augenblick fast ein, das macht Treffer wuchtig.
+static func hit_stop(node: Node, seconds: float) -> void:
+	slow_motion(node, 0.05, seconds)
+
+
+static func shake(node: Node, strength: float, seconds: float) -> void:
+	var cam := node.get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var tween := cam.create_tween()
+	var steps := int(seconds / 0.03)
+	for i in steps:
+		var fade := 1.0 - float(i) / steps
+		tween.tween_property(cam, "h_offset", randf_range(-1, 1) * strength * fade, 0.03)
+		tween.parallel().tween_property(cam, "v_offset", randf_range(-1, 1) * strength * fade, 0.03)
+	tween.tween_property(cam, "h_offset", 0.0, 0.03)
+	tween.parallel().tween_property(cam, "v_offset", 0.0, 0.03)
+
+
+# --- Bausteine -------------------------------------------------------------------
+
+static func _glow_material(color: Color, energy: float) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_color = Color(color.r * energy * 0.32, color.g * energy * 0.32, color.b * energy * 0.32, color.a)
+	return mat
+
+
+static func _particles(color: Color, amount: int, lifetime: float, size: float) -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = amount
+	p.lifetime = lifetime
+	p.one_shot = true
+	p.explosiveness = 0.95
+	var quad := QuadMesh.new()
+	quad.size = Vector2(size, size)
+	var mat := _glow_material(color, 3.0)
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.vertex_color_use_as_albedo = true
+	quad.material = mat
+	p.mesh = quad
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 1))
+	fade.set_color(1, Color(1, 1, 1, 0))
+	p.color_ramp = fade
+	p.scale_amount_min = 0.6
+	p.scale_amount_max = 1.4
+	return p
+
+
+static func _sparks(world: Node, pos: Vector3, color: Color, amount: int, speed: float, lifetime: float) -> void:
+	var p := _particles(color, amount, lifetime, 0.14)
+	p.direction = Vector3.UP
+	p.spread = 180.0
+	p.initial_velocity_min = speed * 0.4
+	p.initial_velocity_max = speed
+	p.gravity = Vector3(0, -9, 0)
+	p.damping_min = 2.0
+	p.damping_max = 4.0
+	world.add_child(p)
+	p.global_position = pos
+	p.emitting = true
+	world.get_tree().create_timer(lifetime + 0.3).timeout.connect(p.queue_free)
+
+
+static func _flash_sphere(world: Node, pos: Vector3, color: Color, from_r: float, to_r: float, seconds: float) -> void:
+	var m := MeshInstance3D.new()
+	var s := SphereMesh.new()
+	s.radius = 1.0
+	s.height = 2.0
+	m.mesh = s
+	m.material_override = _glow_material(Color(color, 0.9), 3.0)
+	world.add_child(m)
+	m.global_position = pos
+	m.scale = Vector3.ONE * from_r
+	var tween := m.create_tween().set_parallel()
+	tween.tween_property(m, "scale", Vector3.ONE * to_r, seconds).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(m.material_override, "albedo_color:a", 0.0, seconds)
+	tween.chain().tween_callback(m.queue_free)
+
+
+static func _ring(world: Node, pos: Vector3, color: Color, from_r: float, to_r: float, seconds: float,
+		facing_camera := false) -> void:
+	var m := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.85
+	torus.outer_radius = 1.0
+	m.mesh = torus
+	m.material_override = _glow_material(Color(color, 0.9), 3.0)
+	world.add_child(m)
+	m.global_position = pos
+	if facing_camera:
+		m.rotation.x = PI / 2.0
+	m.scale = Vector3.ONE * from_r
+	var tween := m.create_tween().set_parallel()
+	tween.tween_property(m, "scale", Vector3.ONE * to_r, seconds).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(m.material_override, "albedo_color:a", 0.0, seconds)
+	tween.chain().tween_callback(m.queue_free)
+
+
+static func _flash_light(world: Node, pos: Vector3, color: Color, energy: float, radius: float, seconds: float) -> void:
+	var light := OmniLight3D.new()
+	light.light_color = color
+	light.light_energy = energy
+	light.omni_range = radius
+	world.add_child(light)
+	light.global_position = pos
+	var tween := light.create_tween()
+	tween.tween_property(light, "light_energy", 0.0, seconds)
+	tween.tween_callback(light.queue_free)
+
+
+static func _banner(world: Node, text: String, color: Color, pos: Vector3) -> void:
+	var label := Label3D.new()
+	label.text = text
+	label.font_size = 110
+	label.outline_size = 28
+	label.modulate = color.lightened(0.3)
+	label.outline_modulate = Color(0.1, 0.05, 0, 0.95)
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.render_priority = 10
+	world.add_child(label)
+	label.global_position = pos
+	label.scale = Vector3.ONE * 0.2
+	var tween := label.create_tween()
+	tween.tween_property(label, "scale", Vector3.ONE * 1.15, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "scale", Vector3.ONE, 0.08)
+	tween.tween_interval(0.5)
+	tween.parallel().tween_property(label, "position:y", pos.y + 0.6, 0.6)
+	tween.tween_property(label, "modulate:a", 0.0, 0.25)
+	tween.parallel().tween_property(label, "outline_modulate:a", 0.0, 0.25)
+	tween.tween_callback(label.queue_free)
