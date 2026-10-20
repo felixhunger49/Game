@@ -54,28 +54,28 @@ const FIGHTERS := [
 	},
 	{
 		"name": "Skelett-Krieger", "scene": KAYKIT_CHARS + "Skeleton_Warrior.glb",
-		"attach": {"handslot.r": KAYKIT_WEAPONS + "Skeleton_Blade.gltf", "handslot.l": KAYKIT_WEAPONS + "Skeleton_Shield_Small_A.gltf"},
+		"keep": ["Skeleton_Blade", "Skeleton_Shield_Small_A"],
 		"special": "wirbel", "weak": "1H_Melee_Attack_Slice_Diagonal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
 		"name": "Skelett-Magier", "scene": KAYKIT_CHARS + "Skeleton_Mage.glb",
-		"attach": {"handslot.r": KAYKIT_WEAPONS + "Skeleton_Staff.gltf"},
+		"keep": ["Skeleton_Staff"],
 		"special": "feuerball", "weak": "1H_Melee_Attack_Stab", "strong": "2H_Melee_Attack_Chop",
 	},
 	{
 		"name": "Skelett-Schurke", "scene": KAYKIT_CHARS + "Skeleton_Rogue.glb",
-		"attach": {"handslot.r": KAYKIT_WEAPONS + "Skeleton_Axe.gltf"},
+		"keep": ["Skeleton_Axe"],
 		"special": "sturm", "weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
 		"name": "Skelett-Diener", "scene": KAYKIT_CHARS + "Skeleton_Minion.glb",
-		"attach": {"handslot.r": KAYKIT_WEAPONS + "Skeleton_Blade.gltf"},
+		"keep": ["Skeleton_Blade"],
 		"special": "aufwaerts", "weak": "1H_Melee_Attack_Stab", "strong": "1H_Melee_Attack_Slice_Diagonal",
 		"anim_overrides": {"aufwaerts": "1H_Melee_Attack_Jump_Chop"},
 	},
 	{
 		"name": "Robo", "scene": "res://assets/kenney/character.glb", "special": "feuerball",
-		"anims": {"idle": "idle", "run": "walk", "jump": "jump"}, "scale": 1.4,
+		"anims": {"idle": "idle", "run": "walk", "jump": "jump"},
 	},
 ]
 
