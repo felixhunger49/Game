@@ -1,79 +1,101 @@
 [gd_scene load_steps=6 format=3]
 
-[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="1_player"]
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
 
 [sub_resource type="RectangleShape2D" id="Shape_0"]
-size = Vector2(1600, 40)
+size = Vector2(800, 40)
 
 [sub_resource type="RectangleShape2D" id="Shape_1"]
-size = Vector2(200, 24)
+size = Vector2(180, 16)
 
 [sub_resource type="RectangleShape2D" id="Shape_2"]
-size = Vector2(200, 24)
-
-[sub_resource type="RectangleShape2D" id="Shape_3"]
-size = Vector2(200, 24)
+size = Vector2(180, 16)
 
 [node name="Main" type="Node2D"]
+script = ExtResource("1_main")
 
 [node name="Background" type="ColorRect" parent="."]
-offset_left = -2000.0
-offset_top = -2000.0
-offset_right = 4000.0
-offset_bottom = 2000.0
+offset_right = 1280.0
+offset_bottom = 720.0
 color = Color(0.16, 0.2, 0.3, 1)
 
-[node name="Ground" type="StaticBody2D" parent="."]
-position = Vector2(640, 680)
+[node name="Stage" type="StaticBody2D" parent="."]
+position = Vector2(640, 560)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Stage"]
 shape = SubResource("Shape_0")
 
-[node name="Visual" type="ColorRect" parent="Ground"]
-offset_left = -800.0
+[node name="Visual" type="ColorRect" parent="Stage"]
+offset_left = -400.0
 offset_top = -20.0
-offset_right = 800.0
+offset_right = 400.0
 offset_bottom = 20.0
 color = Color(0.36, 0.72, 0.45, 1)
 
-[node name="Platform1" type="StaticBody2D" parent="."]
-position = Vector2(500, 520)
+[node name="LeftPlatform" type="StaticBody2D" parent="."]
+position = Vector2(430, 400)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform1"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftPlatform"]
 shape = SubResource("Shape_1")
+one_way_collision = true
 
-[node name="Visual" type="ColorRect" parent="Platform1"]
-offset_left = -100.0
-offset_top = -12.0
-offset_right = 100.0
-offset_bottom = 12.0
-color = Color(0.36, 0.72, 0.45, 1)
+[node name="Visual" type="ColorRect" parent="LeftPlatform"]
+offset_left = -90.0
+offset_top = -8.0
+offset_right = 90.0
+offset_bottom = 8.0
+color = Color(0.55, 0.6, 0.68, 1)
 
-[node name="Platform2" type="StaticBody2D" parent="."]
-position = Vector2(800, 400)
+[node name="RightPlatform" type="StaticBody2D" parent="."]
+position = Vector2(850, 400)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform2"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightPlatform"]
 shape = SubResource("Shape_2")
+one_way_collision = true
 
-[node name="Visual" type="ColorRect" parent="Platform2"]
-offset_left = -100.0
-offset_top = -12.0
-offset_right = 100.0
-offset_bottom = 12.0
-color = Color(0.36, 0.72, 0.45, 1)
+[node name="Visual" type="ColorRect" parent="RightPlatform"]
+offset_left = -90.0
+offset_top = -8.0
+offset_right = 90.0
+offset_bottom = 8.0
+color = Color(0.55, 0.6, 0.68, 1)
 
-[node name="Platform3" type="StaticBody2D" parent="."]
-position = Vector2(1100, 280)
+[node name="Player1" parent="." instance=ExtResource("2_player")]
+position = Vector2(460, 480)
+player_id = 1
+color = Color(1, 0.82, 0.4, 1)
+start_facing = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform3"]
-shape = SubResource("Shape_3")
+[node name="Player2" parent="." instance=ExtResource("2_player")]
+position = Vector2(820, 480)
+player_id = 2
+color = Color(0.4, 0.75, 1, 1)
+start_facing = -1
 
-[node name="Visual" type="ColorRect" parent="Platform3"]
-offset_left = -100.0
-offset_top = -12.0
-offset_right = 100.0
-offset_bottom = 12.0
-color = Color(0.36, 0.72, 0.45, 1)
+[node name="HUD" type="CanvasLayer" parent="."]
 
-[node name="Player" parent="." instance=ExtResource("1_player")]
-position = Vector2(200, 400)
+[node name="P1Label" type="Label" parent="HUD"]
+offset_left = 24.0
+offset_top = 16.0
+offset_right = 400.0
+offset_bottom = 100.0
+theme_override_colors/font_color = Color(1, 0.82, 0.4, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="P2Label" type="Label" parent="HUD"]
+offset_left = 880.0
+offset_top = 16.0
+offset_right = 1256.0
+offset_bottom = 100.0
+theme_override_colors/font_color = Color(0.4, 0.75, 1, 1)
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 2
+
+[node name="WinLabel" type="Label" parent="HUD"]
+offset_top = 200.0
+offset_right = 1280.0
+offset_bottom = 360.0
+theme_override_font_sizes/font_size = 56
+horizontal_alignment = 1
+vertical_alignment = 1

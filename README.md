@@ -1,22 +1,32 @@
 # Game
 
-Ein 2D-Plattformer-Grundgerüst für [Godot 4](https://godotengine.org) (getestet mit 4.3).
+Ein Plattform-Kampfspiel für zwei Spieler an einer Tastatur, gebaut mit [Godot 4](https://godotengine.org) (getestet mit 4.3).
 
-## Starten
+## Regeln
 
-1. Godot 4 herunterladen und öffnen (kostenlos, keine Installation nötig).
-2. Im Projektmanager auf **Importieren** klicken und die Datei `project.godot` aus diesem Ordner wählen.
-3. Mit **F5** (oder dem Play-Knopf oben rechts) starten.
+- Beide Spieler kämpfen auf einer Plattform.
+- Es gibt keine Lebenspunkte: Jeder Treffer erhöht den Schaden (in %). Je höher der Schaden, desto weiter fliegt man beim nächsten Treffer weg.
+- Wer aus der Arena fällt oder geschleudert wird, verliert ein Leben und startet mit 0 % neu.
+- Wer dreimal heruntergefallen ist, hat verloren.
 
 ## Steuerung
 
-| Aktion | Tasten |
-|---|---|
-| Laufen | A / D oder Pfeiltasten |
-| Springen | Leertaste, W oder Pfeil hoch |
+| Aktion | Spieler 1 (gelb) | Spieler 2 (blau) |
+|---|---|---|
+| Laufen | A / D | Pfeil links / rechts |
+| Springen (2× in der Luft möglich) | W | Pfeil hoch |
+| Schlagen | F oder Leertaste | L oder Enter |
+| Neustart nach Spielende | R | R |
+
+## Starten
+
+1. Godot 4 herunterladen und öffnen.
+2. Im Projektmanager auf **Importieren** klicken und `project.godot` wählen.
+3. Mit **F5** starten.
 
 ## Aufbau
 
-- `scenes/main.tscn` ist die Spielwelt mit Boden und Plattformen.
-- `scenes/player.tscn` ist die Spielfigur mit Kollision und Kamera.
-- `scripts/player.gd` enthält Laufen, Springen und Schwerkraft. Geschwindigkeit und Sprunghöhe lassen sich im Inspektor ändern.
+- `scenes/main.tscn` ist die Arena mit Hauptplattform, zwei Plattformen zum Draufspringen und der Anzeige.
+- `scenes/player.tscn` ist eine Kämpfer-Figur, die zweimal in der Arena steckt.
+- `scripts/player.gd` enthält Bewegung, Angriff, Schaden und Rückstoß. Werte wie `attack_damage` oder `knockback_per_damage` lassen sich im Inspektor ändern.
+- `scripts/main.gd` verbindet die Spieler, zeigt Schaden und Leben an und erkennt den Sieger.
