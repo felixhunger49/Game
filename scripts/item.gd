@@ -77,17 +77,22 @@ func _pick_up(player: CharacterBody3D) -> void:
 	match type:
 		"heiltrank":
 			player.heal(30.0)
+			Audio.sfx("pickup_heal")
 		"kraft":
 			player.give_power(10.0)
+			Audio.sfx("pickup_power")
 		"tempo":
 			player.give_speed(10.0)
+			Audio.sfx("pickup_speed")
 		"bombe":
 			fuse = 0.4
+			Audio.sfx("fuse")
 			return
 	queue_free()
 
 
 func _explode() -> void:
+	Audio.sfx("explosion")
 	for p in players:
 		var offset: Vector3 = p.global_position - global_position
 		if p.visible and offset.length() < BOMB_RADIUS:

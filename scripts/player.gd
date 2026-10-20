@@ -40,6 +40,12 @@ const SIDE_ANGLE := deg_to_rad(70)
 const PLATFORM_LAYER := 2
 const SHIELD_MAX := 100.0
 const POWER_MULTIPLIER := 1.4
+## Energie für die Spezialattacke: füllt sich mit der Zeit, durch Treffen und durch Getroffenwerden.
+const SPECIAL_MAX := 100.0
+const SPECIAL_PER_SECOND := 3.0
+const SPECIAL_PER_DAMAGE_DEALT := 2.5
+const SPECIAL_PER_DAMAGE_TAKEN := 1.2
+const SHOUTS := ["ha", "hja", "hah"]
 
 var opponent: CharacterBody3D
 var fighter: Dictionary = {}
@@ -60,6 +66,9 @@ var shielding := false
 var shield_hp := SHIELD_MAX
 var power_time := 0.0
 var speed_time := 0.0
+var special_energy := 0.0
+## Windgeschwindigkeit der Map (Dorf): schiebt die Figur zur Seite.
+var wind_speed := 0.0
 var spawn_position := Vector3.ZERO
 var anim_player: AnimationPlayer
 var current_anim := ""
@@ -109,6 +118,8 @@ func _physics_process(delta: float) -> void:
 	stunned = max(stunned - delta, 0.0)
 	power_time = max(power_time - delta, 0.0)
 	speed_time = max(speed_time - delta, 0.0)
+	if controls_enabled:
+		add_special_energy(SPECIAL_PER_SECOND * delta)
 
 	velocity.y -= gravity * delta
 	# Von unten durch die schwebenden Plattformen springen, beim Fallen darauf landen.
@@ -129,16 +140,17 @@ func _physics_process(delta: float) -> void:
 
 	if hitstun > 0.0:
 		# Getroffen: keine Kontrolle, die Figur fliegt weiter.
-		velocity.x = move_toward(velocity.x, 0.0, 8.0 * delta)
+		velocity.x = move_toward(velocity.x, 0.0, 8.0 * delta) + wind_speed * delta
 	elif dash_time > 0.0:
 		pass
 	elif can_act and not shielding:
 		_handle_input(delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, 60.0 * delta)
+		velocity.x = move_toward(velocity.x, wind_speed * 0.5, 60.0 * delta)
 		if shielding and Input.is_action_just_pressed(_action("jump")):
 			velocity.y = jump_velocity
 			jumps_left -= 1
+			Audio.sfx("jump")
 
 	move_and_slide()
 	_update_visuals(delta)
@@ -154,12 +166,15 @@ func _handle_input(delta: float) -> void:
 	if attack_timer > 0.0 and is_on_floor():
 		# Beim Zuschlagen bleibt man fast stehen.
 		direction = 0.0
-	velocity.x = move_toward(velocity.x, direction * top_speed, accel * delta)
+	# Wind schiebt in der Luft stärker als am Boden.
+	var wind := wind_speed * (0.6 if is_on_floor() else 1.0)
+	velocity.x = move_toward(velocity.x, direction * top_speed + wind, accel * delta)
 	if direction != 0.0:
 		facing = int(sign(direction))
 
 	if Input.is_action_just_pressed(_action("jump")) and jumps_left > 0:
 		velocity.y = jump_velocity * (1.12 if speed_time > 0.0 else 1.0)
+		Audio.sfx("jump", 1.0 if jumps_left == max_jumps else 1.25)
 		jumps_left -= 1
 
 	if attack_timer > 0.0:
@@ -179,10 +194,23 @@ func start_attack(kind: String) -> void:
 	pending_attack = kind
 	pending_time = atk.startup
 	_play(kind, atk.anim_speed)
+	match kind:
+		"weak":
+			Audio.sfx("swing_weak")
+		"strong":
+			Audio.sfx("swing_strong")
+			_shout()
+		"kick":
+			Audio.sfx("swing_weak", 0.8)
 
 
 func start_special() -> void:
 	var kind: String = fighter.get("special", "feuerball")
+	if not special_ready():
+		# Noch nicht aufgeladen.
+		Audio.sfx("fizzle")
+		attack_timer = 0.2
+		return
 	if kind == "aufwaerts":
 		if special_air_used:
 			return
@@ -191,8 +219,34 @@ func start_special() -> void:
 	elif kind == "sturm":
 		dash_time = 0.25
 		dash_hit_done = false
+	special_energy = 0.0
 	start_attack(kind)
 	_play("special", ATTACKS[kind].anim_speed)
+	var sounds := {"feuerball": "fireball", "sturm": "dash", "wirbel": "whirl", "aufwaerts": "uppercut"}
+	Audio.sfx(sounds.get(kind, "swing_strong"))
+	Audio.voice("spezial", voice_pitch())
+
+
+func add_special_energy(amount: float) -> void:
+	if not Settings.special_charge or special_energy >= SPECIAL_MAX:
+		return
+	special_energy = minf(special_energy + amount, SPECIAL_MAX)
+	if special_energy >= SPECIAL_MAX:
+		Audio.sfx("special_ready")
+
+
+func special_ready() -> bool:
+	return not Settings.special_charge or special_energy >= SPECIAL_MAX
+
+
+## Stimmlage der Figur (aus dem Roster), damit Skelette tiefer und der Robo höher klingen.
+func voice_pitch() -> float:
+	return fighter.get("voice", 1.0)
+
+
+func _shout() -> void:
+	if randf() < 0.6:
+		Audio.voice(SHOUTS.pick_random(), voice_pitch() * randf_range(0.95, 1.05), -2.0)
 
 
 func _update_pending_attack(delta: float) -> void:
@@ -249,7 +303,8 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 	if both_sides:
 		side = 1 if offset.x >= 0.0 else -1
 	var angle: Vector2 = atk.angle
-	opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0)
+	if opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0):
+		add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
 	return true
 
 
@@ -266,6 +321,10 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false) -> bool:
 			shielding = false
 			stunned = 2.5
 			velocity.y = 6.0
+			Audio.sfx("shield_break")
+			Audio.voice("au", voice_pitch())
+		else:
+			Audio.sfx("shield_block")
 		return false
 	damage += atk.damage * multiplier
 	var knockback: float = (atk.base + damage * atk.scale) * multiplier
@@ -274,6 +333,11 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false) -> bool:
 	pending_attack = ""
 	dash_time = 0.0
 	_play("hit", 1.5)
+	add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_TAKEN)
+	var heavy: bool = atk.damage * multiplier >= 10.0
+	Audio.sfx("hit_strong" if heavy else "hit_weak")
+	if heavy or randf() < 0.3:
+		Audio.voice("au", voice_pitch() * randf_range(0.95, 1.05), -2.0)
 	return true
 
 
@@ -292,6 +356,7 @@ func give_speed(seconds: float) -> void:
 func cheer() -> void:
 	controls_enabled = false
 	_play("cheer")
+	Audio.voice("jubel", voice_pitch())
 
 
 func _lose_stock() -> void:
@@ -305,6 +370,7 @@ func _lose_stock() -> void:
 	pending_attack = ""
 	dash_time = 0.0
 	velocity = Vector3.ZERO
+	Audio.sfx("ko")
 	if stocks > 0:
 		position = spawn_position + Vector3(0, 4, 0)
 	else:
@@ -330,6 +396,8 @@ func _update_visuals(delta: float) -> void:
 		text += "\nKraft!"
 	elif speed_time > 0.0:
 		text += "\nTempo!"
+	elif Settings.special_charge and special_energy >= SPECIAL_MAX and controls_enabled:
+		text += "\nSpezial bereit!"
 	tag.text = text
 
 	if current_anim == "cheer":

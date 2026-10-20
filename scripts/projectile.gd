@@ -46,8 +46,9 @@ func _physics_process(delta: float) -> void:
 	if target and target.visible:
 		var chest := target.global_position + Vector3(0, 0.9, 0)
 		if chest.distance_to(global_position) < HIT_RADIUS:
-			target.take_hit(attack, Vector3(attack.angle.x * direction, attack.angle.y, 0).normalized(),
-				shooter.power_time > 0.0)
+			if target.take_hit(attack, Vector3(attack.angle.x * direction, attack.angle.y, 0).normalized(),
+					shooter.power_time > 0.0):
+				shooter.add_special_energy(attack.damage * shooter.SPECIAL_PER_DAMAGE_DEALT)
 			queue_free()
 			return
 	if age > LIFETIME:

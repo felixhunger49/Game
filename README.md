@@ -16,13 +16,17 @@ Wie bei Super Smash Bros. sind Figuren und Arenen 3D-Modelle, gekämpft wird abe
 ## Menü
 
 - **Kampf starten**: Danach wählt jeder Spieler mit seinen Laufen-Tasten einen Kämpfer und drückt den schwachen Angriff, wenn er bereit ist.
-- **Map**: Burg, Dorf oder Friedhof.
-- **Optionen**: Items an oder aus, wie oft Items erscheinen (selten, normal, oft) und die Anzahl der Leben.
-- **Steuerung**: alle Tasten im Überblick.
+- **Map**: Burg, Dorf oder Friedhof. Jede Map hat ihren eigenen Effekt (siehe unten).
+- **Optionen**: Items an oder aus, wie oft Items erscheinen (selten, normal, oft), die Anzahl der Leben,
+  Map-Effekte an oder aus, Spezial aufladen an oder aus, Lautstärke von Musik und Geräuschen.
+- **Steuerung anpassen**: jede Taste beider Spieler neu belegen (Tastatur oder Gamepad). Ist die neue Taste
+  schon belegt, tauschen die beiden Aktionen. „Standard wiederherstellen“ setzt alles zurück.
 
 Im Menü: W/S oder Pfeile hoch/runter wählen, A/D oder Pfeile links/rechts ändern, F, J oder Enter bestätigen, Esc zurück.
 
 ## Steuerung
+
+Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 
 | Aktion | Spieler 1 | Spieler 2 |
 |---|---|---|
@@ -47,11 +51,30 @@ Im Menü: W/S oder Pfeile hoch/runter wählen, A/D oder Pfeile links/rechts änd
 
 **Abwehr:** Solange du die Abwehr-Taste hältst, schützt dich eine Blase vor allen Treffern. Sie wird kleiner, je länger du sie hältst und je mehr Treffer sie abfängt. Zerbricht sie, bist du kurz betäubt.
 
+**Spezial aufladen:** Unter den Namen oben zeigt eine Leiste die Spezial-Energie. Sie füllt sich langsam mit der Zeit,
+schneller durch eigene Treffer und etwas durch Treffer, die man einsteckt. Erst bei voller Leiste (sie blinkt, über der Figur
+steht „Spezial bereit!“) geht die Spezialattacke, danach ist die Leiste wieder leer. In den Optionen lässt sich das ausschalten.
+
 **Spezialattacken:**
 - Feuerball (Magier, Skelett-Magier, Robo): fliegt geradeaus.
 - Sturmangriff (Schurke, Kapuzen-Schurke, Skelett-Schurke): schneller Stoß nach vorne.
 - Wirbel (Barbar, Skelett-Krieger): trifft vorne und hinten.
 - Aufwärtshieb (Ritter, Skelett-Diener): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
+
+## Map-Effekte
+
+- **Burg**: Kanonenkugeln fliegen quer über die Arena, mal auf Bodenhöhe, mal auf Höhe der Plattformen.
+  Ein blinkendes rotes Ausrufezeichen zeigt vorher, von welcher Seite.
+- **Dorf**: Windböen schieben alle Kämpfer für ein paar Sekunden zur Seite, in der Luft stärker als am Boden.
+  Pfeile kündigen die Richtung an.
+- **Friedhof**: weniger Schwerkraft, man springt höher und fliegt weiter. Leuchtende lila Kreise am Boden zeigen,
+  wo gleich ein Geist hochschießt und alle darüber nach oben schleudert.
+
+## Sound
+
+Jede Map und das Menü haben eigene Musik. Schläge, Treffer, Sprünge, Abwehr, Items und Map-Effekte haben Geräusche.
+Ein Ansager zählt „Drei, zwei, eins, Kampf!“ herunter und verkündet den Sieger, die Kämpfer rufen beim Zuschlagen und
+Getroffenwerden (Skelette tiefer, der Robo höher).
 
 ## Items
 

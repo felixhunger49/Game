@@ -1,15 +1,19 @@
 extends Node3D
 ## Der Kampf: lädt die gewählte Map, lässt die Spieler Kämpfer wählen und kämpfen,
-## lässt Items erscheinen und erkennt den Sieger.
+## lässt Items erscheinen, startet den Map-Effekt und erkennt den Sieger.
 
-enum State { SELECT, FIGHT, GAME_OVER }
+enum State { SELECT, COUNTDOWN, FIGHT, GAME_OVER }
 
-const CONTROLS_HINT := "Spieler 1: A/D laufen, W springen, S abwehren, F schwach, G stark, H Tritt, T Spezial\n" \
-	+ "Spieler 2: Pfeile laufen/springen, Pfeil runter abwehren, J schwach, K stark, L Tritt, I Spezial   |   Esc: Menü"
+const COUNTDOWN_STEPS := ["3", "2", "1", "KAMPF!"]
+const COUNTDOWN_VOICES := ["drei", "zwei", "eins", "kampf"]
 
 var state := State.SELECT
 var ready_flags := [false, false]
 var item_timer := 0.0
+var countdown_time := 0.0
+var countdown_step := -1
+var map_events: MapEvents
+var energy_bars: Array[ProgressBar] = []
 
 @onready var players: Array = [$Player1, $Player2]
 @onready var labels: Array = [$HUD/P1Label, $HUD/P2Label]
@@ -34,8 +38,10 @@ func _ready() -> void:
 		p.set_fighter(Settings.choices[i])
 		p.fell_off.connect(_on_player_fell_off)
 	center_label.text = "Wählt eure Kämpfer!\nLaufen-Tasten: wechseln   Schwacher Angriff: bereit"
-	bottom_label.text = CONTROLS_HINT
+	bottom_label.text = _controls_hint()
 	_reset_item_timer()
+	_create_energy_bars()
+	Audio.music(Settings.current_map().music)
 
 
 func _process(delta: float) -> void:
@@ -45,6 +51,8 @@ func _process(delta: float) -> void:
 	match state:
 		State.SELECT:
 			_handle_select()
+		State.COUNTDOWN:
+			_update_countdown(delta)
 		State.FIGHT:
 			_update_items(delta)
 		State.GAME_OVER:
@@ -67,21 +75,53 @@ func _handle_select() -> void:
 		if step != 0:
 			Settings.choices[i] = wrapi(Settings.choices[i] + step, 0, Roster.count())
 			players[i].set_fighter(Settings.choices[i])
+			Audio.sfx("menu_move")
 		if Input.is_action_just_pressed(prefix + "weak"):
 			ready_flags[i] = true
+			Audio.sfx("menu_select")
+			Audio.voice("ha", players[i].voice_pitch())
 	if ready_flags[0] and ready_flags[1]:
 		_start_fight()
 
 
+## Beide sind bereit: erst der Countdown "3, 2, 1, Kampf!", dann geht es los.
 func _start_fight() -> void:
 	Settings.save()
-	state = State.FIGHT
-	center_label.text = ""
+	state = State.COUNTDOWN
+	countdown_time = 0.0
+	countdown_step = -1
 	bottom_label.text = ""
+	for p in players:
+		# Kurz zur Seite drehen, damit man sieht, wer gegen wen kämpft.
+		p.facing = p.start_facing
+
+
+func _update_countdown(delta: float) -> void:
+	countdown_time += delta
+	var step := int(countdown_time / 0.8)
+	if step != countdown_step and step < COUNTDOWN_STEPS.size():
+		countdown_step = step
+		center_label.text = COUNTDOWN_STEPS[step]
+		center_label.add_theme_font_size_override("font_size", 110 if step < 3 else 90)
+		Audio.voice(COUNTDOWN_VOICES[step])
+		if step == COUNTDOWN_STEPS.size() - 1:
+			_begin_fight()
+
+
+func _begin_fight() -> void:
+	state = State.FIGHT
 	for p in players:
 		p.controls_enabled = true
 		# Der Bereit-Tastendruck soll nicht gleich als Schlag zählen.
 		p.attack_timer = 0.3
+	get_tree().create_timer(0.7).timeout.connect(func():
+		if state == State.FIGHT:
+			center_label.text = ""
+			center_label.remove_theme_font_size_override("font_size"))
+	if Settings.map_effects:
+		map_events = MapEvents.new()
+		add_child(map_events)
+		map_events.setup(Settings.current_map().event, players, bottom_label)
 
 
 func _update_items(delta: float) -> void:
@@ -112,6 +152,47 @@ func _update_hud() -> void:
 		else:
 			text = "Spieler %d: %s\n%d %%   %s" % [i + 1, text, p.damage, "●".repeat(p.stocks)]
 		labels[i].text = text
+		var bar := energy_bars[i]
+		bar.visible = Settings.special_charge and state != State.SELECT
+		bar.value = p.special_energy
+		# Volle Leiste blinkt: Spezialattacke bereit.
+		var full: bool = p.special_energy >= p.SPECIAL_MAX
+		bar.modulate = Color(1, 1, 1, 0.55 + 0.45 * absf(sin(Time.get_ticks_msec() * 0.008))) if full else Color.WHITE
+
+
+## Unter jedem Namen eine Leiste für die Spezial-Energie.
+func _create_energy_bars() -> void:
+	for i in players.size():
+		var bar := ProgressBar.new()
+		bar.max_value = players[i].SPECIAL_MAX
+		bar.show_percentage = false
+		bar.size = Vector2(300, 18)
+		bar.position = Vector2(24 if i == 0 else 1280 - 24 - 300, 108)
+		var bg := StyleBoxFlat.new()
+		bg.bg_color = Color(0, 0, 0, 0.55)
+		bg.set_corner_radius_all(6)
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = players[i].color
+		fill.set_corner_radius_all(6)
+		bar.add_theme_stylebox_override("background", bg)
+		bar.add_theme_stylebox_override("fill", fill)
+		if i == 1:
+			bar.fill_mode = ProgressBar.FILL_END_TO_BEGIN
+		labels[i].get_parent().add_child(bar)
+		energy_bars.append(bar)
+
+
+func _controls_hint() -> String:
+	var short := {"jump": "springen", "shield": "abwehren", "weak": "schwach", "strong": "stark",
+		"kick": "Tritt", "special": "Spezial"}
+	var lines := []
+	for p in [1, 2]:
+		var key := func(a: String) -> String: return Settings.key_text("p%d_%s" % [p, a])
+		var parts := ["%s/%s laufen" % [key.call("left"), key.call("right")]]
+		for a in short:
+			parts.append("%s %s" % [key.call(a), short[a]])
+		lines.append("Spieler %d: %s" % [p, ", ".join(parts)])
+	return "\n".join(lines) + "   |   Esc: Menü"
 
 
 ## Die Kamera folgt beiden Spielern und zoomt heraus, wenn sie weit auseinander sind.
@@ -139,6 +220,9 @@ func _on_player_fell_off(player: CharacterBody3D) -> void:
 	if player.stocks > 0 or state == State.GAME_OVER:
 		return
 	state = State.GAME_OVER
+	if map_events:
+		map_events.stop()
 	var winner: CharacterBody3D = player.opponent
 	winner.cheer()
+	Audio.voice("spieler_%d_gewinnt" % winner.player_id)
 	center_label.text = "Spieler %d gewinnt!\nR: nochmal   Esc: Menü" % winner.player_id
