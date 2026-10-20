@@ -1,0 +1,5 @@
+# Godot
+.godot/
+/android/
+*.import
+export_presets.cfg
