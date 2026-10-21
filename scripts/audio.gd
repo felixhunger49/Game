@@ -32,7 +32,7 @@ func sfx(sound: String, pitch := 1.0, volume_db := 0.0) -> void:
 	_play(SFX_DIR + sound + ".wav", pitch * randf_range(0.94, 1.06), volume_db)
 
 
-## Stimme (Ansager oder Kampfruf). pitch verändert die Stimmlage, z. B. für Skelette.
+## Stimme (Ansager oder Kampfruf). pitch verändert die Stimmlage, z. B. tiefer für den Barbar.
 func voice(line: String, pitch := 1.0, volume_db := 0.0) -> void:
 	_play(VOICE_DIR + line + ".wav", pitch, volume_db)
 

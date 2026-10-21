@@ -62,10 +62,10 @@ steht „Spezial bereit!“) geht die Spezialattacke, danach ist die Leiste wied
 Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtblitz und Schockwelle. Trifft eine, friert das Bild kurz ein, die Kamera wackelt und es knallt. Solange die Leiste voll ist, steigen Funken um die Figur auf.
 
 **Spezialattacken:**
-- Feuerball (Magier, Skelett-Magier, Robo): fliegt geradeaus.
-- Sturmangriff (Schurke, Kapuzen-Schurke, Skelett-Schurke): schneller Stoß nach vorne.
-- Wirbel (Barbar, Skelett-Krieger): trifft vorne und hinten.
-- Aufwärtshieb (Ritter, Skelett-Diener): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
+- Feuerball (Magier, Robo): fliegt geradeaus.
+- Sturmangriff (Schurke, Kapuzen-Schurke): schneller Stoß nach vorne.
+- Wirbel (Barbar): trifft vorne und hinten.
+- Aufwärtshieb (Ritter, Held): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
 
 ## Map-Effekte
 
@@ -88,7 +88,7 @@ Ausguck am Mast auf dem Piratenschiff, Spalte in der Eiswelt) und einen eigenen 
 
 Jede Map und das Menü haben eigene Musik. Schläge, Treffer, Sprünge, Abwehr, Items und Map-Effekte haben Geräusche.
 Ein Ansager zählt „Drei, zwei, eins, Kampf!“ herunter und verkündet den Sieger, die Kämpfer rufen beim Zuschlagen und
-Getroffenwerden (Skelette tiefer, der Robo höher).
+Getroffenwerden (der Barbar tiefer, der Robo höher).
 
 ## Items
 

@@ -63,27 +63,6 @@ const FIGHTERS := [
 		"weak": "Dualwield_Melee_Attack_Slice", "strong": "Dualwield_Melee_Attack_Chop",
 	},
 	{
-		"name": "Skelett-Krieger", "flip": "schraube", "voice": 0.7, "scene": KAYKIT_CHARS + "Skeleton_Warrior.glb",
-		"keep": ["Skeleton_Blade", "Skeleton_Shield_Small_A"],
-		"special": "wirbel", "weak": "1H_Melee_Attack_Slice_Diagonal", "strong": "1H_Melee_Attack_Chop",
-	},
-	{
-		"name": "Skelett-Magier", "flip": "schweben", "voice": 0.8, "scene": KAYKIT_CHARS + "Skeleton_Mage.glb",
-		"keep": ["Skeleton_Staff"],
-		"special": "feuerball", "weak": "1H_Melee_Attack_Stab", "strong": "2H_Melee_Attack_Chop",
-	},
-	{
-		"name": "Skelett-Schurke", "flip": "doppel_rueckwaerts", "voice": 0.75, "scene": KAYKIT_CHARS + "Skeleton_Rogue.glb",
-		"keep": ["Skeleton_Axe"],
-		"special": "sturm", "weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
-	},
-	{
-		"name": "Skelett-Diener", "flip": "purzeln", "voice": 0.9, "scene": KAYKIT_CHARS + "Skeleton_Minion.glb",
-		"keep": ["Skeleton_Blade"],
-		"special": "aufwaerts", "weak": "1H_Melee_Attack_Stab", "strong": "1H_Melee_Attack_Slice_Diagonal",
-		"anim_overrides": {"aufwaerts": "1H_Melee_Attack_Jump_Chop"},
-	},
-	{
 		"name": "Robo", "flip": "propeller", "voice": 1.5, "scene": "res://assets/kenney/character.glb", "special": "feuerball",
 		"anims": {"idle": "idle", "run": "walk", "jump": "jump"},
 	},

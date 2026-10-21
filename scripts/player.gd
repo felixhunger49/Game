@@ -368,7 +368,7 @@ func special_ready() -> bool:
 	return not Settings.special_charge or special_energy >= SPECIAL_MAX
 
 
-## Stimmlage der Figur (aus dem Roster), damit Skelette tiefer und der Robo höher klingen.
+## Stimmlage der Figur (aus dem Roster), damit z. B. der Barbar tiefer und der Robo höher klingt.
 func voice_pitch() -> float:
 	return fighter.get("voice", 1.0)
 
