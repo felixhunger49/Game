@@ -38,7 +38,7 @@ ambient_light_source = 2
 ambient_light_color = Color(0.75, 0.6, 0.55, 1)
 ambient_light_energy = 0.5
 tonemap_mode = 2
-tonemap_exposure = 1.0
+tonemap_exposure = 0.85
 
 [sub_resource type="BoxShape3D" id="StageShape"]
 size = Vector3(16, 2.2, 4)
@@ -75,7 +75,7 @@ environment = SubResource("Env")
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.766, 0, 0.6428, 0.2717, 0.9063, -0.3237, -0.5826, 0.4226, 0.6943, 0, 10, 0)
 light_color = Color(1, 0.78, 0.55, 1)
-light_energy = 1.0
+light_energy = 0.85
 shadow_enabled = true
 
 [node name="Spawn1" type="Marker3D" parent="."]

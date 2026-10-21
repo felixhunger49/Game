@@ -30,7 +30,7 @@ func _ready() -> void:
 	fx.flock(Vector3(0, 9.0, -5.0), 5, Color(0.55, 0.55, 0.6), Vector3(9, 0.8, 3), 0.3, 0.35)
 	MapLook.particles(self, Vector3(0, 3.5, -1.2), Vector3(7, 0.3, 0.3), Color(1, 0.6, 0.2, 0.9), 20,
 		Vector3(0, 0.9, 0), 0.05, 2.0)
-	MapFX.mood(self, Color(0.95, 0.65, 0.45), 0.006, 0.45, 1.12, 1.05)
+	MapFX.mood(self, Color(0.95, 0.65, 0.45), 0.004, 0.2, 1.08, 1.1, 0.82)
 
 	# Vordergrund: Holzbalken in den oberen Ecken.
 	var fg := MapFX.foreground(self)
