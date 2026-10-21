@@ -10,6 +10,9 @@ class_name Roster
 ## anim_overrides: einzelne Animationen, die von den Standard-Animationen abweichen
 ## attach_from: Waffen aus einem anderen Modell an Knochen hängen: {Knochen: [Modell, Knotenname]}
 ## anim_dir: Ordner mit einer Animationsdatei pro Aktion (idle.fbx, run.fbx, weak.fbx, special.fbx …)
+## anim_files: andere Datei für eine Aktion als <aktion>.fbx: {Aktion: Dateiname}
+## anim_speeds: Abspielgeschwindigkeit je Aktion statt der Standardwerte aus Player.ATTACKS
+## anim_trim: Animationen aus "anim_dir" zuschneiden: {Aktion: [von, bis]} in Sekunden
 ## scale:    Größe des Modells (Standard 0.8)
 ## rotation_y: Drehung des Modells in Grad, falls es nicht nach vorne schaut
 ## voice:    Stimmlage der Kampfrufe (1 = normal, kleiner = tiefer)
@@ -88,8 +91,11 @@ const FIGHTERS := [
 		# Eigene Figur: mit Flux + Trellis erzeugt, Skelett und Animationen von Mixamo.
 		"name": "Held", "flip": "salto", "voice": 1.0, "scene": "res://assets/ritter_neu/idle.fbx",
 		"anim_dir": "res://assets/ritter_neu/", "scale": 195.0, "special": "aufwaerts",
+		# Nur der eigentliche Angriff, ohne langes Ausholen und Zurückgehen.
+		"anim_speeds": {"weak": 1.4, "strong": 1.0, "kick": 1.2},
+		"anim_trim": {"weak": [0.25, 1.00], "strong": [0.15, 1.25], "kick": [0.30, 1.00], "special": [0.40, 1.30]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Knight.glb", "1H_Sword", Vector3(0, 0, -90)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Knight.glb", "1H_Sword", Vector3(0, -90, -90)],
 			"mixamorig_LeftHand": [KAYKIT_CHARS + "Knight.glb", "Badge_Shield", Vector3(-90, 0, 135)],
 		},
 	},

@@ -573,7 +573,7 @@ func _load_anim_files() -> void:
 	var lib := AnimationLibrary.new()
 	for action in ["idle", "run", "jump", "fall", "weak", "strong", "kick", "special", "shield",
 			"hit", "stunned", "dodge", "cheer"]:
-		var path: String = dir + action + ".fbx"
+		var path: String = dir + fighter.get("anim_files", {}).get(action, action + ".fbx")
 		if not ResourceLoader.exists(path):
 			continue
 		var scene: Node = load(path).instantiate()
@@ -581,6 +581,9 @@ func _load_anim_files() -> void:
 		if source and not source.get_animation_list().is_empty():
 			var anim: Animation = source.get_animation(source.get_animation_list()[0]).duplicate()
 			_strip_root_motion(anim)
+			var trim: Array = fighter.get("anim_trim", {}).get(action, [])
+			if trim.size() == 2:
+				anim = _trim_animation(anim, trim[0], trim[1])
 			lib.add_animation(action, anim)
 		scene.free()
 	if anim_player.has_animation_library(Roster.ANIM_LIB):
@@ -596,6 +599,34 @@ func _strip_root_motion(anim: Animation) -> void:
 		for k in anim.track_get_key_count(t):
 			var p: Vector3 = anim.track_get_key_value(t, k)
 			anim.track_set_key_value(t, k, Vector3(start.x, p.y, start.z))
+
+
+## Schneidet eine Animation auf den Bereich von `from` bis `to` Sekunden zu
+## (z. B. nur der eigentliche Schlag ohne langes Ausholen).
+func _trim_animation(anim: Animation, from: float, to: float) -> Animation:
+	var out := Animation.new()
+	out.length = to - from
+	for t in anim.get_track_count():
+		var type := anim.track_get_type(t)
+		if type not in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D, Animation.TYPE_SCALE_3D]:
+			continue
+		var nt := out.add_track(type)
+		out.track_set_path(nt, anim.track_get_path(t))
+		out.track_set_interpolation_type(nt, anim.track_get_interpolation_type(t))
+		var times: Array[float] = [from]
+		for k in anim.track_get_key_count(t):
+			var key_time := anim.track_get_key_time(t, k)
+			if key_time > from and key_time < to:
+				times.append(key_time)
+		times.append(to)
+		for time in times:
+			var value: Variant
+			match type:
+				Animation.TYPE_POSITION_3D: value = anim.position_track_interpolate(t, time)
+				Animation.TYPE_ROTATION_3D: value = anim.rotation_track_interpolate(t, time)
+				_: value = anim.scale_track_interpolate(t, time)
+			out.track_insert_key(nt, time - from, value)
+	return out
 
 
 func _has_anim(action: String) -> bool:
@@ -615,6 +646,8 @@ func _play(action: String, speed_scale := 1.0) -> void:
 	if anim_player == null:
 		return
 	var is_attack := action in ["weak", "strong", "kick", "special"]
+	# Eigene Abspielgeschwindigkeit der Figur (z. B. für zugeschnittene Mixamo-Schläge).
+	speed_scale = fighter.get("anim_speeds", {}).get(action, speed_scale)
 	var anim_name := Roster.anim_name(fighter, action)
 	if anim_name == "" or not anim_player.has_animation(anim_name):
 		# Der Robo hat keine Schlag-Animationen: dann kurz nach vorne stoßen.
