@@ -16,7 +16,7 @@ Wie bei Super Smash Bros. sind Figuren und Arenen 3D-Modelle, gekämpft wird abe
 ## Menü
 
 - **Kampf starten**: Danach wählt jeder Spieler mit seinen Laufen-Tasten einen Kämpfer und drückt den schwachen Angriff, wenn er bereit ist.
-- **Map**: Burg, Dorf oder Friedhof. Jede Map hat ihren eigenen Effekt (siehe unten).
+- **Map**: Burg, Dorf, Friedhof, Vulkan, Piratenschiff, Eiswelt oder Wolkentempel. Jede Map hat ihren eigenen Effekt (siehe unten).
 - **Optionen**: Items an oder aus, wie oft Items erscheinen (selten, normal, oft), die Anzahl der Leben,
   Map-Effekte an oder aus, Spezial aufladen an oder aus, Lautstärke von Musik und Geräuschen.
 - **Steuerung anpassen**: jede Taste beider Spieler neu belegen (Tastatur oder Gamepad). Ist die neue Taste
@@ -75,6 +75,10 @@ Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtbli
   Pfeile kündigen die Richtung an.
 - **Friedhof**: weniger Schwerkraft, man springt höher und fliegt weiter. Leuchtende lila Kreise am Boden zeigen,
   wo gleich ein Geist hochschießt und alle darüber nach oben schleudert.
+- **Vulkan**: Lavafontänen schießen an glühenden orangen Kreisen aus dem Boden und schleudern alle darüber nach oben.
+- **Piratenschiff**: Seegang. Das Schiff schaukelt, und Wellen schieben alle Kämpfer für ein paar Sekunden zur Seite.
+- **Eiswelt**: spiegelglatter Boden, man rutscht beim Laufen und Bremsen. Eiszapfen fallen auf die blauen Kreise.
+- **Wolkentempel**: Blitze schlagen an gelben Kreisen ein und schleudern alle in der Nähe weg.
 
 ## Sound
 

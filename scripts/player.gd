@@ -98,6 +98,8 @@ var speed_time := 0.0
 var special_energy := 0.0
 ## Windgeschwindigkeit der Map (Dorf): schiebt die Figur zur Seite.
 var wind_speed := 0.0
+## Wie gut man am Boden Halt findet (1 = normal, weniger = glatt wie Eis).
+var ground_grip := 1.0
 var spawn_position := Vector3.ZERO
 var anim_player: AnimationPlayer
 var current_anim := ""
@@ -212,7 +214,7 @@ func _physics_process(delta: float) -> void:
 	elif can_act and not shielding:
 		_handle_input(delta)
 	else:
-		velocity.x = move_toward(velocity.x, wind_speed * 0.5, 60.0 * delta)
+		velocity.x = move_toward(velocity.x, wind_speed * 0.5, 60.0 * (ground_grip if is_on_floor() else 1.0) * delta)
 		if shielding and Input.is_action_just_pressed(_action("jump")):
 			velocity.y = jump_velocity
 			jumps_left -= 1
@@ -243,7 +245,7 @@ func _physics_process(delta: float) -> void:
 func _handle_input(delta: float) -> void:
 	var direction := Input.get_axis(_action("left"), _action("right"))
 	var top_speed := speed * (1.4 if speed_time > 0.0 else 1.0)
-	var accel := 60.0 if is_on_floor() else 28.0
+	var accel := 60.0 * ground_grip if is_on_floor() else 28.0
 	if attack_timer > 0.0 and is_on_floor():
 		# Beim Zuschlagen bleibt man fast stehen.
 		direction = 0.0

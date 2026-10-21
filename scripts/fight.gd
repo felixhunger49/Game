@@ -26,6 +26,9 @@ func _ready() -> void:
 	var map: Node3D = load(Settings.current_map().scene).instantiate()
 	add_child(map)
 	move_child(map, 0)
+	# Gemaltes Hintergrundbild für Maps aus fertigen Szenen (die neuen Maps bauen ihres selbst ein).
+	if Settings.current_map().has("backdrop"):
+		MapLook.backdrop(map, Settings.current_map().backdrop)
 
 	players[0].opponent = players[1]
 	players[1].opponent = players[0]

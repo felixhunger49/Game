@@ -3,14 +3,26 @@ extends Node
 
 const SAVE_PATH := "user://settings.cfg"
 
-## event: der Map-Effekt (siehe MapEvents), effect: Beschreibung im Menü.
+## event: der Map-Effekt (siehe MapEvents), effect: Beschreibung im Menü,
+## backdrop: gemaltes Hintergrundbild weit hinter der Arena (optional).
 const MAPS := [
 	{"name": "Burg", "scene": "res://scenes/maps/burg.tscn", "music": "burg", "event": "kanonen",
+		"backdrop": "res://assets/maps/burg/hintergrund.png",
 		"effect": "Kanonenkugeln fliegen quer durch die Burg.\nAchte auf das rote Ausrufezeichen!"},
 	{"name": "Dorf", "scene": "res://scenes/maps/dorf.tscn", "music": "dorf", "event": "wind",
+		"backdrop": "res://assets/maps/dorf/hintergrund.png",
 		"effect": "Windböen schieben alle Kämpfer zur Seite.\nDie Pfeile zeigen die Richtung."},
 	{"name": "Friedhof", "scene": "res://scenes/maps/friedhof.tscn", "music": "friedhof", "event": "geister",
+		"backdrop": "res://assets/maps/friedhof/hintergrund.png",
 		"effect": "Weniger Schwerkraft: man springt höher.\nGeister schießen aus leuchtenden Stellen hoch."},
+	{"name": "Vulkan", "scene": "res://scenes/maps/vulkan.tscn", "music": "burg", "event": "lava",
+		"effect": "Lavafontänen schießen aus dem Boden.\nWeg von den glühenden Stellen!"},
+	{"name": "Piratenschiff", "scene": "res://scenes/maps/piratenschiff.tscn", "music": "dorf", "event": "wellen",
+		"effect": "Seegang: Das Schiff schaukelt und Wellen\nschieben alle zur Seite."},
+	{"name": "Eiswelt", "scene": "res://scenes/maps/eiswelt.tscn", "music": "friedhof", "event": "eis",
+		"effect": "Spiegelglatter Boden: man rutscht!\nEiszapfen fallen auf die blauen Stellen."},
+	{"name": "Wolkentempel", "scene": "res://scenes/maps/wolkentempel.tscn", "music": "dorf", "event": "blitze",
+		"effect": "Blitze schlagen ein.\nGelbe Kreise zeigen, wo es gleich kracht."},
 ]
 const ITEM_RATES := ["Selten", "Normal", "Oft"]
 ## Sekunden zwischen zwei Items je Häufigkeit (zufällig zwischen den beiden Werten).
