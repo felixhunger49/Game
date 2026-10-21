@@ -1,5 +1,6 @@
 [gd_scene load_steps=43 format=3]
 
+[ext_resource type="Script" path="res://scripts/maps/friedhof.gd" id="layout_script"]
 [ext_resource type="PackedScene" path="res://assets/maps/friedhof/floor_dirt.gltf" id="1_res"]
 [ext_resource type="PackedScene" path="res://assets/maps/friedhof/floor_dirt_grave.gltf" id="2_res"]
 [ext_resource type="PackedScene" path="res://assets/maps/friedhof/candle_triple.gltf" id="3_res"]
@@ -99,6 +100,7 @@ height = 12.0
 material = SubResource("Moon")
 
 [node name="Map" type="Node3D"]
+script = ExtResource("layout_script")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env")

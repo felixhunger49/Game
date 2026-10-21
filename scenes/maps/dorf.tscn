@@ -1,5 +1,6 @@
 [gd_scene load_steps=36 format=3]
 
+[ext_resource type="Script" path="res://scripts/maps/dorf.gd" id="layout_script"]
 [ext_resource type="PackedScene" path="res://assets/maps/dorf/hex_grass.gltf" id="1_res"]
 [ext_resource type="PackedScene" path="res://assets/maps/dorf/mountain_B_grass.gltf" id="2_res"]
 [ext_resource type="PackedScene" path="res://assets/maps/dorf/tree_single_A.gltf" id="3_res"]
@@ -24,8 +25,6 @@
 [ext_resource type="PackedScene" path="res://assets/maps/dorf/trees_A_large.gltf" id="22_res"]
 [ext_resource type="PackedScene" path="res://assets/maps/dorf/trees_B_medium.gltf" id="23_res"]
 [ext_resource type="PackedScene" path="res://assets/maps/dorf/mountain_A_grass_trees.gltf" id="24_res"]
-[ext_resource type="PackedScene" path="res://assets/maps/dorf/cloud_big.gltf" id="25_res"]
-[ext_resource type="PackedScene" path="res://assets/maps/dorf/cloud_small.gltf" id="26_res"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.3, 0.55, 0.95, 1)
@@ -68,6 +67,7 @@ size = Vector3(260, 1, 160)
 material = SubResource("Valley")
 
 [node name="Map" type="Node3D"]
+script = ExtResource("layout_script")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env")
@@ -365,17 +365,3 @@ transform = Transform3D(-5.113, 0, 13.03, 0, 14, 0, -13.03, 0, -5.113, 20, -12, 
 [node name="mountain_A_grass_trees4" parent="Background" instance=ExtResource("24_res")]
 transform = Transform3D(-11.94, 0, 1.166, 0, 12, 0, -1.166, 0, -11.94, 65, -12, -135)
 
-[node name="cloud_big" parent="Background" instance=ExtResource("25_res")]
-transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, -18, 10, -30)
-
-[node name="cloud_small" parent="Background" instance=ExtResource("26_res")]
-transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, -4, 14, -45)
-
-[node name="cloud_small2" parent="Background" instance=ExtResource("26_res")]
-transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 14, 9, -28)
-
-[node name="cloud_small3" parent="Background" instance=ExtResource("26_res")]
-transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 28, 15, -50)
-
-[node name="cloud_small4" parent="Background" instance=ExtResource("26_res")]
-transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, -34, 13, -48)

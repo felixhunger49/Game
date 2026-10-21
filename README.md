@@ -69,6 +69,10 @@ Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtbli
 
 ## Map-Effekte
 
+Jede Map hat ihren eigenen Aufbau (z. B. Wehrturm in der Burg, Marktstand im Dorf, Gruft und Baum auf dem Friedhof,
+Ausguck am Mast auf dem Piratenschiff, Spalte in der Eiswelt) und einen eigenen Effekt:
+
+
 - **Burg**: Kanonenkugeln fliegen quer über die Arena, mal auf Bodenhöhe, mal auf Höhe der Plattformen.
   Ein blinkendes rotes Ausrufezeichen zeigt vorher, von welcher Seite.
 - **Dorf**: Windböen schieben alle Kämpfer für ein paar Sekunden zur Seite, in der Luft stärker als am Boden.

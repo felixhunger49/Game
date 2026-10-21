@@ -1,5 +1,6 @@
 [gd_scene load_steps=31 format=3]
 
+[ext_resource type="Script" path="res://scripts/maps/burg.gd" id="layout_script"]
 [ext_resource type="PackedScene" path="res://assets/maps/burg/floor_tile_large.glb" id="1_res"]
 [ext_resource type="PackedScene" path="res://assets/maps/burg/floor_foundation_front.glb" id="2_res"]
 [ext_resource type="PackedScene" path="res://assets/maps/burg/floor_wood_large.glb" id="3_res"]
@@ -66,6 +67,7 @@ size = Vector3(3.3, 0.25, 0.25)
 material = SubResource("Wood")
 
 [node name="Map" type="Node3D"]
+script = ExtResource("layout_script")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env")
