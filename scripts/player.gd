@@ -155,10 +155,14 @@ func set_fighter(index: int) -> void:
 	_setup_weapons(model)
 	_setup_cloth(model)
 	model.scale = Vector3.ONE * fighter.get("scale", 0.8)
+	model.rotation_degrees.y = fighter.get("rotation_y", 0.0)
 
 	anim_player = model.find_child("AnimationPlayer", true, false)
+	_load_anim_files()
 	if anim_player:
-		for action in ["idle", "run", "jump", "shield", "stunned"]:
+		for action in ["idle", "run", "jump", "fall", "shield", "stunned"]:
+			if action == "jump" and fighter.has("anim_dir"):
+				continue  # Mixamo-Sprung ist ein einmaliger Absprung, danach kommt "fall"
 			var anim_name := Roster.anim_name(fighter, action)
 			if anim_player.has_animation(anim_name):
 				anim_player.get_animation(anim_name).loop_mode = Animation.LOOP_LINEAR
@@ -560,9 +564,47 @@ func _update_visuals(delta: float) -> void:
 		_play_movement()
 
 
+## Lädt bei Figuren mit "anim_dir" jede Aktion aus einer eigenen Datei (z. B. von Mixamo) in eine
+## Animations-Bibliothek. Die Vorwärtsbewegung der Hüfte wird entfernt, damit nur das Spiel die Figur bewegt.
+func _load_anim_files() -> void:
+	var dir: String = fighter.get("anim_dir", "")
+	if dir == "" or anim_player == null:
+		return
+	var lib := AnimationLibrary.new()
+	for action in ["idle", "run", "jump", "fall", "weak", "strong", "kick", "special", "shield",
+			"hit", "stunned", "dodge", "cheer"]:
+		var path: String = dir + action + ".fbx"
+		if not ResourceLoader.exists(path):
+			continue
+		var scene: Node = load(path).instantiate()
+		var source: AnimationPlayer = scene.find_child("AnimationPlayer", true, false)
+		if source and not source.get_animation_list().is_empty():
+			var anim: Animation = source.get_animation(source.get_animation_list()[0]).duplicate()
+			_strip_root_motion(anim)
+			lib.add_animation(action, anim)
+		scene.free()
+	if anim_player.has_animation_library(Roster.ANIM_LIB):
+		anim_player.remove_animation_library(Roster.ANIM_LIB)
+	anim_player.add_animation_library(Roster.ANIM_LIB, lib)
+
+
+func _strip_root_motion(anim: Animation) -> void:
+	for t in anim.get_track_count():
+		if anim.track_get_type(t) != Animation.TYPE_POSITION_3D or not str(anim.track_get_path(t)).ends_with("Hips"):
+			continue
+		var start: Vector3 = anim.track_get_key_value(t, 0)
+		for k in anim.track_get_key_count(t):
+			var p: Vector3 = anim.track_get_key_value(t, k)
+			anim.track_set_key_value(t, k, Vector3(start.x, p.y, start.z))
+
+
+func _has_anim(action: String) -> bool:
+	return anim_player != null and anim_player.has_animation(Roster.anim_name(fighter, action))
+
+
 func _play_movement() -> void:
 	if not is_on_floor():
-		_play("jump")
+		_play("fall" if velocity.y < 0.0 and _has_anim("fall") else "jump")
 	elif absf(velocity.x) > 0.5:
 		_play("run")
 	else:
@@ -713,11 +755,33 @@ func _setup_weapons(model: Node3D) -> void:
 		if node.get_parent() is BoneAttachment3D:
 			node.visible = node.name in keep
 
-	var attach: Dictionary = fighter.get("attach", {})
-	if attach.is_empty():
-		return
 	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false)
 	if skeleton == null:
+		return
+	# Waffen aus einem anderen Modell (z. B. Schwert und Schild des KayKit-Ritters) an Knochen hängen.
+	var attach_from: Dictionary = fighter.get("attach_from", {})
+	for bone_name in attach_from:
+		if skeleton.find_bone(bone_name) == -1:
+			continue
+		var source: Node = load(attach_from[bone_name][0]).instantiate()
+		var weapon: Node3D = source.find_child(attach_from[bone_name][1], true, false)
+		if weapon:
+			weapon = weapon.duplicate()
+			var slot := BoneAttachment3D.new()
+			slot.bone_name = bone_name
+			skeleton.add_child(slot)
+			slot.add_child(weapon)
+			# Optional: [Modell, Knoten, Drehung in Grad, Versatz]. Größe wie beim KayKit-Ritter (Skala 0.8).
+			var entry: Array = attach_from[bone_name]
+			var rot: Vector3 = entry[2] if entry.size() > 2 else Vector3.ZERO
+			var offset: Vector3 = entry[3] if entry.size() > 3 else Vector3.ZERO
+			var s: float = 0.8 / fighter.get("scale", 0.8)
+			weapon.transform = Transform3D(Basis.from_euler(rot * PI / 180.0).scaled(Vector3.ONE * s), offset * s)
+			weapon.visible = true
+		source.free()
+
+	var attach: Dictionary = fighter.get("attach", {})
+	if attach.is_empty():
 		return
 	for bone_name in attach:
 		if skeleton.find_bone(bone_name) == -1:
