@@ -36,3 +36,19 @@ func _ready() -> void:
 	MapLook.box(self, Vector3(2.2, 0.16, 1.0), branch + Vector3(0, 0.06, 0), bark)
 	MapLook.cylinder(self, 0.08, 1.4, Vector3(6.6, 6.2, -1.0), bark, 0.02, Vector3(0, 0, 35), 6)
 	MapLook.cylinder(self, 0.08, 1.2, Vector3(7.3, 6.0, -1.0), bark, 0.02, Vector3(0, 0, -30), 6)
+
+	# Stimmung: lila Nebel, flackernde Kerzen, Fledermäuse, Glühwürmchen.
+	var fx := MapFX.attach(self)
+	fx.flicker_all($Lights, 0.35)
+	fx.flicker_all(self, 0.2)
+	fx.flock(Vector3(2.0, 7.0, -4.0), 6, Color(0.08, 0.06, 0.1), Vector3(8, 1.2, 3), 0.55, 0.35, true)
+	MapLook.particles(self, Vector3(0, 1.5, 0.5), Vector3(8, 1.2, 1.5), Color(0.75, 1.0, 0.4, 1.0), 25,
+		Vector3(0, 0.2, 0), 0.06, 5.0)
+	MapFX.mood(self, Color(0.3, 0.18, 0.45), 0.02, 0.8, 1.1, 1.08)
+
+	# Vordergrund: kahle Äste in den oberen Ecken.
+	var fg := MapFX.foreground(self)
+	var dark := MapLook.mat(Color(0.06, 0.05, 0.08))
+	for side in [-1, 1]:
+		MapLook.cylinder(fg, 0.04, 1.6, Vector3(side * 1.94, 1.08, -3.0), dark, 0.015, Vector3(0, 0, side * 65.0), 5)
+		MapLook.cylinder(fg, 0.025, 0.7, Vector3(side * 1.54, 0.95, -3.0), dark, 0.01, Vector3(0, 0, -side * 20.0), 5)

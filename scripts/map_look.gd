@@ -81,6 +81,29 @@ static func light(parent: Node, pos: Vector3, color: Color, energy := 1.5, reach
 	return l
 
 
+## 3D-Modell (z. B. mit Flux + Trellis erzeugt) laden, auf `height` skalieren und mit der Unterkante
+## auf `pos` stellen. Fehlt die Datei, passiert nichts.
+static func prop(parent: Node, path: String, pos: Vector3, height: float, rot_y_deg := 0.0) -> Node3D:
+	if not ResourceLoader.exists(path):
+		return null
+	var model: Node3D = load(path).instantiate()
+	var bounds := AABB()
+	var first := true
+	for m in model.find_children("*", "MeshInstance3D", true, false):
+		var box: AABB = m.transform * m.get_aabb()
+		bounds = box if first else bounds.merge(box)
+		first = false
+	var s := height / maxf(bounds.size.y, 0.001)
+	var holder := Node3D.new()
+	holder.position = pos
+	holder.rotation_degrees.y = rot_y_deg
+	parent.add_child(holder)
+	holder.add_child(model)
+	model.scale = Vector3.ONE * s
+	model.position = -Vector3(bounds.get_center().x, bounds.position.y, bounds.get_center().z) * s
+	return holder
+
+
 ## Großes, unbeleuchtetes Hintergrundbild weit hinter der Arena (falls die Datei existiert).
 static func backdrop(parent: Node, texture_path: String, z := -60.0, width := 150.0, y := 12.0) -> MeshInstance3D:
 	if not ResourceLoader.exists(texture_path):
@@ -92,6 +115,7 @@ static func backdrop(parent: Node, texture_path: String, z := -60.0, width := 15
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_texture = tex
 	m.disable_receive_shadows = true
+	m.disable_fog = true
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
 	node.material_override = m

@@ -29,6 +29,7 @@ func _ready() -> void:
 	# Gemaltes Hintergrundbild für Maps aus fertigen Szenen (die neuen Maps bauen ihres selbst ein).
 	if Settings.current_map().has("backdrop"):
 		MapLook.backdrop(map, Settings.current_map().backdrop)
+	_add_vignette()
 
 	players[0].opponent = players[1]
 	players[1].opponent = players[0]
@@ -199,6 +200,20 @@ func _controls_hint() -> String:
 
 
 ## Die Kamera folgt beiden Spielern und zoomt heraus, wenn sie weit auseinander sind.
+## Dunkelt die Bildränder leicht ab (unter der Anzeige oben).
+func _add_vignette() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 0
+	var rect := ColorRect.new()
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := ShaderMaterial.new()
+	mat.shader = preload("res://scripts/vignette.gdshader")
+	rect.material = mat
+	layer.add_child(rect)
+	add_child(layer)
+
+
 func _update_camera(delta: float) -> void:
 	var visible_players := players.filter(func(p): return p.visible)
 	if visible_players.is_empty():

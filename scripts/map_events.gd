@@ -318,7 +318,11 @@ func _update_strike(e: Dictionary, delta: float) -> void:
 	match kind:
 		"lava":
 			# Die Fontäne schießt hoch und wird dabei breiter.
-			node.scale = Vector3(1.0 + e.time, minf(e.time * 6.0, 1.0), 1.0 + e.time)
+			var grow := minf(e.time * 7.0, 1.0)
+			var fade := clampf((1.0 - e.time) * 2.5, 0.0, 1.0)
+			var column: Node3D = node.get_node("Body")
+			column.scale = Vector3((fade + 0.2) * (1.0 + 0.15 * sin(e.time * 30.0)), grow, fade + 0.2)
+			column.position.y = 3.0 * grow
 			atk = LAVA_ATTACK
 			hit_zone = e.time < 0.5
 		"eis":
@@ -357,19 +361,28 @@ func _strike_node(x: float) -> Node3D:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	var body := MeshInstance3D.new()
+	body.name = "Body"
 	var light := OmniLight3D.new()
 	light.omni_range = 5.0
 	light.light_energy = 3.0
 	match kind:
 		"lava":
+			# Säule aus fließender Lava, dazu spritzende Lavabrocken, Spritzer am Boden und Rauch.
 			var column := CylinderMesh.new()
-			column.top_radius = 0.9
-			column.bottom_radius = 0.6
-			column.height = 7.0
+			column.top_radius = 0.7
+			column.bottom_radius = 0.45
+			column.height = 6.0
+			column.radial_segments = 16
 			body.mesh = column
-			body.position.y = 3.5
-			mat.albedo_color = Color(1.0, 0.45, 0.05, 0.85)
+			body.position.y = 3.0
+			var lava := MapFX.lava_material(MapFX.tex("lava"), 4.0)
+			lava.set_shader_parameter("vertical", true)
+			lava.set_shader_parameter("tiling", 0.6)
+			body.material_override = lava
+			root.add_child(_lava_burst())
 			light.light_color = Color(1, 0.45, 0.1)
+			light.light_energy = 5.0
+			light.omni_range = 7.0
 		"eis":
 			var cone := CylinderMesh.new()
 			cone.top_radius = 0.45
@@ -392,11 +405,81 @@ func _strike_node(x: float) -> Node3D:
 			light.light_color = Color(1, 1, 0.7)
 			light.light_energy = 6.0
 			light.omni_range = 9.0
-	body.material_override = mat
+	if body.material_override == null:
+		body.material_override = mat
 	root.add_child(body)
 	light.position.y = 1.0
 	root.add_child(light)
 	add_child(root)
+	return root
+
+
+## Lavabrocken, die hochspritzen und im Bogen zurückfallen, ein Spritzring am Boden und Rauch.
+func _lava_burst() -> Node3D:
+	var root := Node3D.new()
+	var blob_mat := StandardMaterial3D.new()
+	blob_mat.albedo_color = Color(1.0, 0.45, 0.05)
+	blob_mat.emission_enabled = true
+	blob_mat.emission = Color(1.0, 0.5, 0.1)
+	blob_mat.emission_energy_multiplier = 4.0
+	var blob := SphereMesh.new()
+	blob.radius = 0.16
+	blob.height = 0.32
+	blob.material = blob_mat
+	var blobs := CPUParticles3D.new()
+	blobs.mesh = blob
+	blobs.amount = 45
+	blobs.lifetime = 1.3
+	blobs.explosiveness = 0.35
+	blobs.direction = Vector3.UP
+	blobs.spread = 22.0
+	blobs.initial_velocity_min = 9.0
+	blobs.initial_velocity_max = 15.0
+	blobs.gravity = Vector3(0, -22.0, 0)
+	blobs.scale_amount_min = 0.5
+	blobs.scale_amount_max = 1.4
+	blobs.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	blobs.emission_sphere_radius = 0.4
+	root.add_child(blobs)
+	var splash := blobs.duplicate() as CPUParticles3D
+	splash.amount = 30
+	splash.lifetime = 0.6
+	splash.spread = 80.0
+	splash.initial_velocity_min = 3.0
+	splash.initial_velocity_max = 6.0
+	splash.scale_amount_max = 0.8
+	root.add_child(splash)
+	var smoke_mat := StandardMaterial3D.new()
+	smoke_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	smoke_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	smoke_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	smoke_mat.albedo_color = Color(0.25, 0.22, 0.2, 0.6)
+	# Weiche, runde Rauchwolke statt eines Quadrats.
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(1, 1, 1, 1))
+	gradient.set_color(1, Color(1, 1, 1, 0))
+	var soft := GradientTexture2D.new()
+	soft.gradient = gradient
+	soft.fill = GradientTexture2D.FILL_RADIAL
+	soft.fill_from = Vector2(0.5, 0.5)
+	soft.fill_to = Vector2(0.5, 0.0)
+	smoke_mat.albedo_texture = soft
+	var puff := QuadMesh.new()
+	puff.size = Vector2(1.2, 1.2)
+	puff.material = smoke_mat
+	var smoke := CPUParticles3D.new()
+	smoke.mesh = puff
+	smoke.amount = 14
+	smoke.lifetime = 1.5
+	smoke.position.y = 5.5
+	smoke.direction = Vector3.UP
+	smoke.spread = 30.0
+	smoke.initial_velocity_min = 1.5
+	smoke.initial_velocity_max = 3.0
+	smoke.gravity = Vector3.ZERO
+	smoke.scale_amount_min = 0.8
+	smoke.scale_amount_max = 1.8
+	root.add_child(smoke)
 	return root
 
 
