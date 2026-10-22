@@ -77,7 +77,7 @@ Jeder Kämpfer hat zusätzlich eine passive Fähigkeit, die immer wirkt:
 
 | Kämpfer | Spezial | Passiv |
 |---|---|---|
-| Ritter | Himmelshieb | Standhaft: wird 25 % weniger weit geschleudert |
+| Ritter | Himmelshieb | Schildmeister: Schild hält doppelt so lange; nach einem abgewehrten Treffer macht sein nächster Angriff (innerhalb 1,5 s) 60 % mehr Schaden |
 | Barbar | Wirbel | Berserker: je mehr Schaden er hat, desto härter schlägt er (bis +40 %) |
 | Magier | Feuerball | Arkane Quelle: Spezial lädt 60 % schneller |
 | Schurke | Sturmangriff | Kritisch: 25 % Chance auf doppelten Schaden |
@@ -85,7 +85,7 @@ Jeder Kämpfer hat zusätzlich eine passive Fähigkeit, die immer wirkt:
 | Robo | Feuerball | Panzerung: nimmt 20 % weniger Schaden, etwas langsamer |
 | Held | Himmelshieb | Heldenmut: ab 80 % Schaden 30 % stärker |
 | Paladin | Lichtschild | Heilung: heilt sich langsam, wenn er 3 Sekunden nicht getroffen wird |
-| Brummbart | Erdbeben | Schwergewicht: kaum wegzuschleudern, trotzt dem Wind, springt etwas niedriger |
+| Brummbart | Erdbeben | Schwergewicht: wird 25 % weniger weit geschleudert, trotzt dem Wind, springt etwas niedriger |
 | Hexe | Frostzauber | Gleiten: Sprungtaste in der Luft halten, um langsam zu schweben |
 | Jägerin | Pfeilregen | Flink: läuft schneller und springt dreimal |
 

@@ -31,7 +31,7 @@ const SPECIALS := {
 }
 
 const PASSIVES := {
-	"standhaft": "Standhaft: wird weniger weit geschleudert",
+	"schildmeister": "Schildmeister: Schild hält doppelt so lange, nach dem Abwehren kontert er stärker",
 	"berserker": "Berserker: je mehr Schaden, desto härter",
 	"arkan": "Arkane Quelle: Spezial lädt viel schneller",
 	"kritisch": "Kritisch: manchmal doppelter Schaden",
@@ -60,7 +60,7 @@ const KAYKIT_WEAPONS := "res://assets/kaykit/weapons/"
 
 const FIGHTERS := [
 	{
-		"name": "Ritter", "passive": "standhaft", "flip": "salto", "voice": 1.0, "scene": KAYKIT_CHARS + "Knight.glb",
+		"name": "Ritter", "passive": "schildmeister", "flip": "salto", "voice": 1.0, "scene": KAYKIT_CHARS + "Knight.glb",
 		"keep": ["1H_Sword", "Badge_Shield"], "special": "aufwaerts",
 		"weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
 	},

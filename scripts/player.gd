@@ -51,6 +51,9 @@ const HEAL_DELAY := 3.0
 const HEAL_PER_SECOND := 0.7
 const GLIDE_FALL_SPEED := 2.5
 const CRIT_CHANCE := 0.25
+## Ritter: nach einem abgewehrten Treffer ist der nächste Angriff so lange verstärkt.
+const COUNTER_TIME := 1.5
+const COUNTER_BONUS := 0.6
 
 ## Alles außerhalb dieses Bereichs zählt als heruntergefallen (x links, y unten, Breite, Höhe).
 const BLAST_ZONE := Rect2(-19, -10, 38, 28)
@@ -153,6 +156,7 @@ var ice_block: MeshInstance3D
 var poison_time := 0.0
 var poison_fx: CPUParticles3D
 var since_hit := 0.0
+var counter_time := 0.0
 
 @onready var model_root: Node3D = $Model
 @onready var tag: Label3D = $Tag
@@ -239,7 +243,7 @@ func _physics_process(delta: float) -> void:
 	shielding = can_act and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0 \
 		and roll_time <= 0.0 and drop_time <= 0.0
 	if shielding:
-		shield_hp = max(shield_hp - 18.0 * delta, 0.0)
+		shield_hp = max(shield_hp - 18.0 * delta * (0.5 if passive == "schildmeister" else 1.0), 0.0)
 	else:
 		shield_hp = min(shield_hp + 12.0 * delta, SHIELD_MAX)
 
@@ -519,7 +523,10 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 		return false
 	var multiplier := (POWER_MULTIPLIER if powered else 1.0) * attacker_multiplier
 	if shielding:
-		shield_hp -= atk.damage * 3.0 * multiplier
+		shield_hp -= atk.damage * 3.0 * multiplier * (0.5 if passive == "schildmeister" else 1.0)
+		if passive == "schildmeister":
+			counter_time = COUNTER_TIME
+			SpecialFX.popup(self, "KONTER!", Color(0.6, 0.85, 1.0))
 		velocity.x = direction.x * 3.0
 		if shield_hp <= 0.0:
 			# Schild zerbrochen: kurz betäubt.
@@ -928,6 +935,10 @@ func outgoing_multiplier() -> float:
 		"heldenmut":
 			if damage >= 80.0:
 				m += 0.3
+		"schildmeister":
+			if counter_time > 0.0:
+				m += COUNTER_BONUS
+				counter_time = 0.0
 		"kritisch":
 			if randf() < CRIT_CHANCE:
 				m *= 2.0
@@ -941,8 +952,7 @@ func _damage_taken_multiplier() -> float:
 
 func _knockback_multiplier() -> float:
 	match passive:
-		"standhaft": return 0.75
-		"schwergewicht": return 0.8
+		"schwergewicht": return 0.75
 		"panzerung": return 0.9
 	return 1.0
 
@@ -955,6 +965,7 @@ func on_hit_landed(target: CharacterBody3D) -> void:
 
 func _update_passive(delta: float) -> void:
 	since_hit += delta
+	counter_time = maxf(counter_time - delta, 0.0)
 	if passive == "heilung" and controls_enabled and since_hit > HEAL_DELAY and damage > 0.0:
 		damage = maxf(damage - HEAL_PER_SECOND * delta, 0.0)
 	if passive == "schwergewicht":
