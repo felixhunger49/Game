@@ -4,7 +4,7 @@ class_name SpecialFX
 
 const NAMES := {"feuerball": "FEUERBALL!", "sturm": "STURMANGRIFF!", "wirbel": "WIRBELSTURM!",
 	"aufwaerts": "HIMMELSHIEB!", "lichtschild": "LICHTSCHILD!", "erdbeben": "ERDBEBEN!", "frost": "FROSTZAUBER!",
-	"pfeilregen": "PFEILREGEN!"}
+	"pfeilregen": "PFEILREGEN!", "hundert_faeuste": "HUNDERT FÄUSTE!"}
 
 
 ## Beim Auslösen: Schriftzug, Aura-Ring, Lichtblitz und eine kurze Zeitlupe.
@@ -164,6 +164,17 @@ static func quake(player: Node3D) -> void:
 	_flash_light(world, feet + Vector3(0, 0.5, 0), color, 10.0, 7.0, 0.4)
 	Audio.sfx("explosion", 0.7)
 	shake(player, 0.5, 0.5)
+
+
+## Goldener Faust-Abdruck für die Hundert Fäuste. big: der letzte, große Schlag.
+static func fist(player: Node3D, pos: Vector3, big: bool) -> void:
+	var world := player.get_parent()
+	var gold := Color(1, 0.8, 0.3)
+	_flash_sphere(world, pos, gold, 0.15, 0.9 if big else 0.5, 0.18)
+	_ring(world, pos, gold, 0.2, 1.4 if big else 0.8, 0.2, true)
+	_sparks(world, pos, gold, 30 if big else 12, 7.0 if big else 4.5, 0.35)
+	if big:
+		shake(player, 0.25, 0.25)
 
 
 ## Kurzer Schriftzug über einer Figur, z. B. "KRITISCH!".

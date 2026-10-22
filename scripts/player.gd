@@ -39,6 +39,9 @@ const ATTACKS := {
 	# Hexe: Frostkugel, friert den Gegner ein.
 	"frost": {"damage": 7.0, "base": 2.0, "scale": 0.05, "startup": 0.2, "cooldown": 1.0,
 		"angle": Vector2(1, 0.2), "anim_speed": 1.6},
+	# Mönch: sechs blitzschnelle Faustschläge, der letzte schleudert weg (siehe FLURRY_*).
+	"hundert_faeuste": {"damage": 2.5, "base": 1.2, "scale": 0.0, "range": Vector2(1.7, 1.4), "startup": 0.08,
+		"cooldown": 0.9, "angle": Vector2(1, 0.15), "anim_speed": 2.5},
 	# Jägerin: Pfeilregen auf die Stelle, an der der Gegner steht.
 	"pfeilregen": {"damage": 4.0, "base": 2.5, "scale": 0.08, "startup": 0.25, "cooldown": 0.9,
 		"angle": Vector2(0.4, -0.2), "anim_speed": 1.4},
@@ -51,6 +54,12 @@ const HEAL_DELAY := 3.0
 const HEAL_PER_SECOND := 0.7
 const GLIDE_FALL_SPEED := 2.5
 const CRIT_CHANCE := 0.25
+## Hundert Fäuste: so viele Schläge im Abstand von FLURRY_INTERVAL, der letzte mit FLURRY_FINISH.
+const FLURRY_HITS := 6
+const FLURRY_INTERVAL := 0.11
+const FLURRY_FINISH := {"damage": 7.0, "base": 7.5, "scale": 0.18, "range": Vector2(1.8, 1.5), "angle": Vector2(1, 0.5)}
+## Innere Ruhe: wer still steht, lädt die Spezialattacke so viel schneller.
+const STILL_CHARGE_FACTOR := 2.0
 ## Schildmeister: nach einem abgewehrten Treffer ist der nächste Angriff so lange verstärkt.
 const COUNTER_TIME := 1.5
 const COUNTER_BONUS := 0.6
@@ -68,7 +77,8 @@ const SPECIAL_MAX := 100.0
 const SPECIAL_PER_SECOND := 5.0
 const SPECIAL_PER_DAMAGE_DEALT := 3.5
 const SPECIAL_PER_DAMAGE_TAKEN := 2.0
-const SPECIAL_KINDS := ["feuerball", "sturm", "wirbel", "aufwaerts", "lichtschild", "erdbeben", "frost", "pfeilregen"]
+const SPECIAL_KINDS := ["feuerball", "sturm", "wirbel", "aufwaerts", "lichtschild", "erdbeben", "frost", "pfeilregen",
+	"hundert_faeuste"]
 const SHOUTS := ["ha", "hja", "hah"]
 
 ## Kunststücke am höchsten Punkt eines Sprungs. axis: Drehachse der Figur (x = Salto vorwärts,
@@ -157,6 +167,9 @@ var poison_time := 0.0
 var poison_fx: CPUParticles3D
 var since_hit := 0.0
 var counter_time := 0.0
+var flurry_left := 0
+var flurry_timer := 0.0
+var still_time := 0.0
 
 @onready var model_root: Node3D = $Model
 @onready var tag: Label3D = $Tag
@@ -222,6 +235,15 @@ func _physics_process(delta: float) -> void:
 	drop_time = max(drop_time - delta, 0.0)
 	if controls_enabled:
 		add_special_energy(SPECIAL_PER_SECOND * delta)
+		# Mönch: Still stehen = meditieren, die Leiste füllt sich schneller.
+		if passive == "innere_ruhe" and is_on_floor() and absf(velocity.x) < 0.3 and attack_timer == 0.0 \
+				and hitstun == 0.0:
+			still_time += delta
+			if still_time > 0.3:
+				add_special_energy(SPECIAL_PER_SECOND * (STILL_CHARGE_FACTOR - 1.0) * delta)
+		else:
+			still_time = 0.0
+	_update_flurry(delta)
 	_update_passive(delta)
 	_update_status_effects(delta)
 
@@ -358,11 +380,15 @@ func start_special() -> void:
 		velocity.y = 8.0
 	elif kind == "lichtschild":
 		_start_dome()
+	elif kind == "hundert_faeuste":
+		flurry_left = FLURRY_HITS
+		flurry_timer = 0.12
 	special_energy = 0.0
 	start_attack(kind)
 	_play("special", ATTACKS[kind].anim_speed)
 	var sounds := {"feuerball": "fireball", "sturm": "dash", "wirbel": "whirl", "aufwaerts": "uppercut",
-		"lichtschild": "pickup_heal", "erdbeben": "swing_strong", "frost": "fireball", "pfeilregen": "swing_weak"}
+		"lichtschild": "pickup_heal", "erdbeben": "swing_strong", "frost": "fireball", "pfeilregen": "swing_weak",
+		"hundert_faeuste": "swing_strong"}
 	Audio.sfx(sounds.get(kind, "swing_strong"))
 	Audio.sfx("special_start")
 	Audio.voice("spezial", voice_pitch())
@@ -458,6 +484,8 @@ func _update_pending_attack(delta: float) -> void:
 		"erdbeben":
 			SpecialFX.quake(self)
 			_quake_hit(atk)
+		"hundert_faeuste":
+			pass  # die einzelnen Schläge kommen aus _update_flurry
 		"sturm":
 			pass  # trifft während des Stoßes, siehe _update_dash
 		"wirbel":
@@ -541,6 +569,7 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 		return false
 	if frozen > 0.0:
 		_unfreeze()
+	flurry_left = 0
 	damage += atk.damage * multiplier * _damage_taken_multiplier()
 	since_hit = 0.0
 	var knockback: float = (atk.base + damage * atk.scale) * multiplier * _knockback_multiplier()
@@ -589,6 +618,7 @@ func _lose_stock() -> void:
 	roll_time = 0.0
 	drop_time = 0.0
 	poison_time = 0.0
+	flurry_left = 0
 	_end_dome()
 	if frozen > 0.0:
 		_unfreeze()
@@ -622,6 +652,8 @@ func _update_visuals(delta: float) -> void:
 		text += "\nBetäubt!"
 	elif poison_time > 0.0:
 		text += "\nVergiftet!"
+	elif passive == "innere_ruhe" and still_time > 0.3 and controls_enabled and not special_ready():
+		text += "\nMeditiert …"
 	elif passive == "heldenmut" and damage >= 80.0 and controls_enabled:
 		text += "\nHeldenmut!"
 	elif power_time > 0.0 and speed_time > 0.0:
@@ -733,9 +765,13 @@ func _play_movement() -> void:
 
 
 func _play(action: String, speed_scale := 1.0) -> void:
-	if anim_player == null:
-		return
 	var is_attack := action in ["weak", "strong", "kick", "special"]
+	if anim_player == null:
+		# Figur ohne Animationen (z. B. der Mönch vor Mixamo): bei Angriffen kurz nach vorne stoßen.
+		if is_attack:
+			current_anim = action
+			_lunge()
+		return
 	# Eigene Abspielgeschwindigkeit der Figur (z. B. für zugeschnittene Mixamo-Schläge).
 	speed_scale = fighter.get("anim_speeds", {}).get(action, speed_scale)
 	var anim_name := Roster.anim_name(fighter, action)
@@ -1061,6 +1097,38 @@ func _end_dome() -> void:
 	dome_time = 0.0
 	if dome:
 		dome.visible = false
+
+
+## Hundert Fäuste: in kurzen Abständen ein Schlag nach dem anderen; der Mönch rückt dabei nach.
+func _update_flurry(delta: float) -> void:
+	if flurry_left <= 0:
+		return
+	velocity.x = facing * 2.5
+	attack_timer = maxf(attack_timer, 0.3)
+	flurry_timer -= delta
+	if flurry_timer > 0.0:
+		return
+	flurry_timer = FLURRY_INTERVAL
+	flurry_left -= 1
+	var last := flurry_left == 0
+	var atk: Dictionary = FLURRY_FINISH if last else ATTACKS.hundert_faeuste
+	var fist := global_position + Vector3(facing * 1.0, 1.0 + randf_range(-0.3, 0.3), 0)
+	SpecialFX.fist(self, fist, last)
+	_lunge()
+	Audio.sfx("hit_weak" if not last else "swing_strong", 1.0 + 0.08 * (FLURRY_HITS - flurry_left))
+	if opponent == null or not opponent.visible:
+		return
+	var offset := opponent.global_position - global_position
+	var forward := offset.x * facing
+	var reach: Vector2 = atk.range
+	if forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y:
+		var angle: Vector2 = atk.angle
+		if opponent.take_hit(atk, Vector3(angle.x * facing, angle.y, 0).normalized(), power_time > 0.0,
+				outgoing_multiplier()):
+			add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT * 0.5)
+			on_hit_landed(opponent)
+			if last:
+				SpecialFX.impact(self, opponent.global_position + Vector3(0, 1.0, 0), Color(1, 0.8, 0.3))
 
 
 ## Erdbeben: trifft alle, die in Reichweite am Boden (oder knapp darüber) stehen, und schleudert sie hoch.

@@ -87,6 +87,7 @@ Jeder Kämpfer hat zusätzlich eine passive Fähigkeit, die immer wirkt:
 | Brummbart | Erdbeben | Schwergewicht: wird 25 % weniger weit geschleudert, trotzt dem Wind, springt etwas niedriger |
 | Hexe | Frostzauber | Gleiten: Sprungtaste in der Luft halten, um langsam zu schweben |
 | Jägerin | Pfeilregen | Flink: läuft schneller und springt dreimal |
+| Mönch | Hundert Fäuste: sechs blitzschnelle Schläge mit goldenen Faust-Abdrücken, der letzte schleudert weg | Innere Ruhe: wer still steht, meditiert und lädt das Spezial doppelt so schnell |
 
 ## Map-Effekte
 
