@@ -51,9 +51,12 @@ func _ready() -> void:
 		MapLook.cylinder(bg, 0.9, c[2], Vector3(c[0], -6.0 + c[2] / 2.0, c[1]), crystal, 0.0, Vector3(0, 0, c[3]), 6)
 		MapLook.light(bg, Vector3(c[0], -5.0 + c[2] * 0.5, c[1] + 1.5), Color(0.4, 0.85, 1.0), 0.8, 5.0)
 
-	# Leuchtende Eiskristall-Haufen an den Rändern der Schollen.
-	_crystal_cluster(look, Vector3(-7.0, 0.0, -1.5), 1.0, crystal, snow)
-	_crystal_cluster(look, Vector3(7.1, 0.0, -1.4), 0.75, crystal, snow)
+	# Leuchtende Eiskristall-Haufen an den Rändern der Schollen: 3D-Modell aus Flux + Trellis,
+	# sonst aus Formen gebaut.
+	for k in [[Vector3(-7.0, 0.0, -1.5), 1.0, 20.0], [Vector3(7.1, 0.0, -1.4), 0.75, -30.0]]:
+		if MapLook.prop(look, "res://assets/maps/props/eiskristall.glb", k[0], 2.0 * k[1], k[2]) == null:
+			_crystal_cluster(look, k[0], k[1], crystal, snow)
+		MapLook.light(look, k[0] + Vector3(0, 1.0, 0.6), Color(0.45, 0.9, 1.0), 1.0, 4.0)
 
 	# Kaltes Licht, Schneefall, glitzernde Eiskristalle in der Luft.
 	MapLook.light(look, Vector3(0, 4.0, 5.0), Color(0.6, 0.85, 1.0), 1.0, 14.0)

@@ -1,10 +1,13 @@
 extends Node3D
 ## Piratenschiff: langes Deck mit erhöhtem Achterdeck (rechts), Wanten am Bug (links),
-## einer Rah am hinteren Mast und dem Ausguck hoch oben am Hauptmast. Bei Seegang schaukelt "Schiff".
+## einer Rah am hinteren Mast, dem Ausguck am Hauptmast und ganz oben den Rahen mit den Segeln. Bei Seegang schaukelt "Schiff".
 ## Wehende Segel und Flaggen, Wellen und Möwen.
 
 const MAIN_MAST := -3.2
 const AFT_MAST := 3.6
+## Höhe der Rahen (Stangen mit Segeln), auf denen man stehen kann.
+const MAIN_YARD := 11.0
+const AFT_YARD := 8.5
 
 
 func _ready() -> void:
@@ -42,8 +45,15 @@ func _ready() -> void:
 	MapLook.box(ship, Vector3(18.8, 2.2, 4.6), Vector3(0, -1.4, 0), hull)
 	MapLook.box(ship, Vector3(16.6, 1.4, 3.6), Vector3(0, -3.1, 0), hull_dark)
 	MapLook.box(ship, Vector3(19.0, 0.18, 4.7), Vector3(0, -1.0, 0), red)
-	MapLook.box(ship, Vector3(3.2, 1.8, 4.4), Vector3(-10.5, -0.5, 0), hull, Vector3(0, 0, 22.0))
-	MapLook.box(ship, Vector3(1.4, 0.9, 4.4), Vector3(-11.8, 0.9, 0), deck)
+	# Bug (links): erhöhtes Vordeck, auf das man springen kann (fest, 1,0 hoch, bis x = -12).
+	MapLook.solid(col, Vector3(3.2, 1.0, 4), Vector3(-10.4, 0.5, 0))
+	MapLook.box(ship, Vector3(3.2, 1.8, 4.4), Vector3(-10.9, -0.7, 0), hull, Vector3(0, 0, 22.0))
+	MapLook.box(ship, Vector3(3.4, 1.0, 4.4), Vector3(-10.4, 0.5, 0), hull)
+	MapLook.box(ship, Vector3(3.4, 0.12, 4.4), Vector3(-10.4, 0.95, 0), deck)
+	MapLook.box(ship, Vector3(1.0, 0.9, 4.4), Vector3(-12.3, 1.0, 0), hull, Vector3(0, 0, -20.0))
+	for i in 4:
+		MapLook.box(ship, Vector3(0.12, 0.7, 0.12), Vector3(-11.6 + i * 0.9, 1.35, -2.0), wood)
+	MapLook.box(ship, Vector3(3.2, 0.12, 0.18), Vector3(-10.25, 1.7, -2.0), wood)
 	MapLook.box(ship, Vector3(1.2, 3.0, 4.6), Vector3(9.6, 0.0, 0), hull)
 	MapLook.cylinder(ship, 0.1, 4.5, Vector3(-12.8, 1.6, 0), wood, -1.0, Vector3(0, 0, 70))
 	# Laternen am Heck (flackern).
@@ -59,10 +69,13 @@ func _ready() -> void:
 	# Hauptmast und hinterer Mast mit wehenden Segeln und Flaggen.
 	MapLook.cylinder(ship, 0.25, 15.0, Vector3(MAIN_MAST, 7.5, -0.4), wood)
 	MapLook.cylinder(ship, 0.22, 12.0, Vector3(AFT_MAST, 6.0, -0.4), wood)
-	MapLook.cylinder(ship, 0.1, 6.0, Vector3(MAIN_MAST, 12.3, -0.75), wood, -1.0, Vector3(0, 0, 90))
-	MapLook.cylinder(ship, 0.09, 5.0, Vector3(AFT_MAST, 8.5, -0.75), wood, -1.0, Vector3(0, 0, 90))
-	MapFX.cloth(ship, Vector2(5.4, 3.4), Vector3(MAIN_MAST, 10.6, -0.9), Color(0.97, 0.94, 0.86), sail_tex, true, 0.35)
-	MapFX.cloth(ship, Vector2(4.6, 3.0), Vector3(AFT_MAST, 7.0, -0.9), Color(0.97, 0.94, 0.86), sail_tex, true, 0.3)
+	# Rahen (die Stangen, an denen die Segel hängen): man kann auf ihnen stehen.
+	# Die obere Rah erreicht man vom Ausguck aus, die untere von der Rah in der Mitte.
+	for yard in [[MAIN_MAST, MAIN_YARD, 6.0, 5.4], [AFT_MAST, AFT_YARD, 5.0, 4.6]]:
+		MapLook.cylinder(ship, 0.16, yard[2], Vector3(yard[0], yard[1], -0.3), wood, -1.0, Vector3(0, 0, 90))
+		MapLook.platform(col, Vector3(yard[3], 0.3, 2.4), Vector3(yard[0], yard[1] + 0.16 - 0.15, 0))
+	MapFX.cloth(ship, Vector2(5.4, 3.4), Vector3(MAIN_MAST, MAIN_YARD - 1.75, -0.9), Color(0.97, 0.94, 0.86), sail_tex, true, 0.35)
+	MapFX.cloth(ship, Vector2(4.6, 3.0), Vector3(AFT_MAST, AFT_YARD - 1.55, -0.9), Color(0.97, 0.94, 0.86), sail_tex, true, 0.3)
 	MapFX.cloth(ship, Vector2(1.4, 0.8), Vector3(MAIN_MAST + 0.75, 15.0, -0.4), Color(0.85, 0.12, 0.1), null, false, 0.25)
 	MapFX.cloth(ship, Vector2(1.1, 0.6), Vector3(AFT_MAST + 0.6, 12.0, -0.4), Color(0.1, 0.1, 0.1), null, false, 0.2)
 	for b in [-7.4, -6.6, 5.0]:

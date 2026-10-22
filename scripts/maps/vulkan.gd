@@ -44,8 +44,10 @@ func _ready() -> void:
 	for r in [[-11.0, -8.0, 6.0], [-9.0, -14.0, -4.0], [11.5, -10.0, -6.0], [13.0, -16.0, 5.0]]:
 		MapLook.cylinder(bg, 1.6, 9.0, Vector3(r[0], -3.0, r[1]), basalt, 0.5, Vector3(0, 0, r[2]), 6)
 
-	# Riesiger Drachenschädel aus Obsidian mit glühenden Augen im Lavasee.
-	_dragon_skull(bg, Vector3(14.5, -7.0, -14.0), 3.4, -50.0)
+	# Riesiger Drachenschädel im Lavasee: 3D-Modell aus Flux + Trellis, sonst aus Formen gebaut.
+	if MapLook.prop(bg, "res://assets/maps/props/drachenschaedel.glb", Vector3(14.5, -7.3, -14.0), 7.5, -60.0) == null:
+		_dragon_skull(bg, Vector3(14.5, -7.0, -14.0), 3.4, -50.0)
+	MapLook.light(bg, Vector3(13.0, -3.0, -11.0), Color(1, 0.45, 0.1), 3.0, 9.0)
 
 	# Licht von unten (flackert), aufsteigende Glut, Funkenregen und Asche.
 	MapLook.light(look, Vector3(0, -5.0, 4.0), Color(1, 0.4, 0.1), 3.0, 14.0)

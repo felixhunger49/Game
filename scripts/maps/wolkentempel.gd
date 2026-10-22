@@ -41,8 +41,10 @@ func _ready() -> void:
 	for x in [-6.5, 6.5]:
 		MapFX.cloth(look, Vector2(0.9, 2.6), Vector3(x, 5.2, -1.25), Color(0.25, 0.4, 0.85), null, true, 0.12)
 
-	# Götterstatue mit goldenem Speer zwischen den mittleren Säulen.
-	_statue(look, Vector3(0, 0.0, -1.6), marble, marble_shade, gold)
+	# Götterstatue zwischen den mittleren Säulen: 3D-Modell aus Flux + Trellis, sonst aus Formen gebaut.
+	if MapLook.prop(look, "res://assets/maps/props/statue.glb", Vector3(0, 0.0, -1.6), 3.3) == null:
+		_statue(look, Vector3(0, 0.0, -1.6), marble, marble_shade, gold)
+	MapLook.light(look, Vector3(0, 2.6, -0.4), Color(1.0, 0.85, 0.5), 0.8, 3.5)
 
 	# Plattformen: zwei Seitenplattformen und die hohe Altarplattform in der Mitte.
 	for p in [[-4.3, 2.3, 3.2], [4.3, 2.3, 3.2], [0.0, 4.7, 3.6]]:
