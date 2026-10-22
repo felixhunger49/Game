@@ -4,7 +4,8 @@ class_name SpecialFX
 
 const NAMES := {"feuerball": "FEUERBALL!", "sturm": "STURMANGRIFF!", "wirbel": "WIRBELSTURM!",
 	"aufwaerts": "HIMMELSHIEB!", "lichtschild": "LICHTSCHILD!", "erdbeben": "ERDBEBEN!", "frost": "FROSTZAUBER!",
-	"pfeilregen": "PFEILREGEN!", "hundert_faeuste": "HUNDERT FÄUSTE!"}
+	"pfeilregen": "PFEILREGEN!", "hundert_faeuste": "HUNDERT FÄUSTE!",
+	"breitseite": "BREITSEITE!"}
 
 
 ## Beim Auslösen: Schriftzug, Aura-Ring, Lichtblitz und eine kurze Zeitlupe.

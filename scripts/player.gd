@@ -42,6 +42,9 @@ const ATTACKS := {
 	# Mönch: sechs blitzschnelle Faustschläge, der letzte schleudert weg (siehe FLURRY_*).
 	"hundert_faeuste": {"damage": 2.5, "base": 1.2, "scale": 0.0, "range": Vector2(1.7, 1.4), "startup": 0.08,
 		"cooldown": 0.9, "angle": Vector2(1, 0.15), "anim_speed": 2.5},
+	# Piratin: Kanonenkugel im Bogen, explodiert (siehe Cannonball).
+	"breitseite": {"damage": 13.0, "base": 7.0, "scale": 0.17, "startup": 0.25, "cooldown": 1.0,
+		"angle": Vector2(1, 0.6), "anim_speed": 1.4},
 	# Jägerin: Pfeilregen auf die Stelle, an der der Gegner steht.
 	"pfeilregen": {"damage": 4.0, "base": 2.5, "scale": 0.08, "startup": 0.25, "cooldown": 0.9,
 		"angle": Vector2(0.4, -0.2), "anim_speed": 1.4},
@@ -60,6 +63,8 @@ const FLURRY_INTERVAL := 0.11
 const FLURRY_FINISH := {"damage": 7.0, "base": 7.5, "scale": 0.18, "range": Vector2(1.8, 1.5), "angle": Vector2(1, 0.5)}
 ## Innere Ruhe: wer still steht, lädt die Spezialattacke so viel schneller.
 const STILL_CHARGE_FACTOR := 2.0
+## Plündern: so viel Spezial-Energie stiehlt die Piratin pro Treffer.
+const PLUNDER_ENERGY := 8.0
 ## Schildmeister: nach einem abgewehrten Treffer ist der nächste Angriff so lange verstärkt.
 const COUNTER_TIME := 1.5
 const COUNTER_BONUS := 0.6
@@ -78,7 +83,7 @@ const SPECIAL_PER_SECOND := 5.0
 const SPECIAL_PER_DAMAGE_DEALT := 3.5
 const SPECIAL_PER_DAMAGE_TAKEN := 2.0
 const SPECIAL_KINDS := ["feuerball", "sturm", "wirbel", "aufwaerts", "lichtschild", "erdbeben", "frost", "pfeilregen",
-	"hundert_faeuste"]
+	"hundert_faeuste", "breitseite"]
 const SHOUTS := ["ha", "hja", "hah"]
 
 ## Kunststücke am höchsten Punkt eines Sprungs. axis: Drehachse der Figur (x = Salto vorwärts,
@@ -388,7 +393,7 @@ func start_special() -> void:
 	_play("special", ATTACKS[kind].anim_speed)
 	var sounds := {"feuerball": "fireball", "sturm": "dash", "wirbel": "whirl", "aufwaerts": "uppercut",
 		"lichtschild": "pickup_heal", "erdbeben": "swing_strong", "frost": "fireball", "pfeilregen": "swing_weak",
-		"hundert_faeuste": "swing_strong"}
+		"hundert_faeuste": "swing_strong", "breitseite": "swing_weak"}
 	Audio.sfx(sounds.get(kind, "swing_strong"))
 	Audio.sfx("special_start")
 	Audio.voice("spezial", voice_pitch())
@@ -486,6 +491,10 @@ func _update_pending_attack(delta: float) -> void:
 			_quake_hit(atk)
 		"hundert_faeuste":
 			pass  # die einzelnen Schläge kommen aus _update_flurry
+		"breitseite":
+			var shot := Cannonball.new()
+			get_parent().add_child(shot)
+			shot.launch(self, atk, global_position + Vector3(0.9 * facing, 1.0, 0), facing)
 		"sturm":
 			pass  # trifft während des Stoßes, siehe _update_dash
 		"wirbel":
@@ -997,6 +1006,12 @@ func _knockback_multiplier() -> float:
 func on_hit_landed(target: CharacterBody3D) -> void:
 	if passive == "gift":
 		target.poison(GIFT_TIME)
+	elif passive == "pluendern":
+		var stolen: float = minf(target.special_energy, PLUNDER_ENERGY)
+		if stolen > 0.0:
+			target.special_energy -= stolen
+			add_special_energy(stolen)
+			SpecialFX._sparks(get_parent(), target.global_position + Vector3(0, 1.4, 0), Color(1, 0.85, 0.2), 10, 3.0, 0.4)
 
 
 func _update_passive(delta: float) -> void:

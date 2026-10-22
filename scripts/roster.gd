@@ -29,6 +29,7 @@ const SPECIALS := {
 	"frost": "Frostzauber: Eiskugel, friert den Gegner ein",
 	"pfeilregen": "Pfeilregen: Pfeile regnen auf den Gegner",
 	"hundert_faeuste": "Hundert Fäuste: sechs blitzschnelle Schläge",
+	"breitseite": "Breitseite: Kanonenkugel, die explodiert",
 }
 
 const PASSIVES := {
@@ -45,6 +46,7 @@ const PASSIVES := {
 	"dreifachsprung": "Dreifachsprung: springt dreimal",
 	"flink": "Flink: schneller und springt dreimal",
 	"innere_ruhe": "Innere Ruhe: still stehen lädt das Spezial doppelt so schnell",
+	"pluendern": "Plündern: Treffer stehlen Spezial-Energie",
 }
 
 const KAYKIT_ANIMS := {
@@ -54,6 +56,7 @@ const KAYKIT_ANIMS := {
 	"aufwaerts": "1H_Melee_Attack_Chop", "dodge": "Dodge_Forward",
 	"lichtschild": "Blocking", "erdbeben": "2H_Melee_Attack_Chop", "frost": "Spellcast_Shoot",
 	"pfeilregen": "1H_Ranged_Shoot", "hundert_faeuste": "Unarmed_Melee_Attack_Punch_A",
+	"breitseite": "1H_Ranged_Shoot",
 }
 ## Name der Animations-Bibliothek für Animationen aus einzelnen Dateien ("anim_dir").
 const ANIM_LIB := "datei"
@@ -111,6 +114,12 @@ const FIGHTERS := [
 		"name": "Jägerin", "passive": "flink", "flip": "doppel_rueckwaerts", "voice": 1.3,
 		"scene": KAYKIT_CHARS + "Jaegerin.glb", "keep": ["1H_Crossbow", "Knife_Offhand"], "special": "pfeilregen",
 		"weak": "Dualwield_Melee_Attack_Stab", "strong": "1H_Melee_Attack_Chop",
+	},
+	{
+		# Platzhalter: rote Variante der KayKit-Schurkin, bis das eigene Modell aus ComfyUI fertig ist.
+		"name": "Piratin", "passive": "pluendern", "flip": "rad", "voice": 1.2,
+		"scene": KAYKIT_CHARS + "Piratin.glb", "keep": ["Knife"], "special": "breitseite",
+		"weak": "1H_Melee_Attack_Slice_Diagonal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis). Noch ohne Skelett: sobald sie bei Mixamo
