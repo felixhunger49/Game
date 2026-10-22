@@ -51,7 +51,7 @@ const HEAL_DELAY := 3.0
 const HEAL_PER_SECOND := 0.7
 const GLIDE_FALL_SPEED := 2.5
 const CRIT_CHANCE := 0.25
-## Ritter: nach einem abgewehrten Treffer ist der nächste Angriff so lange verstärkt.
+## Schildmeister: nach einem abgewehrten Treffer ist der nächste Angriff so lange verstärkt.
 const COUNTER_TIME := 1.5
 const COUNTER_BONUS := 0.6
 

@@ -60,11 +60,6 @@ const KAYKIT_WEAPONS := "res://assets/kaykit/weapons/"
 
 const FIGHTERS := [
 	{
-		"name": "Ritter", "passive": "schildmeister", "flip": "salto", "voice": 1.0, "scene": KAYKIT_CHARS + "Knight.glb",
-		"keep": ["1H_Sword", "Badge_Shield"], "special": "aufwaerts",
-		"weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
-	},
-	{
 		"name": "Barbar", "passive": "berserker", "flip": "rad", "voice": 0.85, "scene": KAYKIT_CHARS + "Barbarian.glb",
 		"keep": ["2H_Axe"], "special": "wirbel",
 		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Chop",

@@ -65,7 +65,7 @@ Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtbli
 - Feuerball (Magier, Robo): fliegt geradeaus.
 - Sturmangriff (Schurke, Kapuzen-Schurke): schneller Stoß nach vorne.
 - Wirbel (Barbar): trifft vorne und hinten.
-- Himmelshieb (Ritter, Held): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
+- Himmelshieb (Held): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
 - Lichtschild (Paladin): 1,6 Sekunden unverwundbar in einer Lichtkuppel, dann explodiert sie und schleudert alle in der Nähe weg.
 - Erdbeben (Brummbart): kleiner Sprung, dann ein Stampfer, dessen Schockwelle weit über den Boden läuft.
 - Frostzauber (Hexe): Eiskugel, die den Gegner kurz einfriert. Ein Treffer befreit ihn wieder.
@@ -77,7 +77,6 @@ Jeder Kämpfer hat zusätzlich eine passive Fähigkeit, die immer wirkt:
 
 | Kämpfer | Spezial | Passiv |
 |---|---|---|
-| Ritter | Himmelshieb | Schildmeister: Schild hält doppelt so lange; nach einem abgewehrten Treffer macht sein nächster Angriff (innerhalb 1,5 s) 60 % mehr Schaden |
 | Barbar | Wirbel | Berserker: je mehr Schaden er hat, desto härter schlägt er (bis +40 %) |
 | Magier | Feuerball | Arkane Quelle: Spezial lädt 60 % schneller |
 | Schurke | Sturmangriff | Kritisch: 25 % Chance auf doppelten Schaden |
