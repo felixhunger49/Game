@@ -17,12 +17,32 @@ class_name Roster
 ## rotation_y: Drehung des Modells in Grad, falls es nicht nach vorne schaut
 ## voice:    Stimmlage der Kampfrufe (1 = normal, kleiner = tiefer)
 ## flip:     Kunststück am höchsten Punkt eines Sprungs (siehe Player.FLIPS)
+## passive:  passive Fähigkeit, wirkt immer (siehe PASSIVES)
 
 const SPECIALS := {
 	"feuerball": "Feuerball: fliegt geradeaus",
 	"sturm": "Sturmangriff: schneller Stoß nach vorne",
 	"wirbel": "Wirbel: trifft auf beiden Seiten",
-	"aufwaerts": "Aufwärtshieb: springt hoch und schlägt nach oben",
+	"aufwaerts": "Himmelshieb: springt hoch und schlägt nach oben",
+	"lichtschild": "Lichtschild: kurz unverwundbar, dann explodiert die Kuppel",
+	"erdbeben": "Erdbeben: Stampfer, Schockwelle über den Boden",
+	"frost": "Frostzauber: Eiskugel, friert den Gegner ein",
+	"pfeilregen": "Pfeilregen: Pfeile regnen auf den Gegner",
+}
+
+const PASSIVES := {
+	"standhaft": "Standhaft: wird weniger weit geschleudert",
+	"berserker": "Berserker: je mehr Schaden, desto härter",
+	"arkan": "Arkane Quelle: Spezial lädt viel schneller",
+	"kritisch": "Kritisch: manchmal doppelter Schaden",
+	"gift": "Giftklingen: Treffer vergiften",
+	"panzerung": "Panzerung: nimmt weniger Schaden, etwas langsamer",
+	"heldenmut": "Heldenmut: ab 80 % Schaden viel stärker",
+	"heilung": "Heilung: heilt sich langsam, wenn er nicht getroffen wird",
+	"schwergewicht": "Schwergewicht: kaum wegzuschleudern, trotzt dem Wind",
+	"gleiten": "Gleiten: Sprungtaste in der Luft halten",
+	"dreifachsprung": "Dreifachsprung: springt dreimal",
+	"flink": "Flink: schneller und springt dreimal",
 }
 
 const KAYKIT_ANIMS := {
@@ -30,6 +50,8 @@ const KAYKIT_ANIMS := {
 	"kick": "Unarmed_Melee_Attack_Kick", "shield": "Blocking", "stunned": "Hit_B",
 	"feuerball": "Spellcast_Shoot", "sturm": "Dodge_Forward", "wirbel": "2H_Melee_Attack_Spin",
 	"aufwaerts": "1H_Melee_Attack_Chop", "dodge": "Dodge_Forward",
+	"lichtschild": "Blocking", "erdbeben": "2H_Melee_Attack_Chop", "frost": "Spellcast_Shoot",
+	"pfeilregen": "1H_Ranged_Shoot",
 }
 ## Name der Animations-Bibliothek für Animationen aus einzelnen Dateien ("anim_dir").
 const ANIM_LIB := "datei"
@@ -38,37 +60,37 @@ const KAYKIT_WEAPONS := "res://assets/kaykit/weapons/"
 
 const FIGHTERS := [
 	{
-		"name": "Ritter", "flip": "salto", "voice": 1.0, "scene": KAYKIT_CHARS + "Knight.glb",
+		"name": "Ritter", "passive": "standhaft", "flip": "salto", "voice": 1.0, "scene": KAYKIT_CHARS + "Knight.glb",
 		"keep": ["1H_Sword", "Badge_Shield"], "special": "aufwaerts",
 		"weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Barbar", "flip": "rad", "voice": 0.85, "scene": KAYKIT_CHARS + "Barbarian.glb",
+		"name": "Barbar", "passive": "berserker", "flip": "rad", "voice": 0.85, "scene": KAYKIT_CHARS + "Barbarian.glb",
 		"keep": ["2H_Axe"], "special": "wirbel",
 		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Magier", "flip": "pirouette", "voice": 1.1, "scene": KAYKIT_CHARS + "Mage.glb",
+		"name": "Magier", "passive": "arkan", "flip": "pirouette", "voice": 1.1, "scene": KAYKIT_CHARS + "Mage.glb",
 		"keep": ["2H_Staff"], "special": "feuerball",
 		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Stab",
 	},
 	{
-		"name": "Schurke", "flip": "doppelsalto", "voice": 1.2, "scene": KAYKIT_CHARS + "Rogue.glb",
+		"name": "Schurke", "passive": "kritisch", "flip": "doppelsalto", "voice": 1.2, "scene": KAYKIT_CHARS + "Rogue.glb",
 		"keep": ["Knife", "Knife_Offhand"], "special": "sturm",
 		"weak": "Dualwield_Melee_Attack_Stab", "strong": "Dualwield_Melee_Attack_Chop",
 	},
 	{
-		"name": "Kapuzen-Schurke", "flip": "rueckwaerts", "voice": 1.15, "scene": KAYKIT_CHARS + "Rogue_Hooded.glb",
+		"name": "Kapuzen-Schurke", "passive": "gift", "flip": "rueckwaerts", "voice": 1.15, "scene": KAYKIT_CHARS + "Rogue_Hooded.glb",
 		"keep": ["Knife", "Knife_Offhand"], "special": "sturm",
 		"weak": "Dualwield_Melee_Attack_Slice", "strong": "Dualwield_Melee_Attack_Chop",
 	},
 	{
-		"name": "Robo", "flip": "propeller", "voice": 1.5, "scene": "res://assets/kenney/character.glb", "special": "feuerball",
+		"name": "Robo", "passive": "panzerung", "flip": "propeller", "voice": 1.5, "scene": "res://assets/kenney/character.glb", "special": "feuerball",
 		"anims": {"idle": "idle", "run": "walk", "jump": "jump"},
 	},
 	{
 		# Eigene Figur: mit Flux + Trellis erzeugt, Skelett und Animationen von Mixamo.
-		"name": "Held", "flip": "salto", "voice": 1.0, "scene": "res://assets/ritter_neu/idle.fbx",
+		"name": "Held", "passive": "heldenmut", "flip": "salto", "voice": 1.0, "scene": "res://assets/ritter_neu/idle.fbx",
 		"anim_dir": "res://assets/ritter_neu/", "scale": 195.0, "special": "aufwaerts",
 		# Nur der eigentliche Angriff, ohne langes Ausholen und Zurückgehen.
 		"anim_speeds": {"weak": 1.4, "strong": 1.0, "kick": 1.2},
@@ -77,6 +99,26 @@ const FIGHTERS := [
 			"mixamorig_RightHand": [KAYKIT_CHARS + "Knight.glb", "1H_Sword", Vector3(0, -90, -90)],
 			"mixamorig_LeftHand": [KAYKIT_CHARS + "Knight.glb", "Badge_Shield", Vector3(-90, 0, 135)],
 		},
+	},
+	{
+		"name": "Paladin", "passive": "heilung", "flip": "schraube", "voice": 0.95,
+		"scene": KAYKIT_CHARS + "Paladin.glb", "keep": ["2H_Sword"], "special": "lichtschild",
+		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Chop",
+	},
+	{
+		"name": "Brummbart", "passive": "schwergewicht", "flip": "purzeln", "voice": 0.75,
+		"scene": KAYKIT_CHARS + "Brummbart.glb", "keep": ["1H_Axe", "Barbarian_Round_Shield"], "special": "erdbeben",
+		"weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
+	},
+	{
+		"name": "Hexe", "passive": "gleiten", "flip": "schweben", "voice": 1.25,
+		"scene": KAYKIT_CHARS + "Hexe.glb", "keep": ["1H_Wand", "Spellbook_open"], "special": "frost",
+		"weak": "1H_Melee_Attack_Slice_Diagonal", "strong": "1H_Melee_Attack_Stab",
+	},
+	{
+		"name": "Jägerin", "passive": "flink", "flip": "doppel_rueckwaerts", "voice": 1.3,
+		"scene": KAYKIT_CHARS + "Jaegerin.glb", "keep": ["1H_Crossbow", "Knife_Offhand"], "special": "pfeilregen",
+		"weak": "Dualwield_Melee_Attack_Stab", "strong": "1H_Melee_Attack_Chop",
 	},
 ]
 

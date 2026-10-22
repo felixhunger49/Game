@@ -30,7 +30,27 @@ const ATTACKS := {
 		"cooldown": 1.1, "angle": Vector2(1, 0.8), "anim_speed": 1.5},
 	"aufwaerts": {"damage": 9.0, "base": 6.0, "scale": 0.15, "range": Vector2(1.4, 2.8), "startup": 0.1,
 		"cooldown": 0.9, "angle": Vector2(0.2, 1), "anim_speed": 1.6},
+	# Paladin: 1,6 s unverwundbar in einer Lichtkuppel, dann explodiert sie.
+	"lichtschild": {"damage": 12.0, "base": 7.0, "scale": 0.18, "range": Vector2(2.8, 2.2), "startup": 1.6,
+		"cooldown": 1.8, "angle": Vector2(1, 0.6), "anim_speed": 1.0},
+	# Brummbart: kleiner Sprung, dann Stampfer, dessen Schockwelle über den Boden läuft.
+	"erdbeben": {"damage": 12.0, "base": 7.5, "scale": 0.16, "range": Vector2(4.5, 1.3), "startup": 0.4,
+		"cooldown": 1.0, "angle": Vector2(0.25, 1), "anim_speed": 1.2},
+	# Hexe: Frostkugel, friert den Gegner ein.
+	"frost": {"damage": 7.0, "base": 2.0, "scale": 0.05, "startup": 0.2, "cooldown": 1.0,
+		"angle": Vector2(1, 0.2), "anim_speed": 1.6},
+	# Jägerin: Pfeilregen auf die Stelle, an der der Gegner steht.
+	"pfeilregen": {"damage": 4.0, "base": 2.5, "scale": 0.08, "startup": 0.25, "cooldown": 0.9,
+		"angle": Vector2(0.4, -0.2), "anim_speed": 1.4},
 }
+
+## Passive Fähigkeiten: wirken immer, ohne Taste. Beschreibungen stehen in Roster.PASSIVES.
+const GIFT_TIME := 3.0
+const GIFT_DAMAGE_PER_SECOND := 2.0
+const HEAL_DELAY := 3.0
+const HEAL_PER_SECOND := 0.7
+const GLIDE_FALL_SPEED := 2.5
+const CRIT_CHANCE := 0.25
 
 ## Alles außerhalb dieses Bereichs zählt als heruntergefallen (x links, y unten, Breite, Höhe).
 const BLAST_ZONE := Rect2(-19, -10, 38, 28)
@@ -45,7 +65,7 @@ const SPECIAL_MAX := 100.0
 const SPECIAL_PER_SECOND := 5.0
 const SPECIAL_PER_DAMAGE_DEALT := 3.5
 const SPECIAL_PER_DAMAGE_TAKEN := 2.0
-const SPECIAL_KINDS := ["feuerball", "sturm", "wirbel", "aufwaerts"]
+const SPECIAL_KINDS := ["feuerball", "sturm", "wirbel", "aufwaerts", "lichtschild", "erdbeben", "frost", "pfeilregen"]
 const SHOUTS := ["ha", "hja", "hah"]
 
 ## Kunststücke am höchsten Punkt eines Sprungs. axis: Drehachse der Figur (x = Salto vorwärts,
@@ -120,6 +140,19 @@ var drop_time := 0.0
 var on_platform := false
 ## Leuchtende Funken um die Füße, solange die Spezialattacke bereit ist.
 var ready_aura: CPUParticles3D
+## Passive Fähigkeit des Kämpfers (siehe Roster.PASSIVES).
+var passive := ""
+var base_speed := 0.0
+var base_jump := 0.0
+var base_jumps := 0
+## Lichtkuppel des Paladins: solange > 0, prallen alle Treffer ab.
+var dome_time := 0.0
+var dome: MeshInstance3D
+var frozen := 0.0
+var ice_block: MeshInstance3D
+var poison_time := 0.0
+var poison_fx: CPUParticles3D
+var since_hit := 0.0
 
 @onready var model_root: Node3D = $Model
 @onready var tag: Label3D = $Tag
@@ -127,6 +160,9 @@ var ready_aura: CPUParticles3D
 
 
 func _ready() -> void:
+	base_speed = speed
+	base_jump = jump_velocity
+	base_jumps = max_jumps
 	spawn_position = position
 	facing = start_facing
 	jumps_left = max_jumps
@@ -142,6 +178,7 @@ func _ready() -> void:
 ## Tauscht das 3D-Modell gegen den Kämpfer an Stelle `index` im Roster.
 func set_fighter(index: int) -> void:
 	fighter = Roster.get_fighter(index)
+	_apply_passive()
 	for child in model_root.get_children():
 		model_root.remove_child(child)
 		child.queue_free()
@@ -181,6 +218,8 @@ func _physics_process(delta: float) -> void:
 	drop_time = max(drop_time - delta, 0.0)
 	if controls_enabled:
 		add_special_energy(SPECIAL_PER_SECOND * delta)
+	_update_passive(delta)
+	_update_status_effects(delta)
 
 	velocity.y -= gravity * delta
 	# Von unten durch die schwebenden Plattformen springen, beim Fallen darauf landen.
@@ -228,6 +267,10 @@ func _physics_process(delta: float) -> void:
 	was_rising = rising
 	if flip_time >= 0.0 and FLIPS[fighter.get("flip", "salto")].get("hover", false):
 		velocity.y = maxf(velocity.y, -1.5)
+	# Hexe: Sprungtaste in der Luft halten zum Gleiten.
+	if passive == "gleiten" and not is_on_floor() and velocity.y < -GLIDE_FALL_SPEED and can_act \
+			and Input.is_action_pressed(_action("jump")):
+		velocity.y = -GLIDE_FALL_SPEED
 
 	move_and_slide()
 	on_platform = false
@@ -307,10 +350,15 @@ func start_special() -> void:
 	elif kind == "sturm":
 		dash_time = 0.25
 		dash_hit_done = false
+	elif kind == "erdbeben":
+		velocity.y = 8.0
+	elif kind == "lichtschild":
+		_start_dome()
 	special_energy = 0.0
 	start_attack(kind)
 	_play("special", ATTACKS[kind].anim_speed)
-	var sounds := {"feuerball": "fireball", "sturm": "dash", "wirbel": "whirl", "aufwaerts": "uppercut"}
+	var sounds := {"feuerball": "fireball", "sturm": "dash", "wirbel": "whirl", "aufwaerts": "uppercut",
+		"lichtschild": "pickup_heal", "erdbeben": "swing_strong", "frost": "fireball", "pfeilregen": "swing_weak"}
 	Audio.sfx(sounds.get(kind, "swing_strong"))
 	Audio.sfx("special_start")
 	Audio.voice("spezial", voice_pitch())
@@ -359,6 +407,8 @@ func _create_ready_aura() -> void:
 func add_special_energy(amount: float) -> void:
 	if not Settings.special_charge or special_energy >= SPECIAL_MAX:
 		return
+	if passive == "arkan":
+		amount *= 1.6
 	special_energy = minf(special_energy + amount, SPECIAL_MAX)
 	if special_energy >= SPECIAL_MAX:
 		Audio.sfx("special_ready")
@@ -388,10 +438,22 @@ func _update_pending_attack(delta: float) -> void:
 	pending_attack = ""
 	var atk: Dictionary = ATTACKS[kind]
 	match kind:
-		"feuerball":
+		"feuerball", "frost":
 			var ball := Projectile.new()
 			get_parent().add_child(ball)
-			ball.launch(self, atk, global_position + Vector3(0.8 * facing, 1.1, 0), facing)
+			ball.launch(self, atk, global_position + Vector3(0.8 * facing, 1.1, 0), facing, kind == "frost")
+		"pfeilregen":
+			var rain := ArrowRain.new()
+			get_parent().add_child(rain)
+			var target_x: float = opponent.global_position.x if opponent and opponent.visible else global_position.x + facing * 4.0
+			rain.launch(self, target_x, 0.0 if not opponent else minf(opponent.global_position.y, 3.0))
+		"lichtschild":
+			_end_dome()
+			SpecialFX.impact(self, global_position + Vector3(0, 1.0, 0), Color(1, 0.9, 0.5))
+			_try_hit(atk, true)
+		"erdbeben":
+			SpecialFX.quake(self)
+			_quake_hit(atk)
 		"sturm":
 			pass  # trifft während des Stoßes, siehe _update_dash
 		"wirbel":
@@ -433,9 +495,11 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 	if both_sides:
 		side = 1 if offset.x >= 0.0 else -1
 	var angle: Vector2 = atk.angle
-	var landed: bool = opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0)
+	var landed: bool = opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0,
+		outgoing_multiplier())
 	if landed:
 		add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
+		on_hit_landed(opponent)
 	for kind in SPECIAL_KINDS:
 		if atk == ATTACKS[kind] and landed:
 			SpecialFX.impact(self, opponent.global_position + Vector3(0, 1.0, 0), color)
@@ -444,12 +508,16 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 
 ## Getroffen werden. Je mehr Schaden die Figur schon hat, desto weiter fliegt sie.
 ## Gibt false zurück, wenn der Treffer abgewehrt wurde.
-func take_hit(atk: Dictionary, direction: Vector3, powered := false) -> bool:
+func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_multiplier := 1.0) -> bool:
 	if roll_time > 0.0:
 		# Mitten in der Ausweichrolle: der Treffer geht ins Leere.
 		Audio.sfx("swing_weak", 1.4, -4.0)
 		return false
-	var multiplier := POWER_MULTIPLIER if powered else 1.0
+	if dome_time > 0.0:
+		# In der Lichtkuppel des Paladins prallt alles ab.
+		Audio.sfx("shield_block", 1.3)
+		return false
+	var multiplier := (POWER_MULTIPLIER if powered else 1.0) * attacker_multiplier
 	if shielding:
 		shield_hp -= atk.damage * 3.0 * multiplier
 		velocity.x = direction.x * 3.0
@@ -464,8 +532,11 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false) -> bool:
 		else:
 			Audio.sfx("shield_block")
 		return false
-	damage += atk.damage * multiplier
-	var knockback: float = (atk.base + damage * atk.scale) * multiplier
+	if frozen > 0.0:
+		_unfreeze()
+	damage += atk.damage * multiplier * _damage_taken_multiplier()
+	since_hit = 0.0
+	var knockback: float = (atk.base + damage * atk.scale) * multiplier * _knockback_multiplier()
 	velocity = direction * knockback
 	hitstun = 0.12 + knockback * 0.02
 	pending_attack = ""
@@ -510,6 +581,10 @@ func _lose_stock() -> void:
 	dash_time = 0.0
 	roll_time = 0.0
 	drop_time = 0.0
+	poison_time = 0.0
+	_end_dome()
+	if frozen > 0.0:
+		_unfreeze()
 	_end_flip()
 	velocity = Vector3.ZERO
 	Audio.sfx("ko")
@@ -534,8 +609,14 @@ func _update_visuals(delta: float) -> void:
 	shield_bubble.scale = Vector3.ONE * lerpf(0.5, 1.0, shield_hp / SHIELD_MAX)
 
 	var text := "P%d" % player_id
-	if stunned > 0.0:
+	if frozen > 0.0:
+		text += "\nEingefroren!"
+	elif stunned > 0.0:
 		text += "\nBetäubt!"
+	elif poison_time > 0.0:
+		text += "\nVergiftet!"
+	elif passive == "heldenmut" and damage >= 80.0 and controls_enabled:
+		text += "\nHeldenmut!"
 	elif power_time > 0.0 and speed_time > 0.0:
 		text += "\nKraft + Tempo"
 	elif power_time > 0.0:
@@ -548,7 +629,7 @@ func _update_visuals(delta: float) -> void:
 	if ready_aura:
 		ready_aura.emitting = controls_enabled and special_ready() and Settings.special_charge
 
-	if current_anim == "cheer":
+	if current_anim == "cheer" or frozen > 0.0:
 		return
 	if hitstun > 0.0:
 		_play("hit", 1.5)
@@ -825,6 +906,166 @@ func _setup_weapons(model: Node3D) -> void:
 		slot.bone_name = bone_name
 		skeleton.add_child(slot)
 		slot.add_child(load(attach[bone_name]).instantiate())
+
+
+# --- Passive Fähigkeiten und Zustände ------------------------------------------
+
+func _apply_passive() -> void:
+	passive = fighter.get("passive", "")
+	speed = base_speed * (0.9 if passive == "panzerung" else 1.1 if passive == "flink" else 1.0)
+	jump_velocity = base_jump * (0.92 if passive == "schwergewicht" else 1.0)
+	max_jumps = base_jumps + (1 if passive in ["dreifachsprung", "flink"] else 0)
+	jumps_left = max_jumps
+
+
+## Zusätzlicher Schaden, den dieser Kämpfer austeilt.
+func outgoing_multiplier() -> float:
+	var m := 1.0
+	match passive:
+		"berserker":
+			# Je mehr Schaden er hat, desto härter schlägt er zu (bis +40 % bei 100 %).
+			m += minf(damage, 100.0) / 250.0
+		"heldenmut":
+			if damage >= 80.0:
+				m += 0.3
+		"kritisch":
+			if randf() < CRIT_CHANCE:
+				m *= 2.0
+				SpecialFX.popup(self, "KRITISCH!", Color(1, 0.3, 0.2))
+	return m
+
+
+func _damage_taken_multiplier() -> float:
+	return 0.8 if passive == "panzerung" else 1.0
+
+
+func _knockback_multiplier() -> float:
+	match passive:
+		"standhaft": return 0.75
+		"schwergewicht": return 0.8
+		"panzerung": return 0.9
+	return 1.0
+
+
+## Wird aufgerufen, wenn dieser Kämpfer jemanden getroffen hat.
+func on_hit_landed(target: CharacterBody3D) -> void:
+	if passive == "gift":
+		target.poison(GIFT_TIME)
+
+
+func _update_passive(delta: float) -> void:
+	since_hit += delta
+	if passive == "heilung" and controls_enabled and since_hit > HEAL_DELAY and damage > 0.0:
+		damage = maxf(damage - HEAL_PER_SECOND * delta, 0.0)
+	if passive == "schwergewicht":
+		wind_speed *= 0.3
+
+
+func poison(seconds: float) -> void:
+	poison_time = seconds
+	if poison_fx == null:
+		poison_fx = SpecialFX._particles(Color(0.4, 1.0, 0.3, 0.9), 20, 0.8, 0.1)
+		poison_fx.one_shot = false
+		poison_fx.explosiveness = 0.0
+		poison_fx.direction = Vector3.UP
+		poison_fx.initial_velocity_min = 0.5
+		poison_fx.initial_velocity_max = 1.2
+		poison_fx.gravity = Vector3.ZERO
+		poison_fx.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+		poison_fx.emission_sphere_radius = 0.5
+		poison_fx.position.y = 1.0
+		add_child(poison_fx)
+	poison_fx.emitting = true
+
+
+func freeze(seconds: float) -> void:
+	frozen = seconds
+	stunned = maxf(stunned, seconds)
+	velocity = Vector3(0, minf(velocity.y, 0.0), 0)
+	if anim_player:
+		anim_player.speed_scale = 0.0
+	if ice_block == null:
+		ice_block = MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(1.3, 2.0, 1.3)
+		ice_block.mesh = box
+		var mat := StandardMaterial3D.new()
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.albedo_color = Color(0.6, 0.9, 1.0, 0.45)
+		mat.metallic = 0.3
+		mat.roughness = 0.05
+		mat.emission_enabled = true
+		mat.emission = Color(0.3, 0.6, 1.0)
+		mat.emission_energy_multiplier = 0.4
+		ice_block.material_override = mat
+		ice_block.position.y = 1.0
+		add_child(ice_block)
+	ice_block.visible = true
+	Audio.sfx("shield_break", 1.4)
+
+
+func _unfreeze() -> void:
+	frozen = 0.0
+	stunned = 0.0
+	if anim_player:
+		anim_player.speed_scale = 1.0
+	if ice_block:
+		ice_block.visible = false
+		SpecialFX._sparks(get_parent(), global_position + Vector3(0, 1, 0), Color(0.7, 0.95, 1.0), 40, 6.0, 0.5)
+
+
+func _update_status_effects(delta: float) -> void:
+	if frozen > 0.0:
+		frozen -= delta
+		velocity.x = 0.0
+		if frozen <= 0.0:
+			_unfreeze()
+	if poison_time > 0.0:
+		poison_time -= delta
+		damage += GIFT_DAMAGE_PER_SECOND * delta
+		if poison_time <= 0.0 and poison_fx:
+			poison_fx.emitting = false
+	if dome_time > 0.0:
+		dome_time -= delta
+		if dome:
+			dome.rotation.y += 2.0 * delta
+			dome.scale = Vector3.ONE * (1.0 + 0.04 * sin(Time.get_ticks_msec() * 0.02))
+
+
+func _start_dome() -> void:
+	dome_time = ATTACKS.lichtschild.startup
+	if dome == null:
+		dome = MeshInstance3D.new()
+		var sphere := SphereMesh.new()
+		sphere.radius = 1.4
+		sphere.height = 2.8
+		dome.mesh = sphere
+		dome.material_override = SpecialFX._glow_material(Color(1, 0.85, 0.4, 0.35), 2.0)
+		dome.position.y = 0.9
+		add_child(dome)
+	dome.visible = true
+
+
+func _end_dome() -> void:
+	dome_time = 0.0
+	if dome:
+		dome.visible = false
+
+
+## Erdbeben: trifft alle, die in Reichweite am Boden (oder knapp darüber) stehen, und schleudert sie hoch.
+func _quake_hit(atk: Dictionary) -> void:
+	if opponent == null or not opponent.visible:
+		return
+	var offset := opponent.global_position - global_position
+	var reach: Vector2 = atk.range
+	if absf(offset.x) > reach.x or absf(offset.y) > reach.y:
+		return
+	var side := 1.0 if offset.x >= 0.0 else -1.0
+	var angle: Vector2 = atk.angle
+	if opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0, outgoing_multiplier()):
+		add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
+		on_hit_landed(opponent)
+		SpecialFX.impact(self, opponent.global_position + Vector3(0, 0.6, 0), color)
 
 
 func _action(action_name: String) -> String:

@@ -65,7 +65,29 @@ Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtbli
 - Feuerball (Magier, Robo): fliegt geradeaus.
 - Sturmangriff (Schurke, Kapuzen-Schurke): schneller Stoß nach vorne.
 - Wirbel (Barbar): trifft vorne und hinten.
-- Aufwärtshieb (Ritter, Held): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
+- Himmelshieb (Ritter, Held): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
+- Lichtschild (Paladin): 1,6 Sekunden unverwundbar in einer Lichtkuppel, dann explodiert sie und schleudert alle in der Nähe weg.
+- Erdbeben (Brummbart): kleiner Sprung, dann ein Stampfer, dessen Schockwelle weit über den Boden läuft.
+- Frostzauber (Hexe): Eiskugel, die den Gegner kurz einfriert. Ein Treffer befreit ihn wieder.
+- Pfeilregen (Jägerin): Ein leuchtender Kreis markiert die Stelle des Gegners, dann regnen Pfeile herab.
+
+## Kämpfer und passive Fähigkeiten
+
+Jeder Kämpfer hat zusätzlich eine passive Fähigkeit, die immer wirkt:
+
+| Kämpfer | Spezial | Passiv |
+|---|---|---|
+| Ritter | Himmelshieb | Standhaft: wird 25 % weniger weit geschleudert |
+| Barbar | Wirbel | Berserker: je mehr Schaden er hat, desto härter schlägt er (bis +40 %) |
+| Magier | Feuerball | Arkane Quelle: Spezial lädt 60 % schneller |
+| Schurke | Sturmangriff | Kritisch: 25 % Chance auf doppelten Schaden |
+| Kapuzen-Schurke | Sturmangriff | Giftklingen: Treffer vergiften 3 Sekunden lang |
+| Robo | Feuerball | Panzerung: nimmt 20 % weniger Schaden, etwas langsamer |
+| Held | Himmelshieb | Heldenmut: ab 80 % Schaden 30 % stärker |
+| Paladin | Lichtschild | Heilung: heilt sich langsam, wenn er 3 Sekunden nicht getroffen wird |
+| Brummbart | Erdbeben | Schwergewicht: kaum wegzuschleudern, trotzt dem Wind, springt etwas niedriger |
+| Hexe | Frostzauber | Gleiten: Sprungtaste in der Luft halten, um langsam zu schweben |
+| Jägerin | Pfeilregen | Flink: läuft schneller und springt dreimal |
 
 ## Map-Effekte
 

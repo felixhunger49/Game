@@ -152,7 +152,8 @@ func _update_hud() -> void:
 		var text: String = p.fighter.get("name", "")
 		if state == State.SELECT:
 			var special: String = Roster.SPECIALS.get(p.fighter.get("special", ""), "")
-			text = "Spieler %d\n◀ %s ▶\n%s" % [i + 1, text, "Bereit!" if ready_flags[i] else special]
+			var passive: String = Roster.PASSIVES.get(p.fighter.get("passive", ""), "")
+			text = "Spieler %d\n◀ %s ▶\n%s" % [i + 1, text, "Bereit!" if ready_flags[i] else special + "\n" + passive]
 		else:
 			text = "Spieler %d: %s\n%d %%   %s" % [i + 1, text, p.damage, "●".repeat(p.stocks)]
 		labels[i].text = text

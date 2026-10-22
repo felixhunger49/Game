@@ -3,7 +3,8 @@ class_name SpecialFX
 ## Kamerawackeln, kurze Zeitlupe und ein großer Schriftzug.
 
 const NAMES := {"feuerball": "FEUERBALL!", "sturm": "STURMANGRIFF!", "wirbel": "WIRBELSTURM!",
-	"aufwaerts": "HIMMELSHIEB!"}
+	"aufwaerts": "HIMMELSHIEB!", "lichtschild": "LICHTSCHILD!", "erdbeben": "ERDBEBEN!", "frost": "FROSTZAUBER!",
+	"pfeilregen": "PFEILREGEN!"}
 
 
 ## Beim Auslösen: Schriftzug, Aura-Ring, Lichtblitz und eine kurze Zeitlupe.
@@ -138,6 +139,50 @@ static func fire_trail(ball: Node3D, color: Color) -> CPUParticles3D:
 	ball.add_child(trail)
 	trail.emitting = true
 	return trail
+
+
+## Erdbeben: Staubwelle und Schockringe laufen über den Boden zu beiden Seiten.
+static func quake(player: Node3D) -> void:
+	var world := player.get_parent()
+	var color: Color = player.get("color")
+	var feet: Vector3 = player.global_position + Vector3(0, 0.05, 0)
+	_ring(world, feet, color, 0.5, 5.0, 0.5)
+	_ring(world, feet, Color(0.85, 0.7, 0.5), 0.3, 4.0, 0.7)
+	for side in [-1, 1]:
+		var dust := _particles(Color(0.8, 0.65, 0.45, 0.9), 50, 0.7, 0.3)
+		dust.direction = Vector3(side, 1.2, 0)
+		dust.spread = 25.0
+		dust.initial_velocity_min = 4.0
+		dust.initial_velocity_max = 10.0
+		dust.gravity = Vector3(0, -12, 0)
+		dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+		dust.emission_box_extents = Vector3(2.0, 0.1, 0.5)
+		world.add_child(dust)
+		dust.global_position = feet + Vector3(side * 2.0, 0, 0)
+		dust.emitting = true
+		world.get_tree().create_timer(1.0).timeout.connect(dust.queue_free)
+	_flash_light(world, feet + Vector3(0, 0.5, 0), color, 10.0, 7.0, 0.4)
+	Audio.sfx("explosion", 0.7)
+	shake(player, 0.5, 0.5)
+
+
+## Kurzer Schriftzug über einer Figur, z. B. "KRITISCH!".
+static func popup(player: Node3D, text: String, color: Color) -> void:
+	var label := Label3D.new()
+	label.text = text
+	label.font_size = 70
+	label.outline_size = 18
+	label.modulate = color
+	label.outline_modulate = Color(0, 0, 0, 0.9)
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	player.get_parent().add_child(label)
+	label.global_position = player.global_position + Vector3(0, 2.6, 0)
+	var tween := label.create_tween()
+	tween.tween_property(label, "position:y", label.position.y + 0.8, 0.5)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.5).set_delay(0.2)
+	tween.parallel().tween_property(label, "outline_modulate:a", 0.0, 0.5).set_delay(0.2)
+	tween.tween_callback(label.queue_free)
 
 
 ## Kurze Zeitlupe für alles (in Echtzeit-Sekunden).
