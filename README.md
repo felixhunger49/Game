@@ -63,7 +63,7 @@ Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtbli
 
 **Spezialattacken:**
 - Feuerball (Magier, Robo): fliegt geradeaus.
-- Sturmangriff (Schurke, Kapuzen-Schurke): schneller Stoß nach vorne.
+- Sturmangriff (Schurke): schneller Stoß nach vorne.
 - Wirbel (Barbar): trifft vorne und hinten.
 - Himmelshieb (Held): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
 - Lichtschild (Paladin): 1,6 Sekunden unverwundbar in einer Lichtkuppel, dann explodiert sie und schleudert alle in der Nähe weg.
@@ -80,7 +80,6 @@ Jeder Kämpfer hat zusätzlich eine passive Fähigkeit, die immer wirkt:
 | Barbar | Wirbel | Berserker: je mehr Schaden er hat, desto härter schlägt er (bis +40 %) |
 | Magier | Feuerball | Arkane Quelle: Spezial lädt 60 % schneller |
 | Schurke | Sturmangriff | Kritisch: 25 % Chance auf doppelten Schaden |
-| Kapuzen-Schurke | Sturmangriff | Giftklingen: Treffer vergiften 3 Sekunden lang |
 | Robo | Feuerball | Panzerung: nimmt 20 % weniger Schaden, etwas langsamer |
 | Held | Himmelshieb | Heldenmut: ab 80 % Schaden 30 % stärker |
 | Paladin | Lichtschild | Heilung: heilt sich langsam, wenn er 3 Sekunden nicht getroffen wird |

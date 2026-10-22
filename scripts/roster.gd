@@ -77,11 +77,6 @@ const FIGHTERS := [
 		"weak": "Dualwield_Melee_Attack_Stab", "strong": "Dualwield_Melee_Attack_Chop",
 	},
 	{
-		"name": "Kapuzen-Schurke", "passive": "gift", "flip": "rueckwaerts", "voice": 1.15, "scene": KAYKIT_CHARS + "Rogue_Hooded.glb",
-		"keep": ["Knife", "Knife_Offhand"], "special": "sturm",
-		"weak": "Dualwield_Melee_Attack_Slice", "strong": "Dualwield_Melee_Attack_Chop",
-	},
-	{
 		"name": "Robo", "passive": "panzerung", "flip": "propeller", "voice": 1.5, "scene": "res://assets/kenney/character.glb", "special": "feuerball",
 		"anims": {"idle": "idle", "run": "walk", "jump": "jump"},
 	},
