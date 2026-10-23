@@ -83,7 +83,7 @@ func _handle_select() -> void:
 		if Input.is_action_just_pressed(prefix + "weak"):
 			ready_flags[i] = true
 			Audio.sfx("menu_select")
-			Audio.voice("ha", players[i].voice_pitch())
+			players[i].say("auswahl", "ha")
 	if ready_flags[0] and ready_flags[1]:
 		_start_fight()
 
@@ -243,5 +243,6 @@ func _on_player_fell_off(player: CharacterBody3D) -> void:
 		map_events.stop()
 	var winner: CharacterBody3D = player.opponent
 	winner.cheer()
+	Audio.jingle("sieg")
 	Audio.voice("spieler_%d_gewinnt" % winner.player_id)
 	center_label.text = "Spieler %d gewinnt!\nR: nochmal   Esc: Menü" % winner.player_id

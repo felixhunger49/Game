@@ -62,7 +62,7 @@ steht „Spezial bereit!“) geht die Spezialattacke, danach ist die Leiste wied
 Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtblitz und Schockwelle. Trifft eine, friert das Bild kurz ein, die Kamera wackelt und es knallt. Solange die Leiste voll ist, steigen Funken um die Figur auf.
 
 **Spezialattacken:**
-- Feuerball (Magier, Robo): fliegt geradeaus.
+- Feuerball (Magierin, Kampfroboter): fliegt geradeaus.
 - Sturmangriff (Schurke): schneller Stoß nach vorne.
 - Wirbel (Barbar): trifft vorne und hinten.
 - Himmelshieb (Held): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
@@ -78,9 +78,8 @@ Jeder Kämpfer hat zusätzlich eine passive Fähigkeit, die immer wirkt:
 | Kämpfer | Spezial | Passiv |
 |---|---|---|
 | Barbar | Wirbel | Berserker: je mehr Schaden er hat, desto härter schlägt er (bis +40 %) |
-| Magier | Feuerball | Arkane Quelle: Spezial lädt 60 % schneller |
+| Magierin | Feuerball | Arkane Quelle: Spezial lädt 60 % schneller |
 | Schurke | Sturmangriff | Kritisch: 25 % Chance auf doppelten Schaden |
-| Robo | Feuerball | Panzerung: nimmt 20 % weniger Schaden, etwas langsamer |
 | Held | Himmelshieb | Heldenmut: ab 80 % Schaden 30 % stärker |
 | Paladin | Lichtschild | Heilung: heilt sich langsam, wenn er 3 Sekunden nicht getroffen wird |
 | Brummbart | Erdbeben | Schwergewicht: wird 25 % weniger weit geschleudert, trotzt dem Wind, springt etwas niedriger |
@@ -110,7 +109,7 @@ Ausguck am Mast auf dem Piratenschiff, Spalte in der Eiswelt) und einen eigenen 
 
 Jede Map und das Menü haben eigene Musik. Schläge, Treffer, Sprünge, Abwehr, Items und Map-Effekte haben Geräusche.
 Ein Ansager zählt „Drei, zwei, eins, Kampf!“ herunter und verkündet den Sieger, die Kämpfer rufen beim Zuschlagen und
-Getroffenwerden (der Barbar tiefer, der Robo höher).
+Getroffenwerden (der Barbar tiefer, die Hexe höher).
 
 ## Items
 

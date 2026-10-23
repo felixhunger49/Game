@@ -310,7 +310,7 @@ func _update_strike(e: Dictionary, delta: float) -> void:
 			e.phase = "active"
 			e.time = 0.0
 			e.strike = _strike_node(e.x)
-			Audio.sfx({"lava": "explosion", "eis": "shield_break", "blitze": "cannon"}[kind])
+			Audio.sfx({"lava": "lava", "eis": "ice_crack", "blitze": "thunder"}[kind])
 		return
 	var node: Node3D = e.strike
 	var atk: Dictionary = {}
@@ -493,7 +493,7 @@ func _update_wave(e: Dictionary, _delta: float) -> void:
 			e.phase = "push"
 			e.time = 0.0
 			hud_label.text = ""
-			Audio.sfx("wind", 0.7)
+			Audio.sfx("waves")
 		return
 	var strength := sin(clampf(e.time / WAVE_TIME, 0.0, 1.0) * PI)
 	for p in players:

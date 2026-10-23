@@ -41,7 +41,7 @@ func music(track: String) -> void:
 	if track == _music_name and _music_player.playing:
 		return
 	_music_name = track
-	var stream := _load(MUSIC_DIR + track + ".wav")
+	var stream := _music_stream(track)
 	if stream == null:
 		_music_player.stop()
 		return
@@ -52,6 +52,36 @@ func music(track: String) -> void:
 func stop_music() -> void:
 	_music_name = ""
 	_music_player.stop()
+
+
+## Eigene Stimme einer Figur (assets/audio/voice/figuren/<Figur>/<Spruch>.wav). Hat die Figur den Spruch nicht,
+## kommt die gemeinsame Stimme, in der Stimmlage der Figur verstellt.
+func fighter_voice(folder: String, line: String, fallback: String, fallback_pitch: float, pitch := 1.0, volume_db := 0.0) -> void:
+	var path := VOICE_DIR + "figuren/%s/%s.wav" % [folder, line]
+	if _load(path):
+		_play(path, pitch, volume_db)
+	else:
+		voice(fallback, fallback_pitch * pitch, volume_db)
+
+
+## Kurzes Musikstück einmal abspielen (z. B. Siegesfanfare); die Hintergrundmusik verstummt dafür.
+func jingle(track: String) -> void:
+	var stream := _music_stream(track)
+	if stream == null:
+		return
+	stop_music()
+	var p := _pool[_next]
+	_next = (_next + 1) % POOL_SIZE
+	p.stream = stream
+	p.pitch_scale = 1.0
+	p.volume_db = _to_db(Settings.music_volume) - 2.0
+	p.play()
+
+
+## Neue Musik liegt als MP3 vor, ältere Stücke als WAV.
+func _music_stream(track: String) -> AudioStream:
+	var stream := _load(MUSIC_DIR + track + ".mp3")
+	return stream if stream else _load(MUSIC_DIR + track + ".wav")
 
 
 func apply_volume() -> void:

@@ -363,7 +363,7 @@ func start_attack(kind: String) -> void:
 			Audio.sfx("swing_strong")
 			_shout()
 		"kick":
-			Audio.sfx("swing_weak", 0.8)
+			Audio.sfx("kick")
 
 
 func start_special() -> void:
@@ -396,7 +396,7 @@ func start_special() -> void:
 		"hundert_faeuste": "swing_strong", "breitseite": "swing_weak"}
 	Audio.sfx(sounds.get(kind, "swing_strong"))
 	Audio.sfx("special_start")
-	Audio.voice("spezial", voice_pitch())
+	say("spezial")
 	SpecialFX.special_start(self, kind)
 	if kind == "sturm":
 		SpecialFX.dash_trail(self, dash_time)
@@ -453,14 +453,22 @@ func special_ready() -> bool:
 	return not Settings.special_charge or special_energy >= SPECIAL_MAX
 
 
-## Stimmlage der Figur (aus dem Roster), damit z. B. der Barbar tiefer und der Robo höher klingt.
+## Stimmlage der Figur (aus dem Roster), damit z. B. der Barbar tiefer und die Hexe höher klingt.
 func voice_pitch() -> float:
 	return fighter.get("voice", 1.0)
 
 
+## Spruch in der eigenen Stimme der Figur (z. B. "auswahl", "au", "spezial", "jubel").
+## Ohne eigene Stimme spricht die gemeinsame Stimme "fallback" in der Stimmlage der Figur.
+func say(line: String, fallback := "", pitch := 1.0, volume_db := 0.0) -> void:
+	var folder: String = fighter.get("name", "").replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
+	Audio.fighter_voice(folder, line, fallback if fallback else line, voice_pitch(), pitch, volume_db)
+
+
 func _shout() -> void:
 	if randf() < 0.6:
-		Audio.voice(SHOUTS.pick_random(), voice_pitch() * randf_range(0.95, 1.05), -2.0)
+		var line: String = SHOUTS.pick_random()
+		say(line, line, randf_range(0.97, 1.03), -2.0)
 
 
 func _update_pending_attack(delta: float) -> void:
@@ -572,7 +580,7 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 			stunned = 2.5
 			velocity.y = 6.0
 			Audio.sfx("shield_break")
-			Audio.voice("au", voice_pitch())
+			say("au")
 		else:
 			Audio.sfx("shield_block")
 		return false
@@ -592,7 +600,7 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 	var heavy: bool = atk.damage * multiplier >= 10.0
 	Audio.sfx("hit_strong" if heavy else "hit_weak")
 	if heavy or randf() < 0.3:
-		Audio.voice("au", voice_pitch() * randf_range(0.95, 1.05), -2.0)
+		say("au", "au", randf_range(0.97, 1.03), -2.0)
 	return true
 
 
@@ -611,7 +619,7 @@ func give_speed(seconds: float) -> void:
 func cheer() -> void:
 	controls_enabled = false
 	_play("cheer")
-	Audio.voice("jubel", voice_pitch())
+	say("jubel")
 
 
 func _lose_stock() -> void:
@@ -785,7 +793,7 @@ func _play(action: String, speed_scale := 1.0) -> void:
 	speed_scale = fighter.get("anim_speeds", {}).get(action, speed_scale)
 	var anim_name := Roster.anim_name(fighter, action)
 	if anim_name == "" or not anim_player.has_animation(anim_name):
-		# Der Robo hat keine Schlag-Animationen: dann kurz nach vorne stoßen.
+		# Figur ohne Schlag-Animation: dann kurz nach vorne stoßen.
 		if is_attack:
 			current_anim = action
 			_lunge()

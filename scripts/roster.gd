@@ -70,18 +70,9 @@ const FIGHTERS := [
 		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Magier", "passive": "arkan", "flip": "pirouette", "voice": 1.1, "scene": KAYKIT_CHARS + "Mage.glb",
-		"keep": ["2H_Staff"], "special": "feuerball",
-		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Stab",
-	},
-	{
 		"name": "Schurke", "passive": "kritisch", "flip": "doppelsalto", "voice": 1.2, "scene": KAYKIT_CHARS + "Rogue.glb",
 		"keep": ["Knife", "Knife_Offhand"], "special": "sturm",
 		"weak": "Dualwield_Melee_Attack_Stab", "strong": "Dualwield_Melee_Attack_Chop",
-	},
-	{
-		"name": "Robo", "passive": "panzerung", "flip": "propeller", "voice": 1.5, "scene": "res://assets/kenney/character.glb", "special": "feuerball",
-		"anims": {"idle": "idle", "run": "walk", "jump": "jump"},
 	},
 	{
 		# Eigene Figur: mit Flux + Trellis erzeugt, Skelett und Animationen von Mixamo.
@@ -125,7 +116,19 @@ const FIGHTERS := [
 		# Eigene Figur aus ComfyUI (Flux + Trellis). Noch ohne Skelett: sobald sie bei Mixamo
 		# Knochen und Animationen bekommen hat, wie beim Held "anim_dir" eintragen.
 		"name": "Mönch", "passive": "innere_ruhe", "flip": "doppelsalto", "voice": 1.05,
-		"scene": "res://assets/moench/moench.glb", "scale": 1.75, "special": "hundert_faeuste",
+		"scene": "res://assets/moench/moench_v2.glb", "scale": 1.75, "special": "hundert_faeuste",
+		"anims": {},
+	},
+	{
+		# Eigene Figur aus ComfyUI (Flux + Trellis), wie der Mönch noch ohne Skelett.
+		"name": "Kampfroboter", "passive": "panzerung", "flip": "propeller", "voice": 0.8,
+		"scene": "res://assets/kampfroboter/kampfroboter.glb", "scale": 1.95, "special": "feuerball",
+		"anims": {},
+	},
+	{
+		# Eigene Figur aus ComfyUI (Flux + Trellis), ersetzt den Magier. Noch ohne Skelett.
+		"name": "Magierin", "passive": "arkan", "flip": "pirouette", "voice": 1.2,
+		"scene": "res://assets/magierin/magierin.glb", "scale": 1.75, "special": "feuerball",
 		"anims": {},
 	},
 ]

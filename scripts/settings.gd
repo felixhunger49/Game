@@ -15,13 +15,13 @@ const MAPS := [
 	{"name": "Friedhof", "scene": "res://scenes/maps/friedhof.tscn", "music": "friedhof", "event": "geister",
 		"backdrop": "res://assets/maps/friedhof/hintergrund.png",
 		"effect": "Weniger Schwerkraft: man springt höher.\nGeister schießen aus leuchtenden Stellen hoch."},
-	{"name": "Vulkan", "scene": "res://scenes/maps/vulkan.tscn", "music": "burg", "event": "lava",
+	{"name": "Vulkan", "scene": "res://scenes/maps/vulkan.tscn", "music": "vulkan", "event": "lava",
 		"effect": "Lavafontänen schießen aus dem Boden.\nWeg von den glühenden Stellen!"},
-	{"name": "Piratenschiff", "scene": "res://scenes/maps/piratenschiff.tscn", "music": "dorf", "event": "wellen",
+	{"name": "Piratenschiff", "scene": "res://scenes/maps/piratenschiff.tscn", "music": "piratenschiff", "event": "wellen",
 		"effect": "Seegang: Das Schiff schaukelt und Wellen\nschieben alle zur Seite."},
-	{"name": "Eiswelt", "scene": "res://scenes/maps/eiswelt.tscn", "music": "friedhof", "event": "eis",
+	{"name": "Eiswelt", "scene": "res://scenes/maps/eiswelt.tscn", "music": "eiswelt", "event": "eis",
 		"effect": "Spiegelglatter Boden: man rutscht!\nEiszapfen fallen auf die blauen Stellen."},
-	{"name": "Wolkentempel", "scene": "res://scenes/maps/wolkentempel.tscn", "music": "dorf", "event": "blitze",
+	{"name": "Wolkentempel", "scene": "res://scenes/maps/wolkentempel.tscn", "music": "wolkentempel", "event": "blitze",
 		"effect": "Blitze schlagen ein.\nGelbe Kreise zeigen, wo es gleich kracht."},
 ]
 const ITEM_RATES := ["Selten", "Normal", "Oft"]
@@ -63,6 +63,8 @@ func _ready() -> void:
 	stocks = cfg.get_value("game", "stocks", stocks)
 	map_index = cfg.get_value("game", "map_index", map_index)
 	choices = cfg.get_value("game", "choices", choices)
+	# Gespeicherte Auswahl kann auf eine inzwischen entfernte Figur zeigen.
+	choices = choices.map(func(c): return clampi(c, 0, Roster.FIGHTERS.size() - 1))
 	map_effects = cfg.get_value("game", "map_effects", map_effects)
 	special_charge = cfg.get_value("game", "special_charge", special_charge)
 	music_volume = cfg.get_value("audio", "music_volume", music_volume)
