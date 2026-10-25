@@ -6,6 +6,10 @@ Wie bei Super Smash Bros. sind Figuren und Arenen 3D-Modelle, gekämpft wird abe
 ![Burg](docs/burg.png)
 ![Dorf](docs/dorf.png)
 ![Friedhof](docs/friedhof.png)
+![Vulkan](docs/vulkan.png)
+![Piratenschiff](docs/piratenschiff.png)
+![Eiswelt](docs/eiswelt.png)
+![Wolkentempel](docs/wolkentempel.png)
 
 ## Regeln
 
