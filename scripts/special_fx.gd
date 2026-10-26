@@ -6,7 +6,7 @@ class_name SpecialFX
 const LASER_HEIGHT := 1.0
 
 const NAMES := {"feuerball": "FEUERBALL!", "sturm": "STURMANGRIFF!", "wirbel": "WIRBELSTURM!",
-	"aufwaerts": "HIMMELSHIEB!", "lichtschild": "LICHTSCHILD!", "erdbeben": "ERDBEBEN!", "frost": "FROSTZAUBER!", "schwein": "SCHWEINEZAUBER!",
+	"aufwaerts": "HIMMELSHIEB!", "justice": "JUSTICE!", "lichtschild": "LICHTSCHILD!", "erdbeben": "ERDBEBEN!", "frost": "FROSTZAUBER!", "schwein": "SCHWEINEZAUBER!",
 	"pfeilregen": "PFEILREGEN!", "hundert_faeuste": "HUNDERT FÄUSTE!",
 	"breitseite": "BREITSEITE!", "laser": "LASERKANONE!"}
 

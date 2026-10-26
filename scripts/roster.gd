@@ -24,6 +24,7 @@ const SPECIALS := {
 	"sturm": "Sturmangriff: schneller Stoß nach vorne",
 	"wirbel": "Wirbel: trifft auf beiden Seiten",
 	"aufwaerts": "Himmelshieb: springt hoch und schlägt nach oben",
+	"justice": "Justice: ein riesiges goldenes Lichtschwert fällt auf den Gegner",
 	"lichtschild": "Lichtschild: kurz unverwundbar, dann explodiert die Kuppel",
 	"erdbeben": "Erdbeben: Stampfer, Schockwelle über den Boden",
 	"frost": "Frostzauber: Eiskugel, friert den Gegner ein",
@@ -69,30 +70,31 @@ const KAYKIT_WEAPONS := "res://assets/kaykit/weapons/"
 const FIGHTERS := [
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), Zweihand-Animationen von Mixamo; Fallen/Landen/Rolle/Taumeln
-		# vom Kampfroboter. Große Zweihand-Axt vom KayKit-Barbaren.
+		# vom Kampfroboter. Große Axt vom KayKit-Barbaren (einhändig).
 		"name": "Barbar", "passive": "berserker", "flip": "rad", "voice": 0.85,
 		"scene": "res://assets/barbar/modell.fbx", "anim_dir": "res://assets/barbar/", "scale": 200.0, "special": "wirbel",
 		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.0},
 		"anim_trim": {"weak": [0.35, 0.85], "strong": [0.30, 1.05], "kick": [0.25, 0.95], "special": [0.50, 1.60]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Barbarian.glb", "2H_Axe", Vector3(-33, 4, -130)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Barbarian.glb", "2H_Axe", Vector3(-85, 110, 158)],
 		},
 	},
 	{
-		# Eigene Figur aus ComfyUI (Flux + Trellis), Animationen von Mixamo; Dolche vom KayKit-Schurken.
+		# Eigene Figur aus ComfyUI (Flux + Trellis), Animationen von Mixamo; Dolche vom KayKit-Schurken
+		# (rechts normaler Griff, links Rückhandgriff).
 		"name": "Schurke", "passive": "kritisch", "flip": "doppelsalto", "voice": 1.2,
 		"scene": "res://assets/schurkin/idle.fbx", "anim_dir": "res://assets/schurkin/", "scale": 185.0, "special": "sturm",
 		"anim_speeds": {"weak": 1.5, "strong": 1.1, "kick": 1.6, "special": 1.4},
 		"anim_trim": {"weak": [0.05, 0.50], "strong": [0.20, 1.00], "kick": [0.25, 0.95], "special": [0.00, 1.40]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Rogue.glb", "Knife", Vector3(0, -90, 90), Vector3.ZERO, 0.5],
-			"mixamorig_LeftHand": [KAYKIT_CHARS + "Rogue.glb", "Knife_Offhand", Vector3(0, -90, 90), Vector3.ZERO, 0.5],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Rogue.glb", "Knife", Vector3(0, -69, -50), Vector3.ZERO, 0.5],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Rogue.glb", "Knife_Offhand", Vector3(49, -19, 179), Vector3.ZERO, 0.5],
 		},
 	},
 	{
 		# Eigene Figur: mit Flux + Trellis erzeugt, Skelett und Animationen von Mixamo.
 		"name": "Held", "passive": "heldenmut", "flip": "salto", "voice": 1.0, "scene": "res://assets/ritter_neu/idle.fbx",
-		"anim_dir": "res://assets/ritter_neu/", "scale": 195.0, "special": "aufwaerts",
+		"anim_dir": "res://assets/ritter_neu/", "scale": 195.0, "special": "justice",
 		# Nur der eigentliche Angriff, ohne langes Ausholen und Zurückgehen.
 		"anim_speeds": {"weak": 1.4, "strong": 1.0, "kick": 1.2},
 		"anim_trim": {"weak": [0.25, 1.00], "strong": [0.15, 1.25], "kick": [0.30, 1.00], "special": [0.40, 1.30]},
@@ -110,7 +112,7 @@ const FIGHTERS := [
 		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.3},
 		"anim_trim": {"weak": [0.05, 0.55], "strong": [0.20, 0.95], "kick": [0.00, 0.70]},
 		"attach_from": {
-			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", Vector3(-20, 37, -109)],
+			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", Vector3(-43, -116, 106)],
 			"mixamorig_LeftHand": [KAYKIT_CHARS + "Paladin.glb", "Rectangle_Shield", Vector3(-90, 0, 135)],
 		},
 	},
@@ -183,6 +185,8 @@ static func anim_name(fighter: Dictionary, action: String) -> String:
 		return ANIM_LIB + "/" + action
 	if action in ["weak", "strong"]:
 		return fighter.get(action, "")
+	if action == "luft":
+		return fighter.get("strong", "")
 	if action == "special":
 		action = fighter.get("special", "")
 	if action in fighter.get("anim_overrides", {}):

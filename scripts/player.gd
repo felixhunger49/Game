@@ -32,6 +32,12 @@ const ATTACKS := {
 		"cooldown": 1.1, "angle": Vector2(1, 0.8), "anim_speed": 1.5},
 	"aufwaerts": {"damage": 9.0, "base": 6.0, "scale": 0.15, "range": Vector2(1.4, 2.8), "startup": 0.1,
 		"cooldown": 0.9, "angle": Vector2(0.2, 1), "anim_speed": 1.6},
+	# Alle: in der Luft schlagen = Uppercut nach oben (Animation vom Himmelshieb des Helden).
+	"luft": {"damage": 6.0, "base": 4.5, "scale": 0.12, "range": Vector2(1.4, 2.2), "startup": 0.08,
+		"cooldown": 0.55, "angle": Vector2(0.25, 1), "anim_speed": 1.5},
+	# Held: ein riesiges goldenes Lichtschwert fällt auf den Gegner (siehe JusticeSword).
+	"justice": {"damage": 14.0, "base": 8.0, "scale": 0.2, "startup": 0.3, "cooldown": 1.1,
+		"angle": Vector2(0.35, 1), "anim_speed": 1.4},
 	# Paladin: 1,6 s unverwundbar in einer Lichtkuppel, dann explodiert sie.
 	"lichtschild": {"damage": 12.0, "base": 7.0, "scale": 0.18, "range": Vector2(2.8, 2.2), "startup": 1.6,
 		"cooldown": 1.8, "angle": Vector2(1, 0.6), "anim_speed": 1.0},
@@ -76,6 +82,14 @@ const PLUNDER_ENERGY := 8.0
 ## Schweinezauber (Hexe): so lange ist der Gegner ein Schwein (kann nicht angreifen, langsamer, nimmt mehr Schaden).
 const PIG_TIME := 3.0
 const PIG_DAMAGE_TAKEN := 1.3
+## Luft-Uppercut: Mixamo-Animation vom Himmelshieb des Helden, passt auf jedes Mixamo-Skelett.
+const LUFT_ANIM := "res://assets/ritter_neu/special.fbx"
+const LUFT_TRIM := [0.40, 1.30]
+## Zweihandwaffe (z. B. Axt des Barbaren): zeigt immer von der rechten zur linken Hand, damit beide Hände am Stiel sind.
+var two_hand_weapon: Node3D
+## Stelle auf dem Stiel (in Waffen-Einheiten, KayKit-Axt: Griff 0, Kopf ab ca. 0,9), an der die linke Hand greift.
+const TWO_HAND_GRIP := 0.75
+var two_hand_skeleton: Skeleton3D
 ## Overcharge (Kampfroboter): alle OVERCHARGE_INTERVAL Sekunden ein Stromschlag rundherum,
 ## OVERCHARGE_WARN Sekunden vorher knistert es blau als Warnung.
 const OVERCHARGE_INTERVAL := 7.0
@@ -99,7 +113,7 @@ const SPECIAL_PER_SECOND := 5.0
 const SPECIAL_PER_DAMAGE_DEALT := 3.5
 const SPECIAL_PER_DAMAGE_TAKEN := 2.0
 const SPECIAL_KINDS := ["feuerball", "sturm", "wirbel", "aufwaerts", "lichtschild", "erdbeben", "frost", "pfeilregen",
-	"hundert_faeuste", "breitseite", "laser", "schwein"]
+	"hundert_faeuste", "breitseite", "laser", "schwein", "justice"]
 const SHOUTS := ["ha", "hja", "hah"]
 
 ## Kunststücke am höchsten Punkt eines Sprungs. axis: Drehachse der Figur (x = Salto vorwärts,
@@ -256,6 +270,32 @@ func set_fighter(index: int) -> void:
 	_play("idle")
 
 
+func _process(_delta: float) -> void:
+	_aim_two_hand_weapon()
+
+
+## Zweihandwaffe zwischen beide Hände legen: Stiel von der rechten zur linken Hand, Kopf darüber hinaus.
+func _aim_two_hand_weapon() -> void:
+	if two_hand_weapon == null or not is_instance_valid(two_hand_weapon):
+		return
+	var sk := two_hand_skeleton
+	var right: Vector3 = sk.global_transform * sk.get_bone_global_pose(sk.find_bone("mixamorig_RightHand")).origin
+	var left: Vector3 = sk.global_transform * sk.get_bone_global_pose(sk.find_bone("mixamorig_LeftHand")).origin
+	var along := left - right
+	if along.length() < 0.05:
+		return
+	var y := along.normalized()
+	var side := y.cross(Vector3(0, 0, 1))
+	if side.length() < 0.1:
+		side = y.cross(Vector3(1, 0, 0))
+	var x := side.normalized()
+	var z := x.cross(y)
+	var size := two_hand_weapon.global_transform.basis.get_scale().x
+	# Die linke Hand greift kurz unter dem Kopf (bei TWO_HAND_GRIP auf dem Stiel), die rechte entsprechend weiter unten.
+	var right_on_handle := maxf(TWO_HAND_GRIP - along.length() / size, -0.4)
+	two_hand_weapon.global_transform = Transform3D(Basis(x, y, z).scaled(Vector3.ONE * size), right - y * right_on_handle * size)
+
+
 func _physics_process(delta: float) -> void:
 	attack_timer = max(attack_timer - delta, 0.0)
 	hitstun = max(hitstun - delta, 0.0)
@@ -368,7 +408,11 @@ func _handle_input(delta: float) -> void:
 		return
 	for kind in ["weak", "strong", "kick"]:
 		if Input.is_action_just_pressed(_action(kind)):
-			start_attack(kind)
+			if kind != "kick" and not is_on_floor():
+				start_attack("luft")
+				velocity.y = maxf(velocity.y, 5.0)
+			else:
+				start_attack(kind)
 			return
 	if Input.is_action_just_pressed(_action("special")):
 		start_special()
@@ -421,7 +465,7 @@ func start_special() -> void:
 	_play("special", ATTACKS[kind].anim_speed)
 	var sounds := {"feuerball": "fireball", "sturm": "dash", "wirbel": "whirl", "aufwaerts": "uppercut",
 		"lichtschild": "pickup_heal", "erdbeben": "swing_strong", "frost": "fireball", "pfeilregen": "swing_weak",
-		"hundert_faeuste": "swing_strong", "breitseite": "swing_weak", "laser": "special_start", "schwein": "fireball"}
+		"hundert_faeuste": "swing_strong", "breitseite": "swing_weak", "laser": "special_start", "schwein": "fireball", "justice": "special_start"}
 	Audio.sfx(sounds.get(kind, "swing_strong"))
 	Audio.sfx("special_start")
 	say("spezial")
@@ -530,6 +574,11 @@ func _update_pending_attack(delta: float) -> void:
 		"laser":
 			SpecialFX.laser(self, atk.range.x)
 			_try_hit(atk, false)
+		"justice":
+			var sword := JusticeSword.new()
+			get_parent().add_child(sword)
+			var target_x: float = opponent.global_position.x if opponent and opponent.visible else global_position.x + facing * 4.0
+			sword.launch(self, target_x, opponent.global_position.y if opponent and opponent.visible else global_position.y)
 		"breitseite":
 			var shot := Cannonball.new()
 			get_parent().add_child(shot)
@@ -566,7 +615,7 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 	var in_range := false
 	if both_sides:
 		in_range = absf(offset.x) <= reach.x and absf(offset.y) <= reach.y
-	elif atk == ATTACKS.aufwaerts:
+	elif atk == ATTACKS.aufwaerts or atk == ATTACKS.luft:
 		in_range = absf(offset.x) <= reach.x and offset.y > -1.6 and offset.y <= reach.y
 	else:
 		in_range = forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y
@@ -783,8 +832,10 @@ func _load_anim_files() -> void:
 		return
 	var lib := AnimationLibrary.new()
 	for action in ["idle", "run", "jump", "fall", "weak", "strong", "kick", "special", "shield",
-			"hit", "stunned", "dodge", "cheer"]:
+			"hit", "stunned", "dodge", "cheer", "luft"]:
 		var path: String = dir + fighter.get("anim_files", {}).get(action, action + ".fbx")
+		if action == "luft" and not ResourceLoader.exists(path):
+			path = LUFT_ANIM
 		if not ResourceLoader.exists(path):
 			continue
 		var scene: Node = load(path).instantiate()
@@ -792,7 +843,7 @@ func _load_anim_files() -> void:
 		if source and not source.get_animation_list().is_empty():
 			var anim: Animation = source.get_animation(source.get_animation_list()[0]).duplicate()
 			_strip_root_motion(anim)
-			var trim: Array = fighter.get("anim_trim", {}).get(action, [])
+			var trim: Array = fighter.get("anim_trim", {}).get(action, LUFT_TRIM if action == "luft" else [])
 			if trim.size() == 2:
 				anim = _trim_animation(anim, trim[0], trim[1])
 			lib.add_animation(action, anim)
@@ -1028,6 +1079,9 @@ func _setup_weapons(model: Node3D) -> void:
 			var s: float = 0.8 / fighter.get("scale", 0.8) * (entry[4] if entry.size() > 4 else 1.0)
 			weapon.transform = Transform3D(Basis.from_euler(rot * PI / 180.0).scaled(Vector3.ONE * s), offset * s)
 			weapon.visible = true
+			if fighter.get("two_handed", false) and bone_name == "mixamorig_RightHand":
+				two_hand_weapon = weapon
+				two_hand_skeleton = skeleton
 		source.free()
 
 	var attach: Dictionary = fighter.get("attach", {})

@@ -10,7 +10,7 @@ const LEVELS := [
 	{"name": "Schwer", "reaction": 0.12, "aggression": 0.85, "block": 0.55, "mistakes": 0.03},
 ]
 ## Specials, die aus der Ferne treffen (die anderen nur aus der Nähe einsetzen).
-const RANGED_SPECIALS := ["feuerball", "frost", "schwein", "pfeilregen", "breitseite", "laser", "erdbeben"]
+const RANGED_SPECIALS := ["feuerball", "frost", "schwein", "justice", "pfeilregen", "breitseite", "laser", "erdbeben"]
 ## Weiter weg vom Mittelpunkt läuft der Computer zurück zur Mitte, statt herunterzufallen.
 const EDGE := 7.0
 

@@ -26,6 +26,10 @@ const BOSS_HP := 220.0
 const BOSS_SIZE := 1.7
 var boss_ai: BossAI
 var boss_bar: ProgressBar
+## Kämpferauswahl: je Spieler eine Karte (Name, Spezial, Passive) und was dafür ausgeblendet wird.
+var select_cards: Array[Dictionary] = []
+var select_shade: MeshInstance3D
+var select_hidden: Array[Node3D] = []
 
 @onready var players: Array = [$Player1, $Player2]
 @onready var labels: Array = [$HUD/P1Label, $HUD/P2Label]
@@ -75,8 +79,10 @@ func _ready() -> void:
 		Settings.choices[1] = (Settings.choices[0] + randi_range(1, Roster.count() - 1)) % Roster.count()
 		players[1].set_fighter(Settings.choices[1])
 		ready_flags[1] = true
-	center_label.text = "Wählt eure Kämpfer!\nLaufen-Tasten: wechseln   Schwacher Angriff: bereit"
+	bottom_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bottom_label.add_theme_font_size_override("font_size", 15)
 	bottom_label.text = _controls_hint()
+	_create_select_ui()
 	_reset_item_timer()
 	_create_energy_bars()
 	Audio.music(Settings.current_map().music)
@@ -129,6 +135,7 @@ func _start_fight() -> void:
 	countdown_time = 0.0
 	countdown_step = -1
 	bottom_label.text = ""
+	_remove_select_ui()
 	for p in players:
 		# Kurz zur Seite drehen, damit man sieht, wer gegen wen kämpft.
 		p.facing = p.start_facing
@@ -272,9 +279,10 @@ func _update_hud() -> void:
 		var p = players[i]
 		var text: String = p.fighter.get("name", "")
 		if state == State.SELECT:
-			var special: String = Roster.SPECIALS.get(p.fighter.get("special", ""), "")
-			var passive: String = Roster.PASSIVES.get(p.fighter.get("passive", ""), "")
-			text = "%s\n◀ %s ▶\n%s" % [_player_name(i), text, "Bereit!" if ready_flags[i] else special + "\n" + passive]
+			_update_select_card(i)
+			labels[i].text = ""
+			energy_bars[i].visible = false
+			continue
 		else:
 			text = "%s: %s\n%d %%   %s" % [_player_name(i), text, p.damage, "" if Settings.target_mode else "●".repeat(p.stocks)]
 		labels[i].text = text
@@ -367,7 +375,7 @@ func _update_camera(delta: float) -> void:
 		clampf(mid.y * 0.5 + 2.2, 1.8, 7.0),
 		clampf(9.0 + spread * 0.9, 14.0, 26.0))
 	if state == State.SELECT:
-		target = Vector3(0, 1.6, 9)
+		target = Vector3(clampf(mid.x, -8.0, 8.0), mid.y + 1.5, 8.5 + maxf(spread - 5.0, 0.0) * 0.8)
 	camera.position = camera.position.lerp(target, 3.0 * delta)
 
 
@@ -394,6 +402,128 @@ R: nochmal   Esc: Menü"
 	else:
 		Audio.voice("spieler_%d_gewinnt" % winner.player_id)
 		center_label.text = "%s gewinnt!\nR: nochmal   Esc: Menü" % ("Du" if Settings.solo else "Spieler %d" % winner.player_id)
+
+
+## Kämpferauswahl aufbauen: oben die Überschrift, links und rechts je eine Karte mit umbrechendem Text.
+## Die Map wird hinter den Figuren abgedunkelt, alles was vor ihnen steht (Geländer, Kanonen, Masten) ausgeblendet.
+func _create_select_ui() -> void:
+	center_label.text = ""
+	var hud: Node = center_label.get_parent()
+	var title := _select_label(34, Color(1, 0.85, 0.3))
+	title.text = "Wählt eure Kämpfer!"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.position = Vector2(0, 10)
+	title.size = Vector2(1280, 48)
+	hud.add_child(title)
+	var help := _select_label(18, Color(1, 1, 1, 0.9))
+	help.text = "Laufen-Tasten: Kämpfer wechseln     Schwacher Angriff: bereit"
+	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	help.position = Vector2(0, 54)
+	help.size = Vector2(1280, 28)
+	hud.add_child(help)
+	select_cards.append({"node": title})
+	select_cards.append({"node": help})
+	var cards: Array[Dictionary] = []
+	for i in players.size():
+		if Settings.target_mode and i == 1:
+			continue
+		var panel := PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.05, 0.05, 0.1, 0.78)
+		style.border_color = players[i].color
+		style.set_border_width_all(3)
+		style.set_corner_radius_all(14)
+		style.set_content_margin_all(14)
+		panel.add_theme_stylebox_override("panel", style)
+		panel.position = Vector2(24 if i == 0 else 1280 - 24 - 430, 92)
+		panel.custom_minimum_size = Vector2(430, 0)
+		panel.size = Vector2(430, 0)
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 4)
+		panel.add_child(box)
+		var who := _select_label(18, players[i].color)
+		var fighter_name := _select_label(32, Color.WHITE)
+		var special := _select_label(17, Color(1, 0.9, 0.6), true)
+		var passive := _select_label(17, Color(0.75, 0.9, 1), true)
+		for l in [who, fighter_name, special, passive]:
+			box.add_child(l)
+		hud.add_child(panel)
+		var card := {"node": panel, "who": who, "name": fighter_name, "special": special, "passive": passive, "player": i}
+		select_cards.append(card)
+	# Dunkle Wand direkt hinter den Figuren: die Map bleibt zu ahnen, lenkt aber nicht ab.
+	select_shade = MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(120, 60)
+	select_shade.mesh = quad
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(0.02, 0.02, 0.06, 0.75)
+	# Nach allen anderen durchsichtigen Dingen (Wasser, Nebel) zeichnen, sonst übermalen sie die Wand.
+	mat.render_priority = 100
+	mat.disable_fog = true
+	select_shade.material_override = mat
+	select_shade.position = Vector3(0, 5, -1.2)
+	add_child(select_shade)
+	# Was den Figuren im Weg steht (Kisten, Kanonen, Seile), während der Auswahl ausblenden.
+	# Böden bleiben: was nicht über die Füße reicht, verdeckt niemanden.
+	for node in map_node.find_children("*", "GeometryInstance3D", true, false):
+		var g := node as GeometryInstance3D
+		if not g.is_visible_in_tree():
+			continue
+		var bounds := g.global_transform * g.get_aabb()
+		if bounds.size.length() > 60.0 or bounds.end.z < -0.6:
+			continue
+		for p in players:
+			if not p.visible:
+				continue
+			var body := AABB(p.position + Vector3(-0.9, 0.25, -0.6), Vector3(1.8, 2.4 * p.size_scale, 50.0))
+			if bounds.intersects(body):
+				g.visible = false
+				select_hidden.append(g)
+				break
+	# Namensschilder über den Köpfen vor der dunklen Wand zeichnen.
+	for p in players:
+		p.get_node("Tag").render_priority = 120
+		p.get_node("Tag").outline_render_priority = 119
+
+
+func _select_label(font_size: int, color: Color, wrap := false) -> Label:
+	var label := Label.new()
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	label.add_theme_constant_override("outline_size", 8)
+	if wrap:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.custom_minimum_size = Vector2(400, 0)
+	return label
+
+
+func _update_select_card(i: int) -> void:
+	for card in select_cards:
+		if card.get("player", -1) != i:
+			continue
+		var f: Dictionary = players[i].fighter
+		card.who.text = _player_name(i) + ("   ✔ Bereit!" if ready_flags[i] else "")
+		card.name.text = "◀  %s  ▶" % f.get("name", "") if not ready_flags[i] or (Settings.solo and i == 1) else f.get("name", "")
+		card.special.text = "Spezial – " + Roster.SPECIALS.get(f.get("special", ""), "")
+		card.passive.text = "Passiv – " + Roster.PASSIVES.get(f.get("passive", ""), "")
+		# Die Karte wächst mit dem Text, aber nie über den Bildschirm hinaus.
+		card.node.size = Vector2(430, 0)
+
+
+func _remove_select_ui() -> void:
+	for card in select_cards:
+		card.node.queue_free()
+	select_cards.clear()
+	if select_shade:
+		select_shade.queue_free()
+		select_shade = null
+	for g in select_hidden:
+		if is_instance_valid(g):
+			g.visible = true
+	select_hidden.clear()
 
 
 ## "Spieler 1", "Spieler 2" oder im Solo-Modus "Computer (Mittel)".
