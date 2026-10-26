@@ -59,7 +59,7 @@ func _physics_process(delta: float) -> void:
 	var target: CharacterBody3D = shooter.opponent if shooter else null
 	var hit_target: bool = target != null and target.visible \
 		and (target.global_position + Vector3(0, 0.9, 0)).distance_to(global_position) < 1.0
-	if hit_target or global_position.y < 0.2 or age > LIFETIME:
+	if hit_target or global_position.y < 0.2 or age > LIFETIME or Target.hit_near(self, global_position, 0.8):
 		_explode(target)
 
 
@@ -68,6 +68,7 @@ func _explode(target: CharacterBody3D) -> void:
 	SpecialFX.impact(shooter, global_position, Color(1, 0.55, 0.2))
 	SpecialFX._sparks(world, global_position, Color(1, 0.5, 0.1), 60, 9.0, 0.6)
 	Audio.sfx("explosion", 1.1)
+	Target.hit_near(self, global_position, EXPLOSION_RADIUS)
 	if target and target.visible:
 		var offset := target.global_position + Vector3(0, 0.9, 0) - global_position
 		if offset.length() < EXPLOSION_RADIUS:

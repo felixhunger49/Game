@@ -27,9 +27,11 @@ const SPECIALS := {
 	"lichtschild": "Lichtschild: kurz unverwundbar, dann explodiert die Kuppel",
 	"erdbeben": "Erdbeben: Stampfer, Schockwelle über den Boden",
 	"frost": "Frostzauber: Eiskugel, friert den Gegner ein",
+	"schwein": "Schweinezauber: verwandelt den Gegner 3 Sekunden in ein Schwein",
 	"pfeilregen": "Pfeilregen: Pfeile regnen auf den Gegner",
 	"hundert_faeuste": "Hundert Fäuste: sechs blitzschnelle Schläge",
 	"breitseite": "Breitseite: Kanonenkugel, die explodiert",
+	"laser": "Laserkanone: Laserstrahl aus dem Bauch, quer über die Arena",
 }
 
 const PASSIVES := {
@@ -47,6 +49,7 @@ const PASSIVES := {
 	"flink": "Flink: schneller und springt dreimal",
 	"innere_ruhe": "Innere Ruhe: still stehen lädt das Spezial doppelt so schnell",
 	"pluendern": "Plündern: Treffer stehlen Spezial-Energie",
+	"overcharge": "Overcharge: entlädt sich alle 7 Sekunden in einem Stromschlag, der Gegner in der Nähe trifft",
 }
 
 const KAYKIT_ANIMS := {
@@ -70,9 +73,15 @@ const FIGHTERS := [
 		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Chop",
 	},
 	{
-		"name": "Schurke", "passive": "kritisch", "flip": "doppelsalto", "voice": 1.2, "scene": KAYKIT_CHARS + "Rogue.glb",
-		"keep": ["Knife", "Knife_Offhand"], "special": "sturm",
-		"weak": "Dualwield_Melee_Attack_Stab", "strong": "Dualwield_Melee_Attack_Chop",
+		# Eigene Figur aus ComfyUI (Flux + Trellis), Animationen von Mixamo; Dolche vom KayKit-Schurken.
+		"name": "Schurke", "passive": "kritisch", "flip": "doppelsalto", "voice": 1.2,
+		"scene": "res://assets/schurkin/idle.fbx", "anim_dir": "res://assets/schurkin/", "scale": 185.0, "special": "sturm",
+		"anim_speeds": {"weak": 1.5, "strong": 1.1, "kick": 1.6, "special": 1.4},
+		"anim_trim": {"weak": [0.05, 0.50], "strong": [0.20, 1.00], "kick": [0.25, 0.95], "special": [0.00, 1.40]},
+		"attach_from": {
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Rogue.glb", "Knife", Vector3(0, -90, -90)],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Rogue.glb", "Knife_Offhand", Vector3(0, -90, -90)],
+		},
 	},
 	{
 		# Eigene Figur: mit Flux + Trellis erzeugt, Skelett und Animationen von Mixamo.
@@ -87,9 +96,17 @@ const FIGHTERS := [
 		},
 	},
 	{
+		# Eigene Figur aus ComfyUI (Flux + Trellis, Kopf hinter dem Visier ergänzt), Schwert-und-Schild-Animationen
+		# von Mixamo; Fallen/Landen/Rolle/Taumeln/Jubel vom Kampfroboter. Großer Hammer (assets/paladin/hammer.glb)
+		# und Langschild vom KayKit-Paladin.
 		"name": "Paladin", "passive": "heilung", "flip": "schraube", "voice": 0.95,
-		"scene": KAYKIT_CHARS + "Paladin.glb", "keep": ["2H_Sword"], "special": "lichtschild",
-		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Chop",
+		"scene": "res://assets/paladin/modell.fbx", "anim_dir": "res://assets/paladin/", "scale": 190.0, "special": "lichtschild",
+		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.3},
+		"anim_trim": {"weak": [0.05, 0.55], "strong": [0.20, 0.95], "kick": [0.00, 0.70]},
+		"attach_from": {
+			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", Vector3(0, -90, -90)],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Paladin.glb", "Rectangle_Shield", Vector3(-90, 0, 135)],
+		},
 	},
 	{
 		"name": "Brummbart", "passive": "schwergewicht", "flip": "purzeln", "voice": 0.75,
@@ -97,9 +114,16 @@ const FIGHTERS := [
 		"weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
+		# Eigene Figur aus ComfyUI (Flux + Trellis), Zauber-Animationen von Mixamo (Magier-Paket),
+		# Fallen/Landen/Tritt/Block/Rolle/Taumeln/Jubel vom Kampfroboter. Zauberstab und Buch von der KayKit-Hexe.
 		"name": "Hexe", "passive": "gleiten", "flip": "schweben", "voice": 1.25,
-		"scene": KAYKIT_CHARS + "Hexe.glb", "keep": ["1H_Wand", "Spellbook_open"], "special": "frost",
-		"weak": "1H_Melee_Attack_Slice_Diagonal", "strong": "1H_Melee_Attack_Stab",
+		"scene": "res://assets/hexe/modell.fbx", "anim_dir": "res://assets/hexe/", "scale": 190.0, "special": "schwein",
+		"anim_speeds": {"weak": 2.0, "strong": 1.35, "kick": 1.6, "special": 1.0},
+		"anim_trim": {"weak": [0.35, 0.85], "strong": [1.00, 2.00], "kick": [0.25, 0.95], "special": [0.20, 1.20]},
+		"attach_from": {
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Hexe.glb", "1H_Wand", Vector3(0, -90, -90)],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Hexe.glb", "Spellbook_open", Vector3(0, -90, -90)],
+		},
 	},
 	{
 		"name": "Jägerin", "passive": "flink", "flip": "doppel_rueckwaerts", "voice": 1.3,
@@ -113,17 +137,21 @@ const FIGHTERS := [
 		"weak": "1H_Melee_Attack_Slice_Diagonal", "strong": "1H_Melee_Attack_Chop",
 	},
 	{
-		# Eigene Figur aus ComfyUI (Flux + Trellis). Noch ohne Skelett: sobald sie bei Mixamo
-		# Knochen und Animationen bekommen hat, wie beim Held "anim_dir" eintragen.
+		# Eigene Figur aus ComfyUI (Flux + Trellis), Skelett und Animationen von Mixamo.
 		"name": "Mönch", "passive": "innere_ruhe", "flip": "doppelsalto", "voice": 1.05,
-		"scene": "res://assets/moench/moench_v2.glb", "scale": 1.75, "special": "hundert_faeuste",
-		"anims": {},
+		"scene": "res://assets/moench/run.fbx", "anim_dir": "res://assets/moench/", "scale": 185.0,
+		"special": "hundert_faeuste",
+		# Mixamo-Schläge sind lang: nur der eigentliche Schlag, schneller abgespielt, damit er in der Angriffszeit ganz abläuft.
+		"anim_speeds": {"weak": 1.5, "strong": 1.7, "kick": 1.6},
+		"anim_trim": {"weak": [0.10, 0.45], "strong": [0.20, 1.40], "kick": [0.25, 0.95]},
 	},
 	{
-		# Eigene Figur aus ComfyUI (Flux + Trellis), wie der Mönch noch ohne Skelett.
-		"name": "Kampfroboter", "passive": "panzerung", "flip": "propeller", "voice": 0.8,
-		"scene": "res://assets/kampfroboter/kampfroboter.glb", "scale": 1.95, "special": "feuerball",
-		"anims": {},
+		# Eigene Figur aus ComfyUI (Flux + Trellis), Skelett und Animationen von Mixamo.
+		"name": "Kampfroboter", "passive": "overcharge", "flip": "propeller", "voice": 0.8,
+		"scene": "res://assets/kampfroboter/idle.fbx", "anim_dir": "res://assets/kampfroboter/", "scale": 215.0,
+		"special": "laser",
+		"anim_speeds": {"weak": 1.7, "strong": 1.5, "kick": 1.6},
+		"anim_trim": {"weak": [0.00, 0.40], "strong": [0.00, 1.10], "kick": [0.25, 0.95]},
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), ersetzt den Magier. Noch ohne Skelett.

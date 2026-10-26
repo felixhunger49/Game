@@ -45,6 +45,10 @@ func _physics_process(delta: float) -> void:
 	var target: CharacterBody3D = shooter.opponent
 	for arrow in arrows.duplicate():
 		arrow.global_position.y -= FALL_SPEED * delta
+		if Target.hit_near(self, arrow.global_position, HIT_RADIUS + 0.4):
+			arrows.erase(arrow)
+			arrow.queue_free()
+			continue
 		if target and target.visible:
 			var chest := target.global_position + Vector3(0, 0.9, 0)
 			if chest.distance_to(arrow.global_position) < HIT_RADIUS + 0.4:

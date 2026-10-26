@@ -2,6 +2,8 @@ extends CharacterBody3D
 
 ## Wird ausgelöst, wenn die Figur aus der Arena gefallen ist.
 signal fell_off(player)
+## Nur beim Endboss: seine Lebensleiste ist leer.
+signal boss_defeated
 
 ## 1 oder 2: bestimmt, welche Tasten die Figur steuern (p1_... oder p2_...).
 @export var player_id := 1
@@ -36,7 +38,10 @@ const ATTACKS := {
 	# Brummbart: kleiner Sprung, dann Stampfer, dessen Schockwelle über den Boden läuft.
 	"erdbeben": {"damage": 12.0, "base": 7.5, "scale": 0.16, "range": Vector2(4.5, 1.3), "startup": 0.4,
 		"cooldown": 1.0, "angle": Vector2(0.25, 1), "anim_speed": 1.2},
-	# Hexe: Frostkugel, friert den Gegner ein.
+	# Hexe: grüne Zauberkugel, verwandelt den Gegner kurz in ein Schwein (siehe pigify).
+	"schwein": {"damage": 5.0, "base": 2.5, "scale": 0.04, "startup": 0.2, "cooldown": 1.0,
+		"angle": Vector2(1, 0.3), "anim_speed": 1.6},
+	# Frostkugel, friert den Gegner ein.
 	"frost": {"damage": 7.0, "base": 2.0, "scale": 0.05, "startup": 0.2, "cooldown": 1.0,
 		"angle": Vector2(1, 0.2), "anim_speed": 1.6},
 	# Mönch: sechs blitzschnelle Faustschläge, der letzte schleudert weg (siehe FLURRY_*).
@@ -45,6 +50,9 @@ const ATTACKS := {
 	# Piratin: Kanonenkugel im Bogen, explodiert (siehe Cannonball).
 	"breitseite": {"damage": 13.0, "base": 7.0, "scale": 0.17, "startup": 0.25, "cooldown": 1.0,
 		"angle": Vector2(1, 0.6), "anim_speed": 1.4},
+	# Kampfroboter: lädt im Bauch auf und schießt dann einen Laserstrahl quer über die Arena.
+	"laser": {"damage": 12.0, "base": 6.5, "scale": 0.17, "range": Vector2(10.0, 1.3), "startup": 0.45,
+		"cooldown": 1.1, "angle": Vector2(1, 0.3), "anim_speed": 1.0},
 	# Jägerin: Pfeilregen auf die Stelle, an der der Gegner steht.
 	"pfeilregen": {"damage": 4.0, "base": 2.5, "scale": 0.08, "startup": 0.25, "cooldown": 0.9,
 		"angle": Vector2(0.4, -0.2), "anim_speed": 1.4},
@@ -65,6 +73,14 @@ const FLURRY_FINISH := {"damage": 7.0, "base": 7.5, "scale": 0.18, "range": Vect
 const STILL_CHARGE_FACTOR := 2.0
 ## Plündern: so viel Spezial-Energie stiehlt die Piratin pro Treffer.
 const PLUNDER_ENERGY := 8.0
+## Schweinezauber (Hexe): so lange ist der Gegner ein Schwein (kann nicht angreifen, langsamer, nimmt mehr Schaden).
+const PIG_TIME := 3.0
+const PIG_DAMAGE_TAKEN := 1.3
+## Overcharge (Kampfroboter): alle OVERCHARGE_INTERVAL Sekunden ein Stromschlag rundherum,
+## OVERCHARGE_WARN Sekunden vorher knistert es blau als Warnung.
+const OVERCHARGE_INTERVAL := 7.0
+const OVERCHARGE_WARN := 0.8
+const OVERCHARGE := {"damage": 3.0, "base": 3.5, "scale": 0.06, "range": Vector2(2.4, 2.0), "angle": Vector2(1, 0.6)}
 ## Schildmeister: nach einem abgewehrten Treffer ist der nächste Angriff so lange verstärkt.
 const COUNTER_TIME := 1.5
 const COUNTER_BONUS := 0.6
@@ -83,7 +99,7 @@ const SPECIAL_PER_SECOND := 5.0
 const SPECIAL_PER_DAMAGE_DEALT := 3.5
 const SPECIAL_PER_DAMAGE_TAKEN := 2.0
 const SPECIAL_KINDS := ["feuerball", "sturm", "wirbel", "aufwaerts", "lichtschild", "erdbeben", "frost", "pfeilregen",
-	"hundert_faeuste", "breitseite"]
+	"hundert_faeuste", "breitseite", "laser", "schwein"]
 const SHOUTS := ["ha", "hja", "hah"]
 
 ## Kunststücke am höchsten Punkt eines Sprungs. axis: Drehachse der Figur (x = Salto vorwärts,
@@ -167,10 +183,20 @@ var base_jumps := 0
 var dome_time := 0.0
 var dome: MeshInstance3D
 var frozen := 0.0
+var pig_time := 0.0
+var pig: Node3D
 var ice_block: MeshInstance3D
 var poison_time := 0.0
 var poison_fx: CPUParticles3D
 var since_hit := 0.0
+## Endboss: hat Lebenspunkte statt Prozent, ist größer, wird kaum weggeschleudert und hat mehr Reichweite.
+var boss := false
+var boss_hp := 0.0
+var boss_hp_max := 0.0
+var reach_scale := 1.0
+var size_scale := 1.0
+var overcharge_time := 0.0
+var overcharge_warned := false
 var counter_time := 0.0
 var flurry_left := 0
 var flurry_timer := 0.0
@@ -267,7 +293,7 @@ func _physics_process(delta: float) -> void:
 	var can_act := controls_enabled and hitstun == 0.0 and stunned == 0.0
 	if can_act and roll_time <= 0.0 and dash_time <= 0.0:
 		_check_double_taps()
-	shielding = can_act and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0 \
+	shielding = can_act and pig_time <= 0.0 and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0 \
 		and roll_time <= 0.0 and drop_time <= 0.0
 	if shielding:
 		shield_hp = max(shield_hp - 18.0 * delta * (0.5 if passive == "schildmeister" else 1.0), 0.0)
@@ -318,7 +344,7 @@ func _physics_process(delta: float) -> void:
 
 func _handle_input(delta: float) -> void:
 	var direction := Input.get_axis(_action("left"), _action("right"))
-	var top_speed := speed * (1.4 if speed_time > 0.0 else 1.0)
+	var top_speed := speed * (1.4 if speed_time > 0.0 else 1.0) * (0.75 if pig_time > 0.0 else 1.0)
 	var accel := 60.0 * ground_grip if is_on_floor() else 28.0
 	if attack_timer > 0.0 and is_on_floor():
 		# Beim Zuschlagen bleibt man fast stehen.
@@ -338,7 +364,7 @@ func _handle_input(delta: float) -> void:
 		if flip_time >= 0.0:
 			_end_flip()
 
-	if attack_timer > 0.0:
+	if attack_timer > 0.0 or pig_time > 0.0:
 		return
 	for kind in ["weak", "strong", "kick"]:
 		if Input.is_action_just_pressed(_action(kind)):
@@ -388,12 +414,14 @@ func start_special() -> void:
 	elif kind == "hundert_faeuste":
 		flurry_left = FLURRY_HITS
 		flurry_timer = 0.12
+	elif kind == "laser":
+		SpecialFX.laser_charge(self, ATTACKS.laser.startup)
 	special_energy = 0.0
 	start_attack(kind)
 	_play("special", ATTACKS[kind].anim_speed)
 	var sounds := {"feuerball": "fireball", "sturm": "dash", "wirbel": "whirl", "aufwaerts": "uppercut",
 		"lichtschild": "pickup_heal", "erdbeben": "swing_strong", "frost": "fireball", "pfeilregen": "swing_weak",
-		"hundert_faeuste": "swing_strong", "breitseite": "swing_weak"}
+		"hundert_faeuste": "swing_strong", "breitseite": "swing_weak", "laser": "special_start", "schwein": "fireball"}
 	Audio.sfx(sounds.get(kind, "swing_strong"))
 	Audio.sfx("special_start")
 	say("spezial")
@@ -481,10 +509,10 @@ func _update_pending_attack(delta: float) -> void:
 	pending_attack = ""
 	var atk: Dictionary = ATTACKS[kind]
 	match kind:
-		"feuerball", "frost":
+		"feuerball", "frost", "schwein":
 			var ball := Projectile.new()
 			get_parent().add_child(ball)
-			ball.launch(self, atk, global_position + Vector3(0.8 * facing, 1.1, 0), facing, kind == "frost")
+			ball.launch(self, atk, global_position + Vector3(0.8 * facing, 1.1, 0), facing, kind == "frost", kind == "schwein")
 		"pfeilregen":
 			var rain := ArrowRain.new()
 			get_parent().add_child(rain)
@@ -499,6 +527,9 @@ func _update_pending_attack(delta: float) -> void:
 			_quake_hit(atk)
 		"hundert_faeuste":
 			pass  # die einzelnen Schläge kommen aus _update_flurry
+		"laser":
+			SpecialFX.laser(self, atk.range.x)
+			_try_hit(atk, false)
 		"breitseite":
 			var shot := Cannonball.new()
 			get_parent().add_child(shot)
@@ -526,11 +557,12 @@ func _update_dash(delta: float) -> void:
 
 ## Trifft den Gegner, wenn er in Reichweite ist. both_sides: trifft vorne und hinten.
 func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
+	Target.hit_melee(self, atk.range, both_sides)
 	if opponent == null or not opponent.visible:
 		return false
 	var offset := opponent.global_position - global_position
 	var forward := offset.x * facing
-	var reach: Vector2 = atk.range
+	var reach: Vector2 = atk.range * reach_scale
 	var in_range := false
 	if both_sides:
 		in_range = absf(offset.x) <= reach.x and absf(offset.y) <= reach.y
@@ -586,6 +618,10 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 		return false
 	if frozen > 0.0:
 		_unfreeze()
+	if pig_time > 0.0:
+		_unpig()
+	if boss:
+		return _boss_hit(atk, direction, multiplier)
 	flurry_left = 0
 	damage += atk.damage * multiplier * _damage_taken_multiplier()
 	since_hit = 0.0
@@ -601,6 +637,40 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 	Audio.sfx("hit_strong" if heavy else "hit_weak")
 	if heavy or randf() < 0.3:
 		say("au", "au", randf_range(0.97, 1.03), -2.0)
+	return true
+
+
+## Macht aus der Figur einen Endboss: größer, Lebenspunkte statt Prozent, kaum wegzuschleudern.
+func make_boss(hp: float, size: float) -> void:
+	boss = true
+	boss_hp = hp
+	boss_hp_max = hp
+	reach_scale = size * 0.8
+	size_scale = size
+	stocks = 99
+	model_root.scale *= size
+	var shape := ($CollisionShape3D.shape as CapsuleShape3D).duplicate()
+	shape.radius *= size
+	shape.height *= size
+	$CollisionShape3D.shape = shape
+	$CollisionShape3D.position.y *= size
+	$Tag.position.y *= size
+	$Shield.visible = false
+
+
+## Treffer auf den Endboss: zieht Lebenspunkte ab, er wankt nur kurz.
+func _boss_hit(atk: Dictionary, direction: Vector3, multiplier: float) -> bool:
+	var amount: float = atk.damage * multiplier
+	boss_hp = maxf(boss_hp - amount, 0.0)
+	velocity += direction * minf(atk.base * 0.3, 2.5)
+	hitstun = 0.05
+	var heavy := amount >= 10.0
+	if heavy:
+		_play("hit", 1.5)
+	Audio.sfx("hit_strong" if heavy else "hit_weak", 0.7)
+	SpecialFX._sparks(get_parent(), global_position + Vector3(0, 2.0, 0), Color(1, 0.8, 0.3), 12, 5.0, 0.3)
+	if boss_hp <= 0.0:
+		boss_defeated.emit()
 	return true
 
 
@@ -639,6 +709,8 @@ func _lose_stock() -> void:
 	_end_dome()
 	if frozen > 0.0:
 		_unfreeze()
+	if pig_time > 0.0:
+		_unpig()
 	_end_flip()
 	velocity = Vector3.ZERO
 	Audio.sfx("ko")
@@ -980,7 +1052,7 @@ func _apply_passive() -> void:
 
 ## Zusätzlicher Schaden, den dieser Kämpfer austeilt.
 func outgoing_multiplier() -> float:
-	var m := 1.0
+	var m := 1.15 if boss else 1.0
 	match passive:
 		"berserker":
 			# Je mehr Schaden er hat, desto härter schlägt er zu (bis +40 % bei 100 %).
@@ -1000,7 +1072,7 @@ func outgoing_multiplier() -> float:
 
 
 func _damage_taken_multiplier() -> float:
-	return 0.8 if passive == "panzerung" else 1.0
+	return (0.8 if passive == "panzerung" else 1.0) * (PIG_DAMAGE_TAKEN if pig_time > 0.0 else 1.0)
 
 
 func _knockback_multiplier() -> float:
@@ -1029,6 +1101,16 @@ func _update_passive(delta: float) -> void:
 		damage = maxf(damage - HEAL_PER_SECOND * delta, 0.0)
 	if passive == "schwergewicht":
 		wind_speed *= 0.3
+	if passive == "overcharge" and controls_enabled:
+		overcharge_time += delta
+		if not overcharge_warned and overcharge_time >= OVERCHARGE_INTERVAL - OVERCHARGE_WARN:
+			overcharge_warned = true
+			SpecialFX.overcharge_warn(self, OVERCHARGE_WARN)
+		if overcharge_time >= OVERCHARGE_INTERVAL:
+			overcharge_time = 0.0
+			overcharge_warned = false
+			SpecialFX.overcharge(self, OVERCHARGE.range.x)
+			_try_hit(OVERCHARGE, true)
 
 
 func poison(seconds: float) -> void:
@@ -1084,7 +1166,82 @@ func _unfreeze() -> void:
 		SpecialFX._sparks(get_parent(), global_position + Vector3(0, 1, 0), Color(0.7, 0.95, 1.0), 40, 6.0, 0.5)
 
 
+## Schweinezauber: die Figur wird für ein paar Sekunden zu einem kleinen rosa Schwein.
+func pigify(seconds: float) -> void:
+	if boss:
+		return
+	pig_time = seconds
+	if pig == null:
+		pig = _build_pig()
+		add_child(pig)
+	pig.visible = true
+	model_root.visible = false
+	SpecialFX._flash_sphere(get_parent(), global_position + Vector3(0, 0.8, 0), Color(0.6, 1.0, 0.5), 0.3, 1.6, 0.3)
+	SpecialFX._sparks(get_parent(), global_position + Vector3(0, 0.8, 0), Color(1, 0.6, 0.8), 40, 6.0, 0.5)
+	SpecialFX.popup(self, "OINK!", Color(1, 0.55, 0.75))
+	Audio.sfx("fizzle", 1.3)
+	Audio.sfx("oink")
+
+
+func _unpig() -> void:
+	pig_time = 0.0
+	if pig:
+		pig.visible = false
+	model_root.visible = true
+	SpecialFX._flash_sphere(get_parent(), global_position + Vector3(0, 0.8, 0), Color(0.6, 1.0, 0.5), 0.3, 1.6, 0.3)
+	Audio.sfx("fizzle", 0.9)
+
+
+## Kleines Schwein aus einfachen Formen: Körper, Kopf, Rüssel, Ohren, Beine und Ringelschwanz.
+func _build_pig() -> Node3D:
+	var root := Node3D.new()
+	var pink := StandardMaterial3D.new()
+	pink.albedo_color = Color(1.0, 0.65, 0.72)
+	pink.roughness = 0.6
+	var dark := StandardMaterial3D.new()
+	dark.albedo_color = Color(0.25, 0.1, 0.12)
+	var parts := [
+		[Vector3(0, 0.55, 0), Vector3(0.5, 0.42, 0.62), pink],            # Körper
+		[Vector3(0, 0.78, 0.5), Vector3(0.32, 0.3, 0.3), pink],           # Kopf
+		[Vector3(0, 0.74, 0.78), Vector3(0.14, 0.11, 0.08), pink],        # Rüssel
+		[Vector3(-0.05, 0.75, 0.85), Vector3(0.025, 0.03, 0.02), dark],   # Nasenlöcher
+		[Vector3(0.05, 0.75, 0.85), Vector3(0.025, 0.03, 0.02), dark],
+		[Vector3(-0.12, 0.88, 0.74), Vector3(0.035, 0.04, 0.03), dark],   # Augen
+		[Vector3(0.12, 0.88, 0.74), Vector3(0.035, 0.04, 0.03), dark],
+		[Vector3(-0.2, 1.05, 0.45), Vector3(0.1, 0.12, 0.05), pink],      # Ohren
+		[Vector3(0.2, 1.05, 0.45), Vector3(0.1, 0.12, 0.05), pink],
+	]
+	for leg in [Vector3(-0.25, 0.18, 0.3), Vector3(0.25, 0.18, 0.3), Vector3(-0.25, 0.18, -0.3), Vector3(0.25, 0.18, -0.3)]:
+		parts.append([leg, Vector3(0.11, 0.2, 0.11), pink])
+	for p in parts:
+		var m := MeshInstance3D.new()
+		var s := SphereMesh.new()
+		s.radius = 1.0
+		s.height = 2.0
+		m.mesh = s
+		m.material_override = p[2]
+		m.position = p[0]
+		m.scale = p[1]
+		root.add_child(m)
+	var tail := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.05
+	torus.outer_radius = 0.1
+	tail.mesh = torus
+	tail.material_override = pink
+	tail.position = Vector3(0, 0.75, -0.65)
+	tail.rotation.x = PI / 2.0
+	root.add_child(tail)
+	return root
+
+
 func _update_status_effects(delta: float) -> void:
+	if pig_time > 0.0:
+		pig_time -= delta
+		pig.rotation.y = model_root.rotation.y
+		pig.position.y = absf(sin(Time.get_ticks_msec() * 0.012)) * 0.08 if absf(velocity.x) > 0.5 else 0.0
+		if pig_time <= 0.0:
+			_unpig()
 	if frozen > 0.0:
 		frozen -= delta
 		velocity.x = 0.0
@@ -1139,11 +1296,12 @@ func _update_flurry(delta: float) -> void:
 	SpecialFX.fist(self, fist, last)
 	_lunge()
 	Audio.sfx("hit_weak" if not last else "swing_strong", 1.0 + 0.08 * (FLURRY_HITS - flurry_left))
+	Target.hit_melee(self, atk.range, false)
 	if opponent == null or not opponent.visible:
 		return
 	var offset := opponent.global_position - global_position
 	var forward := offset.x * facing
-	var reach: Vector2 = atk.range
+	var reach: Vector2 = atk.range * reach_scale
 	if forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y:
 		var angle: Vector2 = atk.angle
 		if opponent.take_hit(atk, Vector3(angle.x * facing, angle.y, 0).normalized(), power_time > 0.0,
@@ -1156,10 +1314,11 @@ func _update_flurry(delta: float) -> void:
 
 ## Erdbeben: trifft alle, die in Reichweite am Boden (oder knapp darüber) stehen, und schleudert sie hoch.
 func _quake_hit(atk: Dictionary) -> void:
+	Target.hit_melee(self, atk.range, true)
 	if opponent == null or not opponent.visible:
 		return
 	var offset := opponent.global_position - global_position
-	var reach: Vector2 = atk.range
+	var reach: Vector2 = atk.range * reach_scale
 	if absf(offset.x) > reach.x or absf(offset.y) > reach.y:
 		return
 	var side := 1.0 if offset.x >= 0.0 else -1.0

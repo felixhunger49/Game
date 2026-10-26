@@ -105,7 +105,9 @@ func _entries() -> Array:
 				list.append("key:" + a)
 			list.append_array(["reset", "back"])
 			return list
-	return ["play", "map", "options", "controls", "quit"]
+	if Settings.solo:
+		return ["play", "mode", "cpu", "targets", "boss", "map", "options", "controls", "quit"]
+	return ["play", "mode", "targets", "boss", "map", "options", "controls", "quit"]
 
 
 func _entry_text(entry: String) -> String:
@@ -115,7 +117,11 @@ func _entry_text(entry: String) -> String:
 		return "%s:  %s" % [Settings.ACTION_NAMES[entry.substr(4)], key]
 	match entry:
 		"play": return "Kampf starten"
+		"targets": return "Ziele zerstören (gegen die Uhr)"
+		"boss": return "Endboss: Riesen-Kampfroboter"
 		"map": return "Map:  ◀ %s ▶" % Settings.current_map().name
+		"mode": return "Modus:  ◀ %s ▶" % ("Solo gegen Computer" if Settings.solo else "Zwei Spieler")
+		"cpu": return "Computer:  ◀ %s ▶" % CpuPlayer.LEVELS[Settings.cpu_level].name
 		"options": return "Optionen"
 		"controls": return "Steuerung anpassen"
 		"quit": return "Beenden"
@@ -137,6 +143,10 @@ func _change(entry: String, step: int) -> void:
 		"map":
 			Settings.map_index = wrapi(Settings.map_index + step, 0, Settings.MAPS.size())
 			_load_map()
+		"mode":
+			Settings.solo = not Settings.solo
+		"cpu":
+			Settings.cpu_level = clampi(Settings.cpu_level + step, 0, CpuPlayer.LEVELS.size() - 1)
 		"items":
 			Settings.items_enabled = not Settings.items_enabled
 		"rate":
@@ -169,7 +179,9 @@ func _activate(entry: String) -> void:
 		_refresh()
 		return
 	match entry:
-		"play":
+		"play", "targets", "boss":
+			Settings.target_mode = entry == "targets"
+			Settings.boss_mode = entry == "boss"
 			Audio.sfx("menu_select")
 			get_tree().change_scene_to_file("res://scenes/fight.tscn")
 		"options":
@@ -187,7 +199,7 @@ func _activate(entry: String) -> void:
 			Settings.reset_controls()
 			Audio.sfx("menu_select")
 			_refresh()
-		"map", "items", "rate", "stocks", "map_effects", "special_charge", "player":
+		"map", "mode", "cpu", "items", "rate", "stocks", "map_effects", "special_charge", "player":
 			_change(entry, 1)
 
 

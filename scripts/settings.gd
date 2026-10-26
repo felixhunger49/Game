@@ -42,6 +42,14 @@ var map_index := 0
 var choices := [0, 1]
 var map_effects := true
 var special_charge := true
+## Solo: Spieler 2 ist der Computer (Schwierigkeit 0 leicht, 1 mittel, 2 schwer).
+var solo := false
+var cpu_level := 1
+## Ziele zerstören: allein gegen die Uhr. Bestzeiten je "Map|Kämpfer" in Sekunden.
+var target_mode := false
+## Endboss: allein gegen den Riesen-Kampfroboter.
+var boss_mode := false
+var target_records := {}
 var music_volume := 7
 var sfx_volume := 8
 
@@ -67,6 +75,9 @@ func _ready() -> void:
 	choices = choices.map(func(c): return clampi(c, 0, Roster.FIGHTERS.size() - 1))
 	map_effects = cfg.get_value("game", "map_effects", map_effects)
 	special_charge = cfg.get_value("game", "special_charge", special_charge)
+	solo = cfg.get_value("game", "solo", solo)
+	cpu_level = cfg.get_value("game", "cpu_level", cpu_level)
+	target_records = cfg.get_value("game", "target_records", target_records)
 	music_volume = cfg.get_value("audio", "music_volume", music_volume)
 	sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 	if cfg.has_section("controls"):
@@ -84,6 +95,9 @@ func save() -> void:
 	cfg.set_value("game", "choices", choices)
 	cfg.set_value("game", "map_effects", map_effects)
 	cfg.set_value("game", "special_charge", special_charge)
+	cfg.set_value("game", "solo", solo)
+	cfg.set_value("game", "cpu_level", cpu_level)
+	cfg.set_value("game", "target_records", target_records)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
 	for action in _default_events:

@@ -1,6 +1,6 @@
 # Arena-Kampf
 
-Ein Plattform-Kampfspiel für zwei Spieler an einer Tastatur, gebaut mit [Godot 4](https://godotengine.org) (getestet mit 4.3).
+Ein Plattform-Kampfspiel für zwei Spieler an einer Tastatur oder allein gegen den Computer, gebaut mit [Godot 4](https://godotengine.org) (getestet mit 4.3).
 Wie bei Super Smash Bros. sind Figuren und Arenen 3D-Modelle, gekämpft wird aber nur nach links, rechts, oben und unten.
 
 ![Burg](docs/burg.png)
@@ -20,6 +20,15 @@ Wie bei Super Smash Bros. sind Figuren und Arenen 3D-Modelle, gekämpft wird abe
 ## Menü
 
 - **Kampf starten**: Danach wählt jeder Spieler mit seinen Laufen-Tasten einen Kämpfer und drückt den schwachen Angriff, wenn er bereit ist.
+- **Modus**: Zwei Spieler oder Solo gegen den Computer. Im Solo-Modus wählt der Computer einen zufälligen anderen
+  Kämpfer und ist sofort bereit. Seine Stärke stellt man darunter ein: Leicht, Mittel oder Schwer
+  (Schwer reagiert schneller, greift öfter an, blockt mehr und macht kaum Fehler).
+- **Ziele zerstören (gegen die Uhr)**: allein auf der gewählten Map. Zehn schwebende Zielscheiben sind verteilt: auf den
+  Plattformen, in der Luft und über dem Boden. Jeder Angriff zerstört sie (auch Feuerball, Laser, Pfeilregen, Erdbeben …).
+  Die Zeit läuft, bis alle kaputt sind; die Bestzeit wird je Map und Kämpfer gespeichert.
+- **Endboss: Riesen-Kampfroboter**: allein gegen einen 1,7-mal so großen Kampfroboter mit Lebensleiste (300) statt Prozent.
+  Er wird kaum weggeschleudert, schießt regelmäßig seinen Laser (drüberspringen!), lässt Raketen regnen (rote Kreise am Boden
+  zeigen, wo sie einschlagen) und entlädt Overcharge. Ab halber Leiste wird er WÜTEND: glüht rot, ist schneller und schießt öfter.
 - **Map**: Burg, Dorf, Friedhof, Vulkan, Piratenschiff, Eiswelt oder Wolkentempel. Jede Map hat ihren eigenen Effekt (siehe unten).
 - **Optionen**: Items an oder aus, wie oft Items erscheinen (selten, normal, oft), die Anzahl der Leben,
   Map-Effekte an oder aus, Spezial aufladen an oder aus, Lautstärke von Musik und Geräuschen.
@@ -66,13 +75,15 @@ steht „Spezial bereit!“) geht die Spezialattacke, danach ist die Leiste wied
 Spezialattacken sind ein Spektakel: großer Schriftzug, kurze Zeitlupe, Lichtblitz und Schockwelle. Trifft eine, friert das Bild kurz ein, die Kamera wackelt und es knallt. Solange die Leiste voll ist, steigen Funken um die Figur auf.
 
 **Spezialattacken:**
-- Feuerball (Magierin, Kampfroboter): fliegt geradeaus.
+- Feuerball (Magierin): fliegt geradeaus.
+- Laserkanone (Kampfroboter): lädt kurz im Bauch auf, dann schießt ein Laserstrahl quer über die Arena.
 - Sturmangriff (Schurke): schneller Stoß nach vorne.
 - Wirbel (Barbar): trifft vorne und hinten.
 - Himmelshieb (Held): springt hoch, schlägt nach oben und rettet dich zurück auf die Plattform.
 - Lichtschild (Paladin): 1,6 Sekunden unverwundbar in einer Lichtkuppel, dann explodiert sie und schleudert alle in der Nähe weg.
 - Erdbeben (Brummbart): kleiner Sprung, dann ein Stampfer, dessen Schockwelle weit über den Boden läuft.
-- Frostzauber (Hexe): Eiskugel, die den Gegner kurz einfriert. Ein Treffer befreit ihn wieder.
+- Schweinezauber (Hexe): grüne Zauberkugel. Wer getroffen wird, ist 3 Sekunden lang ein kleines rosa Schwein:
+  kann nur laufen und springen, nicht angreifen oder blocken, und nimmt mehr Schaden.
 - Pfeilregen (Jägerin): Ein leuchtender Kreis markiert die Stelle des Gegners, dann regnen Pfeile herab.
 
 ## Kämpfer und passive Fähigkeiten
@@ -83,11 +94,12 @@ Jeder Kämpfer hat zusätzlich eine passive Fähigkeit, die immer wirkt:
 |---|---|---|
 | Barbar | Wirbel | Berserker: je mehr Schaden er hat, desto härter schlägt er (bis +40 %) |
 | Magierin | Feuerball | Arkane Quelle: Spezial lädt 60 % schneller |
+| Kampfroboter | Laserkanone | Overcharge: entlädt sich alle 7 Sekunden in einem Stromschlag, der Gegner in der Nähe trifft (kurz vorher knistert es blau) |
 | Schurke | Sturmangriff | Kritisch: 25 % Chance auf doppelten Schaden |
 | Held | Himmelshieb | Heldenmut: ab 80 % Schaden 30 % stärker |
 | Paladin | Lichtschild | Heilung: heilt sich langsam, wenn er 3 Sekunden nicht getroffen wird |
 | Brummbart | Erdbeben | Schwergewicht: wird 25 % weniger weit geschleudert, trotzt dem Wind, springt etwas niedriger |
-| Hexe | Frostzauber | Gleiten: Sprungtaste in der Luft halten, um langsam zu schweben |
+| Hexe | Schweinezauber | Gleiten: Sprungtaste in der Luft halten, um langsam zu schweben |
 | Jägerin | Pfeilregen | Flink: läuft schneller und springt dreimal |
 | Piratin | Breitseite: eine kleine Kanone feuert eine Kugel im Bogen, die explodiert | Plündern: jeder Treffer stiehlt dem Gegner Spezial-Energie |
 | Mönch | Hundert Fäuste: sechs blitzschnelle Schläge mit goldenen Faust-Abdrücken, der letzte schleudert weg | Innere Ruhe: wer still steht, meditiert und lädt das Spezial doppelt so schnell |

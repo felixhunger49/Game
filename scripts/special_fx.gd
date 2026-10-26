@@ -2,10 +2,13 @@ class_name SpecialFX
 ## Effekte, die Spezialattacken spektakulär machen: Lichtblitze, Funken, Schockwellen,
 ## Kamerawackeln, kurze Zeitlupe und ein großer Schriftzug.
 
+## Höhe des Kampfroboter-Bauchs über den Füßen (dort kommt der Laser heraus).
+const LASER_HEIGHT := 1.0
+
 const NAMES := {"feuerball": "FEUERBALL!", "sturm": "STURMANGRIFF!", "wirbel": "WIRBELSTURM!",
-	"aufwaerts": "HIMMELSHIEB!", "lichtschild": "LICHTSCHILD!", "erdbeben": "ERDBEBEN!", "frost": "FROSTZAUBER!",
+	"aufwaerts": "HIMMELSHIEB!", "lichtschild": "LICHTSCHILD!", "erdbeben": "ERDBEBEN!", "frost": "FROSTZAUBER!", "schwein": "SCHWEINEZAUBER!",
 	"pfeilregen": "PFEILREGEN!", "hundert_faeuste": "HUNDERT FÄUSTE!",
-	"breitseite": "BREITSEITE!"}
+	"breitseite": "BREITSEITE!", "laser": "LASERKANONE!"}
 
 
 ## Beim Auslösen: Schriftzug, Aura-Ring, Lichtblitz und eine kurze Zeitlupe.
@@ -165,6 +168,102 @@ static func quake(player: Node3D) -> void:
 	_flash_light(world, feet + Vector3(0, 0.5, 0), color, 10.0, 7.0, 0.4)
 	Audio.sfx("explosion", 0.7)
 	shake(player, 0.5, 0.5)
+
+
+## Kampfroboter: rote Kugel im Bauch, die anschwillt, während der Laser auflädt.
+static func laser_charge(player: Node3D, seconds: float) -> void:
+	var red := Color(1, 0.15, 0.1)
+	var core := MeshInstance3D.new()
+	var s := SphereMesh.new()
+	s.radius = 1.0
+	s.height = 2.0
+	core.mesh = s
+	core.material_override = _glow_material(Color(red, 0.95), 4.0)
+	player.add_child(core)
+	core.position = Vector3(0.35 * player.get("facing"), LASER_HEIGHT * player.get("size_scale"), 0)
+	core.scale = Vector3.ONE * 0.05
+	var tween := core.create_tween()
+	tween.tween_property(core, "scale", Vector3.ONE * 0.32, seconds).set_ease(Tween.EASE_IN)
+	tween.tween_callback(core.queue_free)
+	_flash_light(player.get_parent(), player.global_position + Vector3(0, LASER_HEIGHT * player.get("size_scale"), 0.5), red, 4.0, 3.0, seconds)
+	Audio.sfx("laser", 0.7)
+
+
+## Kampfroboter: dicker roter Laserstrahl aus dem Bauch, mit weißem Kern, Funken am Ende und Lichtblitz.
+static func laser(player: Node3D, length: float) -> void:
+	var world := player.get_parent()
+	var facing: int = player.get("facing")
+	var red := Color(1, 0.15, 0.1)
+	var start: Vector3 = player.global_position + Vector3(0.35 * facing, LASER_HEIGHT * player.get("size_scale"), 0)
+	var middle := start + Vector3(facing * length / 2.0, 0, 0)
+	for layer in [[0.32, red, 3.0], [0.12, Color(1, 0.9, 0.85), 4.0]]:
+		var beam := MeshInstance3D.new()
+		var c := CylinderMesh.new()
+		c.top_radius = layer[0]
+		c.bottom_radius = layer[0]
+		c.height = length
+		beam.mesh = c
+		beam.material_override = _glow_material(Color(layer[1], 0.95), layer[2])
+		world.add_child(beam)
+		beam.global_position = middle
+		beam.rotation.z = PI / 2.0
+		var tween := beam.create_tween().set_parallel()
+		tween.tween_property(beam, "scale", Vector3(0.05, 1.0, 0.05), 0.45).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		tween.tween_property(beam.material_override, "albedo_color:a", 0.0, 0.45)
+		tween.chain().tween_callback(beam.queue_free)
+	_flash_sphere(world, start, red, 0.2, 0.9, 0.25)
+	_sparks(world, start + Vector3(facing * length, 0, 0), red, 40, 8.0, 0.5)
+	_flash_light(world, middle, red, 10.0, length, 0.4)
+	Audio.sfx("laser", 0.55, 4.0)
+	shake(player, 0.3, 0.35)
+
+
+## Overcharge-Warnung: blaues Knistern um den Kampfroboter, kurz bevor er sich entlädt.
+static func overcharge_warn(player: Node3D, seconds: float) -> void:
+	var blue := Color(0.3, 0.7, 1.0)
+	var crackle := _particles(blue, 40, 0.25, 0.1)
+	crackle.one_shot = false
+	crackle.explosiveness = 0.0
+	crackle.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	crackle.emission_sphere_radius = 0.7
+	crackle.direction = Vector3.UP
+	crackle.spread = 180.0
+	crackle.initial_velocity_min = 1.0
+	crackle.initial_velocity_max = 3.0
+	crackle.gravity = Vector3.ZERO
+	player.add_child(crackle)
+	crackle.position = Vector3(0, 1.0, 0)
+	crackle.emitting = true
+	player.get_tree().create_timer(seconds).timeout.connect(crackle.queue_free)
+	_flash_light(player.get_parent(), player.global_position + Vector3(0, 1.0, 0.6), blue, 3.0, 3.0, seconds)
+	Audio.sfx("fuse", 1.6, -6.0)
+
+
+## Overcharge: Stromschlag rundherum mit Blitzring, kleinen Blitzen und Funken.
+static func overcharge(player: Node3D, radius: float) -> void:
+	var world := player.get_parent()
+	var blue := Color(0.3, 0.7, 1.0)
+	var center: Vector3 = player.global_position + Vector3(0, 1.0, 0)
+	_ring(world, center, blue, 0.3, radius, 0.3, true)
+	_ring(world, player.global_position + Vector3(0, 0.1, 0), blue, 0.3, radius, 0.3)
+	_flash_sphere(world, center, Color(0.7, 0.9, 1.0), 0.3, 1.2, 0.2)
+	_sparks(world, center, blue, 60, 9.0, 0.4)
+	for i in 6:
+		var a := TAU * i / 6.0 + randf() * 0.5
+		var bolt := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = Vector3(radius * 0.9, 0.05, 0.05)
+		bolt.mesh = b
+		bolt.material_override = _glow_material(Color(0.8, 0.95, 1.0, 0.95), 4.0)
+		world.add_child(bolt)
+		bolt.global_position = center + Vector3(cos(a), sin(a), 0) * radius * 0.45
+		bolt.rotation.z = a + randf_range(-0.3, 0.3)
+		var tween := bolt.create_tween()
+		tween.tween_property(bolt.material_override, "albedo_color:a", 0.0, 0.2)
+		tween.tween_callback(bolt.queue_free)
+	_flash_light(world, center, blue, 9.0, radius * 2.5, 0.3)
+	Audio.sfx("laser", 1.5, -2.0)
+	shake(player, 0.15, 0.2)
 
 
 ## Goldener Faust-Abdruck für die Hundert Fäuste. big: der letzte, große Schlag.

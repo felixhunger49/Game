@@ -14,15 +14,19 @@ var age := 0.0
 var frost := false
 const FROST_COLOR := Color(0.55, 0.85, 1.0)
 const FREEZE_TIME := 1.8
+## Schweinezauber: grüne Kugel, verwandelt den Gegner in ein Schwein.
+var pig := false
+const PIG_COLOR := Color(0.45, 1.0, 0.4)
 
 
-func launch(from: CharacterBody3D, atk: Dictionary, start: Vector3, dir: int, is_frost := false) -> void:
+func launch(from: CharacterBody3D, atk: Dictionary, start: Vector3, dir: int, is_frost := false, is_pig := false) -> void:
 	shooter = from
 	attack = atk
 	direction = dir
 	frost = is_frost
+	pig = is_pig
 	global_position = start
-	var color: Color = FROST_COLOR if frost else from.color
+	var color: Color = FROST_COLOR if frost else PIG_COLOR if pig else from.color
 
 	# Heller Kern
 	var mesh := MeshInstance3D.new()
@@ -59,6 +63,9 @@ func _physics_process(delta: float) -> void:
 	position.x += direction * SPEED * delta
 	scale = Vector3.ONE * (1.0 + 0.15 * sin(age * 30.0))
 	rotation.z += 12.0 * delta
+	if Target.hit_near(self, global_position, HIT_RADIUS + 0.3):
+		queue_free()
+		return
 	var target: CharacterBody3D = shooter.opponent if shooter else null
 	if target and target.visible:
 		var chest := target.global_position + Vector3(0, 0.9, 0)
@@ -70,6 +77,8 @@ func _physics_process(delta: float) -> void:
 				SpecialFX.impact(shooter, global_position, FROST_COLOR if frost else shooter.color)
 				if frost:
 					target.freeze(FREEZE_TIME)
+				if pig:
+					target.pigify(target.PIG_TIME)
 			queue_free()
 			return
 	if age > LIFETIME:
