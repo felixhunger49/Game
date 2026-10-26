@@ -68,9 +68,15 @@ const KAYKIT_WEAPONS := "res://assets/kaykit/weapons/"
 
 const FIGHTERS := [
 	{
-		"name": "Barbar", "passive": "berserker", "flip": "rad", "voice": 0.85, "scene": KAYKIT_CHARS + "Barbarian.glb",
-		"keep": ["2H_Axe"], "special": "wirbel",
-		"weak": "2H_Melee_Attack_Slice", "strong": "2H_Melee_Attack_Chop",
+		# Eigene Figur aus ComfyUI (Flux + Trellis), Zweihand-Animationen von Mixamo; Fallen/Landen/Rolle/Taumeln
+		# vom Kampfroboter. Große Zweihand-Axt vom KayKit-Barbaren.
+		"name": "Barbar", "passive": "berserker", "flip": "rad", "voice": 0.85,
+		"scene": "res://assets/barbar/modell.fbx", "anim_dir": "res://assets/barbar/", "scale": 200.0, "special": "wirbel",
+		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.0},
+		"anim_trim": {"weak": [0.35, 0.85], "strong": [0.30, 1.05], "kick": [0.25, 0.95], "special": [0.50, 1.60]},
+		"attach_from": {
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Barbarian.glb", "2H_Axe", Vector3(-33, 4, -130)],
+		},
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), Animationen von Mixamo; Dolche vom KayKit-Schurken.
@@ -79,8 +85,8 @@ const FIGHTERS := [
 		"anim_speeds": {"weak": 1.5, "strong": 1.1, "kick": 1.6, "special": 1.4},
 		"anim_trim": {"weak": [0.05, 0.50], "strong": [0.20, 1.00], "kick": [0.25, 0.95], "special": [0.00, 1.40]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Rogue.glb", "Knife", Vector3(0, -90, -90)],
-			"mixamorig_LeftHand": [KAYKIT_CHARS + "Rogue.glb", "Knife_Offhand", Vector3(0, -90, -90)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Rogue.glb", "Knife", Vector3(0, -90, 90), Vector3.ZERO, 0.5],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Rogue.glb", "Knife_Offhand", Vector3(0, -90, 90), Vector3.ZERO, 0.5],
 		},
 	},
 	{
@@ -104,7 +110,7 @@ const FIGHTERS := [
 		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.3},
 		"anim_trim": {"weak": [0.05, 0.55], "strong": [0.20, 0.95], "kick": [0.00, 0.70]},
 		"attach_from": {
-			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", Vector3(0, -90, -90)],
+			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", Vector3(-20, 37, -109)],
 			"mixamorig_LeftHand": [KAYKIT_CHARS + "Paladin.glb", "Rectangle_Shield", Vector3(-90, 0, 135)],
 		},
 	},

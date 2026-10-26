@@ -26,7 +26,7 @@ Wie bei Super Smash Bros. sind Figuren und Arenen 3D-Modelle, gekämpft wird abe
 - **Ziele zerstören (gegen die Uhr)**: allein auf der gewählten Map. Zehn schwebende Zielscheiben sind verteilt: auf den
   Plattformen, in der Luft und über dem Boden. Jeder Angriff zerstört sie (auch Feuerball, Laser, Pfeilregen, Erdbeben …).
   Die Zeit läuft, bis alle kaputt sind; die Bestzeit wird je Map und Kämpfer gespeichert.
-- **Endboss: Riesen-Kampfroboter**: allein gegen einen 1,7-mal so großen Kampfroboter mit Lebensleiste (300) statt Prozent.
+- **Endboss: Riesen-Kampfroboter**: allein gegen einen 1,7-mal so großen Kampfroboter mit Lebensleiste (220) statt Prozent.
   Er wird kaum weggeschleudert, schießt regelmäßig seinen Laser (drüberspringen!), lässt Raketen regnen (rote Kreise am Boden
   zeigen, wo sie einschlagen) und entlädt Overcharge. Ab halber Leiste wird er WÜTEND: glüht rot, ist schneller und schießt öfter.
 - **Map**: Burg, Dorf, Friedhof, Vulkan, Piratenschiff, Eiswelt oder Wolkentempel. Jede Map hat ihren eigenen Effekt (siehe unten).

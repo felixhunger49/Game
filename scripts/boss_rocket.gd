@@ -3,11 +3,11 @@ extends Node3D
 ## Rakete des Riesen-Kampfroboters: erst blinkt ein roter Kreis am Boden (Zeit zum Ausweichen),
 ## dann fällt die Rakete vom Himmel und explodiert.
 
-const WARN_TIME := 1.1
+const WARN_TIME := 1.5
 const FALL_SPEED := 22.0
 const START_HEIGHT := 13.0
 const RADIUS := 1.5
-const ATTACK := {"damage": 9.0, "base": 6.0, "scale": 0.12, "angle": Vector2(0.6, 1.0)}
+const ATTACK := {"damage": 7.0, "base": 5.0, "scale": 0.09, "angle": Vector2(0.6, 1.0)}
 
 var shooter: CharacterBody3D
 var target: CharacterBody3D
@@ -28,7 +28,7 @@ func launch(from: CharacterBody3D, victim: CharacterBody3D, x: float, y: float) 
 	disc.bottom_radius = RADIUS
 	disc.height = 0.04
 	marker.mesh = disc
-	marker.material_override = SpecialFX._glow_material(Color(1, 0.15, 0.1, 0.7), 2.5)
+	marker.material_override = SpecialFX._glow_material(Color(1, 0.08, 0.05, 0.8), 1.2)
 	add_child(marker)
 	marker.position.y = 0.05
 	rocket = Node3D.new()

@@ -645,7 +645,7 @@ func make_boss(hp: float, size: float) -> void:
 	boss = true
 	boss_hp = hp
 	boss_hp_max = hp
-	reach_scale = size * 0.8
+	reach_scale = size * 0.65
 	size_scale = size
 	stocks = 99
 	model_root.scale *= size
@@ -1019,11 +1019,13 @@ func _setup_weapons(model: Node3D) -> void:
 			slot.bone_name = bone_name
 			skeleton.add_child(slot)
 			slot.add_child(weapon)
-			# Optional: [Modell, Knoten, Drehung in Grad, Versatz]. Größe wie beim KayKit-Ritter (Skala 0.8).
+			# Optional: [Modell, Knoten, Drehung in Grad, Versatz, Größe]. Größe 1 wie beim KayKit-Ritter (Skala 0.8).
+			# Die Drehung hängt von der Figur ab: Mixamo legt die Handknochen je nach Modell etwas anders
+			# (siehe tools_tmp/hand_rotation.gd, rechnet sie aus der Haltung beim Held aus).
 			var entry: Array = attach_from[bone_name]
 			var rot: Vector3 = entry[2] if entry.size() > 2 else Vector3.ZERO
 			var offset: Vector3 = entry[3] if entry.size() > 3 else Vector3.ZERO
-			var s: float = 0.8 / fighter.get("scale", 0.8)
+			var s: float = 0.8 / fighter.get("scale", 0.8) * (entry[4] if entry.size() > 4 else 1.0)
 			weapon.transform = Transform3D(Basis.from_euler(rot * PI / 180.0).scaled(Vector3.ONE * s), offset * s)
 			weapon.visible = true
 		source.free()
@@ -1052,7 +1054,7 @@ func _apply_passive() -> void:
 
 ## Zusätzlicher Schaden, den dieser Kämpfer austeilt.
 func outgoing_multiplier() -> float:
-	var m := 1.15 if boss else 1.0
+	var m := 0.85 if boss else 1.0
 	match passive:
 		"berserker":
 			# Je mehr Schaden er hat, desto härter schlägt er zu (bis +40 % bei 100 %).

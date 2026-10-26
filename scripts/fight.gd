@@ -22,7 +22,7 @@ var targets_total := 0
 var targets_left := 0
 var target_time := 0.0
 ## Endboss: Lebensleiste oben in der Mitte.
-const BOSS_HP := 300.0
+const BOSS_HP := 220.0
 const BOSS_SIZE := 1.7
 var boss_ai: BossAI
 var boss_bar: ProgressBar
@@ -179,8 +179,8 @@ func _create_boss_bar() -> void:
 	boss_bar.max_value = BOSS_HP
 	boss_bar.value = BOSS_HP
 	boss_bar.show_percentage = false
-	boss_bar.size = Vector2(560, 26)
-	boss_bar.position = Vector2(640 - 280, 24)
+	boss_bar.size = Vector2(440, 26)
+	boss_bar.position = Vector2(400, 24)
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = Color(0, 0, 0, 0.6)
 	bg.set_corner_radius_all(8)

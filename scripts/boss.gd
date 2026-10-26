@@ -1,14 +1,14 @@
 class_name BossAI
 extends CpuPlayer
-## Endboss "Riesen-Kampfroboter": kämpft wie der Computer (Stufe Schwer) und hat dazu eigene Angriffe:
+## Endboss "Riesen-Kampfroboter": kämpft wie der Computer (Stufe Mittel, etwas langsamer) und hat dazu eigene Angriffe:
 ## - Laser aus dem Bauch in festen Abständen (man kann darüber springen),
 ## - Raketenregen: rote Kreise am Boden, kurz danach schlagen Raketen ein,
 ## - Overcharge (seine Passive) alle paar Sekunden.
 ## Ab halber Lebensleiste wird er WÜTEND: glüht rot, ist schneller und schießt öfter.
 
 const PHASES := [
-	{"laser": 7.0, "rockets": 6.0, "volley": 3, "speed": 1.0},
-	{"laser": 4.5, "rockets": 3.5, "volley": 5, "speed": 1.25},
+	{"laser": 10.0, "rockets": 9.0, "volley": 2, "speed": 1.0},
+	{"laser": 7.0, "rockets": 6.0, "volley": 3, "speed": 1.15},
 ]
 
 var phase := 0
@@ -18,10 +18,12 @@ var rage_light: OmniLight3D
 
 
 func setup(player: CharacterBody3D, opponent: CharacterBody3D, _difficulty: int) -> void:
-	super.setup(player, opponent, 2)
-	# Blockt seltener als der normale Computer, sonst wird es zäh.
-	level = LEVELS[2].duplicate()
-	level.block = 0.2
+	super.setup(player, opponent, 1)
+	# Reagiert langsamer, greift seltener an und blockt kaum, damit man ihn schlagen kann.
+	level = LEVELS[1].duplicate()
+	level.reaction = 0.35
+	level.aggression = 0.5
+	level.block = 0.1
 
 
 func _physics_process(delta: float) -> void:
@@ -58,8 +60,8 @@ func _rocket_volley(count: int) -> void:
 ## Wütend: rotes Glühen, schneller, schießt öfter.
 func _enrage() -> void:
 	phase = 1
-	level = LEVELS[2].duplicate()
-	level.reaction *= 0.7
+	level.reaction *= 0.8
+	level.aggression = 0.65
 	me.speed *= PHASES[1].speed
 	SpecialFX.popup(me, "WÜTEND!", Color(1, 0.2, 0.1))
 	SpecialFX.shake(me, 0.5, 0.6)

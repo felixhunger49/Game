@@ -196,7 +196,7 @@ static func laser(player: Node3D, length: float) -> void:
 	var red := Color(1, 0.15, 0.1)
 	var start: Vector3 = player.global_position + Vector3(0.35 * facing, LASER_HEIGHT * player.get("size_scale"), 0)
 	var middle := start + Vector3(facing * length / 2.0, 0, 0)
-	for layer in [[0.32, red, 3.0], [0.12, Color(1, 0.9, 0.85), 4.0]]:
+	for layer in [[0.32, red, 2.4], [0.12, Color(1, 0.55, 0.45), 2.2]]:
 		var beam := MeshInstance3D.new()
 		var c := CylinderMesh.new()
 		c.top_radius = layer[0]
@@ -213,7 +213,7 @@ static func laser(player: Node3D, length: float) -> void:
 		tween.chain().tween_callback(beam.queue_free)
 	_flash_sphere(world, start, red, 0.2, 0.9, 0.25)
 	_sparks(world, start + Vector3(facing * length, 0, 0), red, 40, 8.0, 0.5)
-	_flash_light(world, middle, red, 10.0, length, 0.4)
+	_flash_light(world, middle, red, 6.0, length, 0.4)
 	Audio.sfx("laser", 0.55, 4.0)
 	shake(player, 0.3, 0.35)
 
