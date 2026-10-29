@@ -34,6 +34,9 @@ var route := {}
 var steer := Vector2.ZERO
 var steer_time := 0.0
 var wall_jump_time := 0.0
+## Ab und zu läuft der Computer woandershin (in die Höhle, aufs Dach …), statt nur dem Gegner nachzulaufen.
+var roam := -1
+var roam_time := 0.0
 
 
 func setup(player: CharacterBody3D, opponent: CharacterBody3D, difficulty: int, stage: Node = null) -> void:
@@ -91,6 +94,7 @@ func _physics_process(delta: float) -> void:
 
 	steer_time = maxf(steer_time - delta, 0.0)
 	wall_jump_time = maxf(wall_jump_time - delta, 0.0)
+	roam_time = maxf(roam_time - delta, 0.0)
 	var on_floor := me.is_on_floor()
 
 	# 1) Zurück auf die Bühne: kein Boden mehr unter einem, also zur nächsten Plattform steuern und springen.
@@ -225,6 +229,15 @@ func _plan_route() -> Dictionary:
 	var list := _surfaces()
 	var start := _surface_under(me.global_position, list)
 	var goal := _surface_under(foe.global_position, list)
+	var far: bool = absf(foe.global_position.x - me.global_position.x) > 3.0
+	if roam_time <= 0.0 and far and not list.is_empty() and randf() < 0.025:
+		roam = randi() % list.size()
+		roam_time = 5.0
+	if roam_time > 0.0 and far and roam < list.size():
+		if roam == start:
+			roam_time = 0.0
+		else:
+			goal = roam
 	if start < 0 or goal < 0 or start == goal:
 		return {}
 	# Dijkstra: Kosten = gelaufene Strecke, Höhe zählt etwas mehr.
