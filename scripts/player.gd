@@ -22,6 +22,8 @@ const ATTACKS := {
 		"cooldown": 0.25, "angle": Vector2(1, 0.35), "anim_speed": 2.2},
 	"strong": {"damage": 13.0, "base": 6.5, "scale": 0.22, "range": Vector2(1.9, 1.4), "startup": 0.3,
 		"cooldown": 0.75, "angle": Vector2(1, 0.7), "anim_speed": 1.4},
+	# Pfeilschuss der Jägerin (starker Angriff aus der Ferne, daher etwas schwächer als ein Schlag).
+	"pfeil": {"damage": 9.0, "base": 5.0, "scale": 0.15, "startup": 0.3, "cooldown": 0.75, "angle": Vector2(1, 0.4)},
 	"kick": {"damage": 8.0, "base": 5.0, "scale": 0.15, "range": Vector2(1.7, 1.0), "startup": 0.12,
 		"cooldown": 0.45, "angle": Vector2(1, 0.25), "anim_speed": 1.8},
 	"feuerball": {"damage": 9.0, "base": 4.0, "scale": 0.12, "startup": 0.2, "cooldown": 1.0,
@@ -562,6 +564,12 @@ func _update_pending_attack(delta: float) -> void:
 	var kind := pending_attack
 	pending_attack = ""
 	var atk: Dictionary = ATTACKS[kind]
+	# Jägerin: der starke Angriff ist ein Pfeilschuss quer über die Arena.
+	if kind == "strong" and fighter.get("bow", false):
+		var arrow := ArrowShot.new()
+		get_parent().add_child(arrow)
+		arrow.launch(self, ATTACKS.pfeil, global_position + Vector3(0.7 * facing, 1.2, 0), facing)
+		return
 	match kind:
 		"feuerball", "frost", "schwein":
 			var ball := Projectile.new()
