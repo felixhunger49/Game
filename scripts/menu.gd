@@ -100,7 +100,7 @@ func _input(event: InputEvent) -> void:
 func _entries() -> Array:
 	match page:
 		Page.OPTIONS:
-			return ["items", "rate", "stocks", "map_effects", "special_charge", "music", "sfx", "back"]
+			return ["items", "rate", "stocks", "map_effects", "special_charge", "graphics", "music", "sfx", "back"]
 		Page.CONTROLS:
 			var list := ["player"]
 			for a in Settings.BINDABLE:
@@ -140,6 +140,7 @@ func _entry_text(entry: String) -> String:
 		"stocks": return "Leben:  ◀ %d ▶" % Settings.stocks
 		"map_effects": return "Map-Effekte:  ◀ %s ▶" % ("An" if Settings.map_effects else "Aus")
 		"special_charge": return "Spezial aufladen:  ◀ %s ▶" % ("An" if Settings.special_charge else "Aus")
+		"graphics": return "Grafik:  ◀ %s ▶" % Settings.GRAPHICS[Settings.graphics]
 		"music": return "Musik:  ◀ %s ▶" % _bar(Settings.music_volume)
 		"sfx": return "Geräusche & Stimmen:  ◀ %s ▶" % _bar(Settings.sfx_volume)
 		"player": return "Spieler:  ◀ %d ▶" % controls_player
@@ -167,6 +168,8 @@ func _change(entry: String, step: int) -> void:
 			Settings.map_effects = not Settings.map_effects
 		"special_charge":
 			Settings.special_charge = not Settings.special_charge
+		"graphics":
+			Settings.graphics = wrapi(Settings.graphics + step, 0, Settings.GRAPHICS.size())
 		"music":
 			Settings.music_volume = clampi(Settings.music_volume + step, 0, 10)
 			Audio.apply_volume()
@@ -215,7 +218,7 @@ func _activate(entry: String) -> void:
 			Settings.reset_controls()
 			Audio.sfx("menu_select")
 			_refresh()
-		"map", "mode", "cpu", "items", "rate", "stocks", "map_effects", "special_charge", "player":
+		"map", "mode", "cpu", "items", "rate", "stocks", "map_effects", "special_charge", "graphics", "player":
 			_change(entry, 1)
 
 

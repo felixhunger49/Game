@@ -321,6 +321,7 @@ func _physics_process(delta: float) -> void:
 	_update_passive(delta)
 	_update_status_effects(delta)
 
+	var fall_speed := -velocity.y
 	velocity.y -= gravity * delta
 	# Von unten durch die schwebenden Plattformen springen, beim Fallen darauf landen.
 	# Nach doppeltem Runter fällt man kurz durch sie hindurch.
@@ -372,7 +373,10 @@ func _physics_process(delta: float) -> void:
 			and Input.is_action_pressed(_action("jump")):
 		velocity.y = -GLIDE_FALL_SPEED
 
+	var was_on_floor := is_on_floor()
 	move_and_slide()
+	if is_on_floor() and not was_on_floor and fall_speed > 7.0 and visible:
+		SpecialFX.dust(get_parent(), global_position, 12 if fall_speed > 14.0 else 7, 3.0 if fall_speed > 14.0 else 2.0)
 	on_platform = false
 	if is_on_floor():
 		for i in get_slide_collision_count():
@@ -399,6 +403,8 @@ func _handle_input(delta: float) -> void:
 		facing = int(sign(direction))
 
 	if Input.is_action_just_pressed(_action("jump")) and jumps_left > 0:
+		if is_on_floor():
+			SpecialFX.dust(get_parent(), global_position, 6, 1.6)
 		velocity.y = jump_velocity * (1.12 if speed_time > 0.0 else 1.0)
 		Audio.sfx("jump", 1.0 if jumps_left == max_jumps else 1.25)
 		jumps_left -= 1
@@ -496,12 +502,13 @@ func _create_ready_aura() -> void:
 	ready_aura.orbit_velocity_min = 0.4
 	ready_aura.orbit_velocity_max = 0.8
 	var quad := QuadMesh.new()
-	quad.size = Vector2(0.12, 0.12)
+	quad.size = Vector2(0.22, 0.22)
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.albedo_texture = SpecialFX.soft_dot()
 	mat.vertex_color_use_as_albedo = true
 	mat.albedo_color = color * 2.0
 	quad.material = mat
@@ -633,9 +640,15 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 	if landed:
 		add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
 		on_hit_landed(opponent)
+	var special := false
 	for kind in SPECIAL_KINDS:
 		if atk == ATTACKS[kind] and landed:
 			SpecialFX.impact(self, opponent.global_position + Vector3(0, 1.0, 0), color)
+			special = true
+	if landed and not special:
+		# Trefferpunkt zwischen beiden Figuren, etwas näher am Getroffenen.
+		var spot: Vector3 = opponent.global_position.lerp(global_position, 0.25) + Vector3(0, 1.0, 0)
+		SpecialFX.hit(self, spot, color, atk.damage * (POWER_MULTIPLIER if power_time > 0.0 else 1.0))
 	return true
 
 
@@ -680,6 +693,9 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 	var knockback: float = (atk.base + damage * atk.scale) * multiplier * _knockback_multiplier()
 	velocity = direction * knockback
 	hitstun = 0.12 + knockback * 0.02
+	if knockback > 13.0:
+		# Weit weggeschleudert: Rauchspur hinterherziehen.
+		SpecialFX.launch_trail(self, clampf(knockback * 0.03, 0.3, 1.0))
 	pending_attack = ""
 	dash_time = 0.0
 	_end_flip()

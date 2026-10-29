@@ -10,12 +10,12 @@ func _ready() -> void:
 	var bg: Node3D = $Background
 	var fx := MapFX.attach(self)
 	var marble_tex := MapFX.tex("marmor")
-	var marble: Material = MapFX.textured(marble_tex, MapFX.tex("marmor_n"), Color.WHITE, 0.3, 0.3) if marble_tex \
+	var marble: Material = MapFX.textured(marble_tex, MapFX.tex("marmor_n"), Color(0.93, 0.89, 0.85), 0.3, 0.3) if marble_tex \
 		else MapLook.mat(Color(0.94, 0.92, 0.88), 0.35)
-	var marble_shade: Material = MapFX.textured(marble_tex, MapFX.tex("marmor_n"), Color(0.82, 0.8, 0.8), 0.3, 0.4) if marble_tex \
+	var marble_shade: Material = MapFX.textured(marble_tex, MapFX.tex("marmor_n"), Color(0.74, 0.7, 0.72), 0.3, 0.4) if marble_tex \
 		else MapLook.mat(Color(0.8, 0.78, 0.76), 0.4)
 	var gold := MapLook.mat(Color(1.0, 0.78, 0.3), 0.3, 0.8)
-	var cloud := MapLook.mat(Color(1, 1, 1), 1.0)
+	var cloud := MapLook.mat(Color(0.93, 0.92, 0.96), 1.0)
 	var cloud_pink := MapLook.mat(Color(1.0, 0.86, 0.9), 1.0)
 	$Spawn1.position = Vector3(-3.0, 0.2, 0)
 	$Spawn2.position = Vector3(3.0, 0.2, 0)
@@ -74,7 +74,7 @@ func _ready() -> void:
 	fx.flock(Vector3(0, 9.5, -6.0), 5, Color(1, 1, 1), Vector3(12, 0.8, 4), 0.3, 0.4)
 	MapLook.particles(self, Vector3(0, 4.0, 0), Vector3(9, 4, 2), Color(1.0, 0.85, 0.4, 1.0), 35,
 		Vector3(0, 0.2, 0), 0.05, 4.0)
-	MapFX.mood(self, Color(1.0, 0.88, 0.85), 0.006, 0.2, 1.15, 1.12, 0.92)
+	MapFX.mood(self, Color(1.0, 0.88, 0.85), 0.006, 0.25, 1.18, 1.2, 0.86)
 
 	# Vordergrund: Wolkenfetzen in den unteren Ecken.
 	var fg := MapFX.foreground(self)

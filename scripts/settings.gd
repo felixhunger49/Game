@@ -90,6 +90,9 @@ var campaign_losses := 0
 var campaign_wins := 0
 var music_volume := 7
 var sfx_volume := 8
+## Grafik: 0 Niedrig (für schwache PCs), 1 Hoch (Kantenglättung, Schatten, Glühen, mehr Funken).
+const GRAPHICS := ["Niedrig", "Hoch"]
+var graphics := 1
 
 ## Standardbelegung aus project.godot, damit man sie wiederherstellen kann.
 var _default_events := {}
@@ -122,6 +125,7 @@ func _ready() -> void:
 	campaign_wins = cfg.get_value("campaign", "wins", campaign_wins)
 	music_volume = cfg.get_value("audio", "music_volume", music_volume)
 	sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
+	graphics = clampi(cfg.get_value("video", "graphics", graphics), 0, GRAPHICS.size() - 1)
 	if cfg.has_section("controls"):
 		for action in cfg.get_section_keys("controls"):
 			if action in _default_events:
@@ -146,6 +150,7 @@ func save() -> void:
 	cfg.set_value("campaign", "wins", campaign_wins)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
+	cfg.set_value("video", "graphics", graphics)
 	for action in _default_events:
 		cfg.set_value("controls", action, InputMap.action_get_events(action))
 	cfg.save(SAVE_PATH)

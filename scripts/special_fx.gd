@@ -323,6 +323,136 @@ static func shake(node: Node, strength: float, seconds: float) -> void:
 
 # --- Bausteine -------------------------------------------------------------------
 
+# --- Treffer, Staub und Flugspur ------------------------------------------------------
+
+## Weicher, runder Lichtpunkt für alle Partikel (statt eckiger Plättchen). Wird nur einmal gebaut.
+static var _dot: Texture2D
+
+static func soft_dot() -> Texture2D:
+	if _dot == null:
+		var g := Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		g.add_point(0.35, Color(1, 1, 1, 0.75))
+		var tex := GradientTexture2D.new()
+		tex.gradient = g
+		tex.fill = GradientTexture2D.FILL_RADIAL
+		tex.fill_from = Vector2(0.5, 0.5)
+		tex.fill_to = Vector2(1.0, 0.5)
+		tex.width = 64
+		tex.height = 64
+		_dot = tex
+	return _dot
+
+
+## Weniger Partikel bei Grafik "Niedrig".
+static func amount_for_quality(amount: int) -> int:
+	return amount if Settings.graphics > 0 else maxi(amount / 2, 1)
+
+
+## Normaler Treffer: Funken in der Farbe des Angreifers, ein kurzer weißer Blitz und
+## bei starken Treffern ein Ring, Treffer-Stopp und Kamerawackeln.
+static func hit(source: Node3D, pos: Vector3, color: Color, strength: float) -> void:
+	var world := source.get_parent()
+	var heavy := strength >= 10.0
+	_flash_sphere(world, pos, Color(1, 1, 1), 0.15, 0.7 if heavy else 0.45, 0.1)
+	_sparks(world, pos, color, 24 if heavy else 12, 9.0 if heavy else 6.0, 0.35)
+	_sparks(world, pos, Color(1, 0.95, 0.8), 10 if heavy else 5, 7.0, 0.2)
+	if heavy:
+		_ring(world, pos, color, 0.2, 1.8, 0.2, true)
+		hit_stop(source, 0.06)
+		shake(source, 0.18, 0.2)
+	else:
+		hit_stop(source, 0.025)
+
+
+## Staubwolke am Boden (Landen, Absprung, Ausweichrolle).
+static func dust(world: Node, pos: Vector3, amount := 10, spread := 2.5) -> void:
+	var p := CPUParticles3D.new()
+	p.amount = amount_for_quality(amount)
+	p.lifetime = 0.5
+	p.one_shot = true
+	p.explosiveness = 1.0
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	p.emission_box_extents = Vector3(0.3, 0.05, 0.2)
+	p.direction = Vector3(1, 0.25, 0)
+	p.spread = 180.0
+	p.flatness = 0.85
+	p.initial_velocity_min = spread * 0.5
+	p.initial_velocity_max = spread
+	p.damping_min = 4.0
+	p.damping_max = 6.0
+	p.gravity = Vector3(0, 0.6, 0)
+	p.scale_amount_min = 0.7
+	p.scale_amount_max = 1.3
+	var grow := Curve.new()
+	grow.add_point(Vector2(0, 0.5))
+	grow.add_point(Vector2(1, 1.4))
+	p.scale_amount_curve = grow
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.5, 0.5)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.vertex_color_use_as_albedo = true
+	mat.albedo_texture = soft_dot()
+	mat.albedo_color = Color(0.85, 0.8, 0.72, 0.55)
+	mat.disable_receive_shadows = true
+	quad.material = mat
+	p.mesh = quad
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 1))
+	fade.set_color(1, Color(1, 1, 1, 0))
+	p.color_ramp = fade
+	world.add_child(p)
+	p.global_position = pos + Vector3(0, 0.1, 0)
+	p.emitting = true
+	world.get_tree().create_timer(0.9).timeout.connect(p.queue_free)
+
+
+## Rauchspur hinter einer Figur, die nach einem harten Treffer wegfliegt (wie in Smash).
+static func launch_trail(player: Node3D, seconds: float) -> void:
+	var p := CPUParticles3D.new()
+	p.amount = amount_for_quality(40)
+	p.lifetime = 0.45
+	p.local_coords = false
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	p.emission_sphere_radius = 0.25
+	p.spread = 180.0
+	p.initial_velocity_min = 0.2
+	p.initial_velocity_max = 0.6
+	p.gravity = Vector3.ZERO
+	p.scale_amount_min = 0.8
+	p.scale_amount_max = 1.4
+	var shrink := Curve.new()
+	shrink.add_point(Vector2(0, 1))
+	shrink.add_point(Vector2(1, 0.2))
+	p.scale_amount_curve = shrink
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.55, 0.55)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.vertex_color_use_as_albedo = true
+	mat.albedo_texture = soft_dot()
+	mat.albedo_color = Color(0.92, 0.92, 0.95, 0.6)
+	quad.material = mat
+	p.mesh = quad
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 1))
+	fade.set_color(1, Color(1, 1, 1, 0))
+	p.color_ramp = fade
+	p.position = Vector3(0, 1.0, 0)
+	player.add_child(p)
+	p.emitting = true
+	player.get_tree().create_timer(seconds).timeout.connect(func():
+		if is_instance_valid(p):
+			p.emitting = false
+			p.get_tree().create_timer(0.6).timeout.connect(p.queue_free))
+
+
 static func _glow_material(color: Color, energy: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -335,14 +465,16 @@ static func _glow_material(color: Color, energy: float) -> StandardMaterial3D:
 
 static func _particles(color: Color, amount: int, lifetime: float, size: float) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
-	p.amount = amount
+	p.amount = amount_for_quality(amount)
 	p.lifetime = lifetime
 	p.one_shot = true
 	p.explosiveness = 0.95
 	var quad := QuadMesh.new()
-	quad.size = Vector2(size, size)
+	# Etwas größer, weil der runde Punkt zum Rand hin weich ausläuft.
+	quad.size = Vector2(size, size) * 1.8
 	var mat := _glow_material(color, 3.0)
 	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.albedo_texture = soft_dot()
 	mat.vertex_color_use_as_albedo = true
 	quad.material = mat
 	p.mesh = quad

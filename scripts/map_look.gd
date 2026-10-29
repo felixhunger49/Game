@@ -130,7 +130,7 @@ static func particles(parent: Node, pos: Vector3, extents: Vector3, color: Color
 		velocity: Vector3, size := 0.12, lifetime := 4.0, gravity := Vector3.ZERO) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.position = pos
-	p.amount = amount
+	p.amount = SpecialFX.amount_for_quality(amount)
 	p.lifetime = lifetime
 	p.preprocess = lifetime
 	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
@@ -141,11 +141,13 @@ static func particles(parent: Node, pos: Vector3, extents: Vector3, color: Color
 	p.initial_velocity_max = velocity.length() * 1.2
 	p.gravity = gravity
 	var quad := QuadMesh.new()
-	quad.size = Vector2(size, size)
+	# Weicher runder Punkt statt Quadrat, darum etwas größer.
+	quad.size = Vector2(size, size) * 1.7
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.albedo_texture = SpecialFX.soft_dot()
 	m.albedo_color = color
 	quad.material = m
 	p.mesh = quad

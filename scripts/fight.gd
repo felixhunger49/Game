@@ -58,6 +58,7 @@ func _ready() -> void:
 	if Settings.current_map().has("backdrop"):
 		MapLook.backdrop(map, Settings.current_map().backdrop)
 	_add_vignette()
+	_apply_graphics(map)
 
 	players[0].opponent = players[1]
 	players[1].opponent = players[0]
@@ -380,6 +381,21 @@ func _controls_hint() -> String:
 
 ## Die Kamera folgt beiden Spielern und zoomt heraus, wenn sie weit auseinander sind.
 ## Dunkelt die Bildränder leicht ab (unter der Anzeige oben).
+## Grafik-Einstellung: "Hoch" glättet Kanten (MSAA), "Niedrig" spart Schatten und Glühen für schwache PCs.
+func _apply_graphics(map: Node3D) -> void:
+	var high := Settings.graphics > 0
+	get_viewport().msaa_3d = Viewport.MSAA_2X if high else Viewport.MSAA_DISABLED
+	if high:
+		return
+	for light in map.find_children("*", "DirectionalLight3D", true, false):
+		light.shadow_enabled = false
+	var we: WorldEnvironment = map.get_node_or_null("WorldEnvironment")
+	if we and we.environment:
+		# Kopie, damit die Map-Datei im Speicher unverändert bleibt.
+		we.environment = we.environment.duplicate()
+		we.environment.glow_enabled = false
+
+
 func _add_vignette() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 0
