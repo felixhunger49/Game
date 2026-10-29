@@ -50,7 +50,13 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 | Starker Angriff | G | K (oder Num 2) |
 | Tritt | H | L (oder Num 3) |
 | Spezialattacke | T | I (oder Num 5) |
-| Ausweichrolle | 2× schnell links oder rechts | 2× schnell Pfeil links oder rechts |
+| Ausweichrolle | 2× schnell links oder rechts, oder S halten + A/D | 2× schnell Pfeil links oder rechts, oder Pfeil runter halten + links/rechts |
+| Smash-Angriff aufladen | G gedrückt halten, loslassen | K gedrückt halten, loslassen |
+| Greifen | S halten + F | Pfeil runter halten + J |
+| Werfen (im Griff) | A/D vor/zurück, W hoch, S runter, F zuschlagen | Pfeile, J zuschlagen |
+| Ausweichen in der Luft | S in der Luft | Pfeil runter in der Luft |
+| Schnell fallen | S in der Luft gedrückt halten | Pfeil runter in der Luft gedrückt halten |
+| An der Kante | automatisch beim Fallen; W hochspringen, zur Bühne hochklettern, Angriff = hochklettern mit Tritt, S oder weg = loslassen | genauso mit den Pfeilen |
 | Durch eine Plattform fallen | 2× schnell S (auf einer Plattform) | 2× schnell Pfeil runter |
 | Nach dem Kampf nochmal | R | R |
 | Zurück ins Menü | Esc | Esc |
@@ -66,7 +72,15 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 
 **Abwehr:** Solange du die Abwehr-Taste hältst, schützt dich eine Blase vor allen Treffern. Sie wird kleiner, je länger du sie hältst und je mehr Treffer sie abfängt. Zerbricht sie, bist du kurz betäubt.
 
-**Ausweichrolle:** Zweimal schnell in eine Richtung tippen: Die Figur rollt ein Stück in diese Richtung und kann dabei nicht getroffen werden. Danach kurz warten bis zur nächsten Rolle.
+**Ausweichrolle:** Zweimal schnell in eine Richtung tippen (oder beim Abwehren eine Richtung drücken): Die Figur rollt ein Stück in diese Richtung und kann dabei nicht getroffen werden. Danach kurz warten bis zur nächsten Rolle.
+
+**Smash-Angriff:** Den starken Angriff gedrückt halten: Die Figur bleibt in der Ausholbewegung stehen, zittert und sprüht Funken. Je länger (bis 1 Sekunde), desto stärker, voll aufgeladen gibt es 60 % mehr Schaden und Rückstoß. Kurz antippen ist ein normaler starker Schlag.
+
+**Greifen und Werfen:** Abwehren halten und schwach angreifen packt den Gegner, auch wenn er gerade abwehrt. Im Griff: schwacher Angriff schlägt zu, vor/zurück wirft nach vorne oder hinter sich, Springen wirft nach oben, Abwehren nach unten. Wer gepackt ist, kommt durch schnelles Tastendrücken früher frei. Daneben gegriffen: kurz ohne Schild.
+
+**In der Luft:** Abwehren antippen = ausweichen (kurz unverwundbar, einmal pro Sprung). Gedrückt halten = schnell fallen.
+
+**Kante:** Wer neben der Bühne herunterfällt, hält sich automatisch an der Kante fest und ist kurz unverwundbar (erst wieder, nachdem man gelandet ist). Nach 2,5 Sekunden lässt man los.
 
 **Spezial aufladen:** Unter den Namen oben zeigt eine Leiste die Spezial-Energie. Sie füllt sich langsam mit der Zeit,
 schneller durch eigene Treffer und etwas durch Treffer, die man einsteckt. Erst bei voller Leiste (sie blinkt, über der Figur

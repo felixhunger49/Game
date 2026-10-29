@@ -64,6 +64,9 @@ const ATTACKS := {
 	# Jägerin: Pfeilregen auf die Stelle, an der der Gegner steht.
 	"pfeilregen": {"damage": 4.0, "base": 2.5, "scale": 0.08, "startup": 0.25, "cooldown": 0.9,
 		"angle": Vector2(0.4, -0.2), "anim_speed": 1.4},
+	# Alle: Abwehren + schwacher Angriff = Gegner packen (macht keinen Schaden, geht durch den Schild).
+	"griff": {"damage": 0.0, "base": 0.0, "scale": 0.0, "range": GRAB_RANGE, "startup": 0.1,
+		"cooldown": 0.5, "angle": Vector2(1, 0), "anim_speed": 2.0},
 }
 
 ## Passive Fähigkeiten: wirken immer, ohne Taste. Beschreibungen stehen in Roster.PASSIVES.
@@ -141,6 +144,34 @@ const ROLL_SPEED := 12.0
 const ROLL_COOLDOWN := 0.6
 ## So lange fällt man nach doppeltem Runter durch eine Plattform.
 const DROP_TIME := 0.45
+
+## Schnell fallen: so schnell fällt man, wenn man in der Luft Abwehren gedrückt hält.
+const FAST_FALL_SPEED := 22.0
+## Ausweichen in der Luft (Abwehren in der Luft): so lange unverwundbar, einmal pro Sprung.
+const AIR_DODGE_TIME := 0.3
+const AIR_DODGE_SPEED := 6.0
+## Smash-Angriff: starken Angriff am Boden gedrückt halten hält die Figur oben in der Ausholbewegung an
+## und lädt bis zu CHARGE_MAX Sekunden auf. Volle Ladung gibt CHARGE_BONUS mehr Schaden und Rückstoß.
+const CHARGE_MAX := 1.0
+const CHARGE_BONUS := 0.6
+## An der Kante festhalten: höchstens so lange hängen, so lange unverwundbar (nur wenn man seit
+## dem letzten Festhalten gelandet ist) und so lange warten, bis man wieder greifen kann.
+const LEDGE_HANG_MAX := 2.5
+const LEDGE_INVULN := 0.6
+const LEDGE_REGRAB := 0.6
+## So weit unter der Kante hängt die Figur (Füße), damit die Hände oben am Rand sind.
+const LEDGE_HANG_DROP := 1.75
+## Greifen (Abwehren + schwacher Angriff): Reichweite, Haltezeit und Schaden beim Zuschlagen im Griff.
+const GRAB_RANGE := Vector2(1.4, 1.2)
+const GRAB_HOLD_TIME := 1.1
+const GRAB_PUMMEL_DAMAGE := 1.5
+## Würfe: angle zeigt nach vorne (x = 1). "hinten" wirft hinter sich.
+const THROWS := {
+	"vorne": {"damage": 8.0, "base": 6.0, "scale": 0.16, "angle": Vector2(1, 0.55)},
+	"hinten": {"damage": 10.0, "base": 6.5, "scale": 0.18, "angle": Vector2(-1, 0.6)},
+	"oben": {"damage": 9.0, "base": 6.0, "scale": 0.15, "angle": Vector2(0.1, 1)},
+	"unten": {"damage": 6.0, "base": 4.5, "scale": 0.08, "angle": Vector2(0.3, 1)},
+}
 
 ## Höhe der Körpermitte: um diesen Punkt drehen sich die Kunststücke.
 const FLIP_PIVOT_HEIGHT := 0.9
@@ -220,6 +251,28 @@ var counter_time := 0.0
 var flurry_left := 0
 var flurry_timer := 0.0
 var still_time := 0.0
+## Schnell fallen und Ausweichen in der Luft.
+var fast_falling := false
+var fast_fall_armed := false
+var air_dodge_time := 0.0
+var air_dodge_used := false
+## Smash-Angriff aufladen: charging = Taste wird noch gehalten, charge_time = so lange wird schon aufgeladen.
+var charging := false
+var charge_time := 0.0
+## Kante: ledge_side = Richtung zur Bühne (0 = hängt nicht), ledge_top = Höhe der Kante.
+var ledge_side := 0
+var ledge_top := 0.0
+var ledge_x := 0.0
+var hang_time := 0.0
+var ledge_invuln := 0.0
+var ledge_invuln_ready := true
+var ledge_regrab := 0.0
+## Greifen: holding = der gepackte Gegner, held_by = wer einen selbst gepackt hat.
+var holding: CharacterBody3D
+var held_by: CharacterBody3D
+var grab_hold := 0.0
+var pummel_cooldown := 0.0
+var grab_lag := 0.0
 
 @onready var model_root: Node3D = $Model
 @onready var tag: Label3D = $Tag
@@ -309,6 +362,11 @@ func _physics_process(delta: float) -> void:
 	speed_time = max(speed_time - delta, 0.0)
 	roll_cooldown = max(roll_cooldown - delta, 0.0)
 	drop_time = max(drop_time - delta, 0.0)
+	air_dodge_time = maxf(air_dodge_time - delta, 0.0)
+	ledge_regrab = maxf(ledge_regrab - delta, 0.0)
+	ledge_invuln = maxf(ledge_invuln - delta, 0.0)
+	pummel_cooldown = maxf(pummel_cooldown - delta, 0.0)
+	grab_lag = maxf(grab_lag - delta, 0.0)
 	if controls_enabled:
 		add_special_energy(SPECIAL_PER_SECOND * delta)
 		# Mönch: Still stehen = meditieren, die Leiste füllt sich schneller.
@@ -323,6 +381,20 @@ func _physics_process(delta: float) -> void:
 	_update_passive(delta)
 	_update_status_effects(delta)
 
+	# Gepackt oder an der Kante: eigene Steuerung, keine Schwerkraft.
+	if held_by:
+		_update_held()
+		_update_visuals(delta)
+		return
+	if ledge_side != 0:
+		_update_ledge(delta)
+		_update_visuals(delta)
+		return
+	if holding:
+		_update_holding(delta)
+		_update_visuals(delta)
+		return
+
 	var fall_speed := -velocity.y
 	velocity.y -= gravity * delta
 	# Von unten durch die schwebenden Plattformen springen, beim Fallen darauf landen.
@@ -332,6 +404,10 @@ func _physics_process(delta: float) -> void:
 		jumps_left = max_jumps
 		special_air_used = false
 		jumped = false
+		fast_falling = false
+		fast_fall_armed = false
+		air_dodge_used = false
+		ledge_invuln_ready = true
 
 	_update_pending_attack(delta)
 	_update_dash(delta)
@@ -340,7 +416,7 @@ func _physics_process(delta: float) -> void:
 	if can_act and roll_time <= 0.0 and dash_time <= 0.0:
 		_check_double_taps()
 	shielding = can_act and pig_time <= 0.0 and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0 \
-		and roll_time <= 0.0 and drop_time <= 0.0
+		and roll_time <= 0.0 and drop_time <= 0.0 and not charging and pending_attack != "griff" and grab_lag <= 0.0
 	if shielding:
 		shield_hp = max(shield_hp - 18.0 * delta * (0.5 if passive == "schildmeister" else 1.0), 0.0)
 	else:
@@ -353,6 +429,9 @@ func _physics_process(delta: float) -> void:
 		pass
 	elif roll_time > 0.0:
 		_update_roll(delta)
+	elif air_dodge_time > 0.0:
+		velocity.x = move_toward(velocity.x, 0.0, 10.0 * delta)
+		velocity.y = maxf(velocity.y, -3.0)
 	elif can_act and not shielding:
 		_handle_input(delta)
 	else:
@@ -361,6 +440,19 @@ func _physics_process(delta: float) -> void:
 			velocity.y = jump_velocity
 			jumps_left -= 1
 			Audio.sfx("jump")
+		elif shielding and Input.is_action_just_pressed(_action("weak")):
+			# Abwehren + schwacher Angriff: Gegner packen.
+			start_grab()
+		elif shielding and roll_cooldown <= 0.0 and (Input.is_action_just_pressed(_action("left")) \
+				or Input.is_action_just_pressed(_action("right"))):
+			# Aus dem Schild zur Seite rollen.
+			_start_roll(1 if Input.is_action_just_pressed(_action("right")) else -1)
+
+	# In der Luft: Abwehren = ausweichen, gedrückt halten = schnell fallen.
+	if can_act and not is_on_floor() and roll_time <= 0.0 and dash_time <= 0.0:
+		_update_air_moves()
+	if fast_falling and hitstun == 0.0:
+		velocity.y = minf(velocity.y, -FAST_FALL_SPEED)
 
 	# Kunststück am höchsten Punkt eines Sprungs (nicht beim Wegfliegen nach einem Treffer).
 	var rising := velocity.y > 0.0 and not is_on_floor()
@@ -377,6 +469,9 @@ func _physics_process(delta: float) -> void:
 
 	var was_on_floor := is_on_floor()
 	move_and_slide()
+	if can_act and not is_on_floor() and velocity.y < 0.0 and ledge_regrab <= 0.0 and pending_attack == "" \
+			and dash_time <= 0.0 and air_dodge_time <= 0.0 and pig_time <= 0.0:
+		_try_grab_ledge()
 	if is_on_floor() and not was_on_floor and fall_speed > 7.0 and visible:
 		SpecialFX.dust(get_parent(), global_position, 12 if fall_speed > 14.0 else 7, 3.0 if fall_speed > 14.0 else 2.0)
 	on_platform = false
@@ -411,6 +506,8 @@ func _handle_input(delta: float) -> void:
 		Audio.sfx("jump", 1.0 if jumps_left == max_jumps else 1.25)
 		jumps_left -= 1
 		jumped = true
+		fast_falling = false
+		fast_fall_armed = false
 		# Ein neuer Sprung bricht ein laufendes Kunststück nicht ab, startet aber oben ein neues.
 		if flip_time >= 0.0:
 			_end_flip()
@@ -422,6 +519,8 @@ func _handle_input(delta: float) -> void:
 			if kind != "kick" and not is_on_floor():
 				start_attack("luft")
 				velocity.y = maxf(velocity.y, 5.0)
+			elif kind == "strong":
+				_start_charge()
 			else:
 				start_attack(kind)
 			return
@@ -561,14 +660,33 @@ func _update_pending_attack(delta: float) -> void:
 	pending_time -= delta
 	if pending_time > 0.0:
 		return
+	if pending_attack == "strong" and charging and _update_charge(delta):
+		return
 	var kind := pending_attack
 	pending_attack = ""
 	var atk: Dictionary = ATTACKS[kind]
+	if kind == "griff":
+		if not _try_grab():
+			# Daneben gegriffen: kurz ungeschützt.
+			grab_lag = 0.4
+		return
+	if kind == "strong" and charge_time > 0.0:
+		# Aufgeladener Smash-Angriff: mehr Schaden und Rückstoß.
+		var bonus := 1.0 + CHARGE_BONUS * charge_time / CHARGE_MAX
+		charge_time = 0.0
+		atk = atk.duplicate()
+		for key in ["damage", "base", "scale"]:
+			atk[key] *= bonus
 	# Jägerin: der starke Angriff ist ein Pfeilschuss quer über die Arena.
 	if kind == "strong" and fighter.get("bow", false):
 		var arrow := ArrowShot.new()
 		get_parent().add_child(arrow)
-		arrow.launch(self, ATTACKS.pfeil, global_position + Vector3(0.7 * facing, 1.2, 0), facing)
+		var pfeil: Dictionary = ATTACKS.pfeil
+		if atk.damage > ATTACKS.strong.damage:
+			pfeil = pfeil.duplicate()
+			for key in ["damage", "base", "scale"]:
+				pfeil[key] *= atk.damage / ATTACKS.strong.damage
+		arrow.launch(self, pfeil, global_position + Vector3(0.7 * facing, 1.2, 0), facing)
 		return
 	match kind:
 		"feuerball", "frost", "schwein":
@@ -663,8 +781,8 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 ## Getroffen werden. Je mehr Schaden die Figur schon hat, desto weiter fliegt sie.
 ## Gibt false zurück, wenn der Treffer abgewehrt wurde.
 func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_multiplier := 1.0) -> bool:
-	if roll_time > 0.0:
-		# Mitten in der Ausweichrolle: der Treffer geht ins Leere.
+	if roll_time > 0.0 or air_dodge_time > 0.0 or ledge_invuln > 0.0:
+		# Mitten in der Ausweichrolle (am Boden oder in der Luft) oder frisch an der Kante: der Treffer geht ins Leere.
 		Audio.sfx("swing_weak", 1.4, -4.0)
 		return false
 	if dome_time > 0.0:
@@ -695,6 +813,16 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 		_unpig()
 	if boss:
 		return _boss_hit(atk, direction, multiplier)
+	if held_by:
+		held_by._release_grab(false)
+	if holding:
+		_release_grab(false)
+	if ledge_side != 0:
+		_let_go_ledge()
+	_stop_charge()
+	charge_time = 0.0
+	fast_falling = false
+	fast_fall_armed = false
 	flurry_left = 0
 	damage += atk.damage * multiplier * _damage_taken_multiplier()
 	since_hit = 0.0
@@ -782,6 +910,15 @@ func _lose_stock() -> void:
 	drop_time = 0.0
 	poison_time = 0.0
 	flurry_left = 0
+	if held_by:
+		held_by._release_grab(false)
+	if holding:
+		_release_grab(false)
+	ledge_side = 0
+	_stop_charge()
+	charge_time = 0.0
+	fast_falling = false
+	air_dodge_time = 0.0
 	_end_dome()
 	if frozen > 0.0:
 		_unfreeze()
@@ -814,7 +951,11 @@ func _update_visuals(delta: float) -> void:
 	shield_bubble.scale = Vector3.ONE * lerpf(0.5, 1.0, shield_hp / SHIELD_MAX)
 
 	var text := "P%d" % player_id
-	if frozen > 0.0:
+	if held_by:
+		text += "\nGepackt!"
+	elif charging and charge_time > 0.05:
+		text += "\nLädt auf!"
+	elif frozen > 0.0:
 		text += "\nEingefroren!"
 	elif stunned > 0.0:
 		text += "\nBetäubt!"
@@ -836,7 +977,18 @@ func _update_visuals(delta: float) -> void:
 	if ready_aura:
 		ready_aura.emitting = controls_enabled and special_ready() and Settings.special_charge
 
+	# Ausweichen in der Luft: die Figur blinkt.
+	if flip_pivot:
+		flip_pivot.visible = air_dodge_time <= 0.0 or int(air_dodge_time * 30.0) % 2 == 0
+		if not charging and roll_time <= 0.0 and flip_time < 0.0 and flip_pivot.position.x != 0.0:
+			flip_pivot.position.x = 0.0
+
 	if current_anim == "cheer" or frozen > 0.0:
+		return
+	if held_by:
+		_play("stunned" if _has_anim("stunned") else "hit")
+		return
+	if ledge_side != 0 or holding:
 		return
 	if hitstun > 0.0:
 		_play("hit", 1.5)
@@ -1413,6 +1565,283 @@ func _quake_hit(atk: Dictionary) -> void:
 		add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
 		on_hit_landed(opponent)
 		SpecialFX.impact(self, opponent.global_position + Vector3(0, 0.6, 0), color)
+
+
+## In der Luft: Abwehren antippen = ausweichen (kurz unverwundbar, einmal pro Sprung),
+## gedrückt halten = schnell fallen, sobald es abwärts geht.
+func _update_air_moves() -> void:
+	if Input.is_action_just_pressed(_action("shield")):
+		fast_fall_armed = true
+		if not air_dodge_used and pending_attack == "":
+			air_dodge_used = true
+			air_dodge_time = AIR_DODGE_TIME
+			var dir := Input.get_axis(_action("left"), _action("right"))
+			velocity.x = dir * AIR_DODGE_SPEED
+			velocity.y = maxf(velocity.y, 0.0)
+			_end_flip()
+			Audio.sfx("dash", 1.3, -6.0)
+	if not Input.is_action_pressed(_action("shield")):
+		fast_fall_armed = false
+	if fast_fall_armed and not fast_falling and air_dodge_time <= 0.0 and velocity.y <= 0.0:
+		fast_falling = true
+		Audio.sfx("swing_weak", 0.7, -8.0)
+
+
+## Smash-Angriff: starken Angriff gedrückt halten, loslassen schlägt zu (je länger, desto stärker).
+func _start_charge() -> void:
+	start_attack("strong")
+	charging = true
+	charge_time = 0.0
+
+
+## Läuft, solange die Figur oben in der Ausholbewegung wartet. Gibt true zurück, solange weiter geladen wird.
+func _update_charge(delta: float) -> bool:
+	if Input.is_action_pressed(_action("strong")) and charge_time < CHARGE_MAX and is_on_floor() and controls_enabled:
+		charge_time = minf(charge_time + delta, CHARGE_MAX)
+		attack_timer = maxf(attack_timer, ATTACKS.strong.cooldown - ATTACKS.strong.startup)
+		var ratio := charge_time / CHARGE_MAX
+		# Die Figur bleibt in der Ausholbewegung stehen und zittert immer stärker.
+		if anim_player and frozen <= 0.0:
+			anim_player.speed_scale = 0.0
+		flip_pivot.position.x = randf_range(-1.0, 1.0) * 0.06 * ratio
+		if int(charge_time * 10.0) != int((charge_time - delta) * 10.0):
+			SpecialFX._sparks(get_parent(), global_position + Vector3(0.3 * facing, 1.2, 0), color, 3 + int(ratio * 6.0), 2.0, 0.3)
+		return true
+	_stop_charge()
+	if charge_time > CHARGE_MAX * 0.5:
+		SpecialFX.popup(self, "SMASH!", color)
+	return false
+
+
+func _stop_charge() -> void:
+	if not charging:
+		return
+	charging = false
+	if flip_pivot:
+		flip_pivot.position.x = 0.0
+	if anim_player and frozen <= 0.0:
+		anim_player.speed_scale = 1.0
+
+
+## Kante greifen: sucht beim Fallen eine feste Bühnenkante vor oder hinter der Figur.
+func _try_grab_ledge() -> void:
+	var space := get_world_3d().direct_space_state
+	for side in [facing, -facing]:
+		# 1) Waagerecht in Brusthöhe zur Seite: trifft die Wand der Bühne?
+		var wall := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 1.3, 0),
+			global_position + Vector3(side * 0.9, 1.3, 0), 1, [get_rid()])
+		var wall_hit := space.intersect_ray(wall)
+		if wall_hit.is_empty() or not wall_hit.collider is StaticBody3D or wall_hit.normal.x * side > -0.7:
+			continue
+		# 2) Von oben auf die Wand: die Oberkante muss knapp über dem Kopf liegen.
+		var edge_x: float = wall_hit.position.x
+		var down := PhysicsRayQueryParameters3D.create(Vector3(edge_x + side * 0.1, global_position.y + 2.4, 0),
+			Vector3(edge_x + side * 0.1, global_position.y + 1.3, 0), 1, [get_rid()])
+		var top_hit := space.intersect_ray(down)
+		if top_hit.is_empty() or top_hit.collider != wall_hit.collider or top_hit.normal.y < 0.7:
+			continue
+		# Steht direkt darunter Boden (z. B. neben einer Stufe), lohnt sich Festhalten nicht.
+		var below := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 0.1, 0),
+			global_position + Vector3(0, -1.5, 0), 3, [get_rid()])
+		if not space.intersect_ray(below).is_empty():
+			continue
+		# Hängt der Gegner schon an dieser Kante, ist kein Platz.
+		if opponent and opponent.ledge_side == side and absf(opponent.ledge_x - edge_x) < 0.5:
+			continue
+		_grab_ledge(side, edge_x, top_hit.position.y)
+		return
+
+
+func _grab_ledge(side: int, edge_x: float, top: float) -> void:
+	ledge_side = side
+	ledge_x = edge_x
+	ledge_top = top
+	hang_time = 0.0
+	facing = side
+	velocity = Vector3.ZERO
+	global_position = Vector3(edge_x - side * 0.42, top - LEDGE_HANG_DROP, global_position.z)
+	jumps_left = max_jumps
+	special_air_used = false
+	fast_falling = false
+	fast_fall_armed = false
+	air_dodge_used = false
+	pending_attack = ""
+	attack_timer = 0.0
+	_end_flip()
+	if ledge_invuln_ready:
+		ledge_invuln = LEDGE_INVULN
+		ledge_invuln_ready = false
+	Audio.sfx("shield_block", 1.6, -8.0)
+	_play("fall" if _has_anim("fall") else "jump")
+
+
+## An der Kante: Springen = hochspringen, zur Bühne = hochklettern, Angriff = hochklettern und treten,
+## weg von der Bühne oder Abwehren = loslassen.
+func _update_ledge(delta: float) -> void:
+	velocity = Vector3.ZERO
+	hang_time += delta
+	jumps_left = max_jumps
+	if not controls_enabled:
+		return
+	var toward := "right" if ledge_side > 0 else "left"
+	var away := "left" if ledge_side > 0 else "right"
+	if hitstun > 0.0 or stunned > 0.0 or hang_time > LEDGE_HANG_MAX or Input.is_action_just_pressed(_action(away)) \
+			or Input.is_action_just_pressed(_action("shield")):
+		_let_go_ledge()
+		velocity.y = -2.0
+	elif Input.is_action_just_pressed(_action("jump")):
+		_let_go_ledge()
+		velocity.y = jump_velocity
+		jumps_left = max_jumps - 1
+		jumped = true
+		Audio.sfx("jump")
+	elif hang_time > 0.15 and Input.is_action_just_pressed(_action(toward)):
+		_climb_ledge()
+	elif hang_time > 0.15 and (Input.is_action_just_pressed(_action("weak")) or Input.is_action_just_pressed(_action("strong")) \
+			or Input.is_action_just_pressed(_action("kick"))):
+		_climb_ledge()
+		start_attack("kick")
+
+
+func _climb_ledge() -> void:
+	var side := ledge_side
+	_let_go_ledge()
+	ledge_regrab = 0.0
+	global_position = Vector3(ledge_x + side * 0.55, ledge_top + 0.05, global_position.z)
+	velocity = Vector3.ZERO
+	ledge_invuln = maxf(ledge_invuln, 0.25)
+	SpecialFX.dust(get_parent(), global_position, 6, 1.4)
+	Audio.sfx("jump", 0.8, -4.0)
+
+
+func _let_go_ledge() -> void:
+	ledge_side = 0
+	ledge_regrab = LEDGE_REGRAB
+
+
+## Greifen: kurz zupacken. Trifft der Griff, ist der Gegner gepackt, auch wenn er abwehrt.
+func start_grab() -> void:
+	if attack_timer > 0.0 or holding or boss:
+		return
+	shielding = false
+	start_attack("griff")
+	_play("weak", ATTACKS.griff.anim_speed)
+
+
+func _try_grab() -> bool:
+	if opponent == null or not opponent.visible or opponent.boss or opponent.held_by or opponent.holding:
+		return false
+	if opponent.roll_time > 0.0 or opponent.air_dodge_time > 0.0 or opponent.ledge_invuln > 0.0 \
+			or opponent.dome_time > 0.0 or opponent.ledge_side != 0:
+		return false
+	var offset := opponent.global_position - global_position
+	var forward := offset.x * facing
+	if forward < -0.3 or forward > GRAB_RANGE.x * reach_scale or absf(offset.y) > GRAB_RANGE.y:
+		return false
+	holding = opponent
+	opponent.held_by = self
+	opponent._on_grabbed()
+	# Je mehr Schaden der Gegner hat, desto länger kann man ihn halten.
+	grab_hold = GRAB_HOLD_TIME + minf(opponent.damage, 150.0) * 0.008
+	attack_timer = 0.0
+	_play("idle")
+	Audio.sfx("shield_block", 0.7)
+	SpecialFX.popup(self, "GEPACKT!", color)
+	return true
+
+
+## Wird beim Gepackten aufgerufen: alles abbrechen, was er gerade tut.
+func _on_grabbed() -> void:
+	shielding = false
+	_stop_charge()
+	charge_time = 0.0
+	pending_attack = ""
+	attack_timer = 0.0
+	dash_time = 0.0
+	flurry_left = 0
+	fast_falling = false
+	velocity = Vector3.ZERO
+	_end_flip()
+
+
+## Im Griff: schwacher Angriff = zuschlagen, links/rechts = nach vorne oder hinten werfen,
+## Springen = nach oben werfen, Abwehren = nach unten werfen. Läuft die Zeit ab, kommt der Gegner frei.
+func _update_holding(delta: float) -> void:
+	velocity = Vector3.ZERO
+	if not is_instance_valid(holding) or not holding.visible or holding.held_by != self:
+		holding = null
+		return
+	holding.global_position = Vector3(global_position.x + facing * 0.85, global_position.y, holding.global_position.z)
+	holding.velocity = Vector3.ZERO
+	grab_hold -= delta
+	if not controls_enabled:
+		_release_grab(true)
+		return
+	var back := "left" if facing > 0 else "right"
+	var front := "right" if facing > 0 else "left"
+	if Input.is_action_just_pressed(_action(front)):
+		_throw("vorne")
+	elif Input.is_action_just_pressed(_action(back)):
+		_throw("hinten")
+	elif Input.is_action_just_pressed(_action("jump")):
+		_throw("oben")
+	elif Input.is_action_just_pressed(_action("shield")):
+		_throw("unten")
+	elif Input.is_action_just_pressed(_action("weak")) and pummel_cooldown <= 0.0:
+		pummel_cooldown = 0.3
+		holding.damage += GRAB_PUMMEL_DAMAGE * outgoing_multiplier()
+		add_special_energy(GRAB_PUMMEL_DAMAGE * SPECIAL_PER_DAMAGE_DEALT)
+		SpecialFX.hit(self, holding.global_position + Vector3(0, 1.0, 0), color, GRAB_PUMMEL_DAMAGE)
+		Audio.sfx("hit_weak", 1.2)
+		_play("weak", 2.5)
+	elif grab_hold <= 0.0:
+		_release_grab(true)
+
+
+## Gepackt: festgehalten. Schnell Tasten drücken hilft, früher freizukommen.
+func _update_held() -> void:
+	if not is_instance_valid(held_by) or held_by.holding != self:
+		held_by = null
+		return
+	velocity = Vector3.ZERO
+	for a in ["left", "right", "jump", "weak", "strong", "kick", "special"]:
+		if Input.is_action_just_pressed(_action(a)):
+			held_by.grab_hold -= 0.08
+
+
+func _throw(kind: String) -> void:
+	var target := holding
+	var throw: Dictionary = THROWS[kind]
+	_release_grab(false)
+	var side := facing
+	if kind == "hinten":
+		# Umdrehen und hinter sich werfen.
+		facing = -facing
+	var dir := Vector3(throw.angle.x * side, throw.angle.y, 0).normalized()
+	if target.take_hit(throw, dir, power_time > 0.0, outgoing_multiplier()):
+		add_special_energy(throw.damage * SPECIAL_PER_DAMAGE_DEALT)
+		on_hit_landed(target)
+		SpecialFX.hit(self, target.global_position + Vector3(0, 1.0, 0), color, throw.damage)
+	if kind == "unten":
+		SpecialFX.dust(get_parent(), target.global_position, 10, 2.0)
+	attack_timer = 0.35
+	Audio.sfx("swing_strong")
+	_shout()
+	_play("strong", 1.6)
+
+
+## Griff lösen. push: beide werden ein Stück auseinandergeschoben (Gegner hat sich befreit).
+func _release_grab(push: bool) -> void:
+	var target := holding
+	holding = null
+	if target == null or not is_instance_valid(target):
+		return
+	target.held_by = null
+	if push:
+		target.velocity = Vector3(facing * 5.0, 3.0, 0)
+		velocity.x = -facing * 4.0
+		attack_timer = 0.3
+		Audio.sfx("swing_weak", 0.8)
 
 
 func _action(action_name: String) -> String:
