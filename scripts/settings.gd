@@ -34,6 +34,26 @@ const MAPS := [
 	{"name": "Unterwasser-Kuppel", "scene": "res://scenes/maps/unterwasser.tscn", "music": "unterwasser", "event": "blasen",
 		"effect": "Unter Wasser springt man höher.\nBlasen-Geysire schleudern alle nach oben."},
 ]
+## Solo-Kampagne: feste Reihenfolge von Kämpfen. type: "kampf" (gegen den Computer),
+## "ziele" (Bonus: alle Ziele zerstören) oder "boss" (Finale gegen den Riesen-Kampfroboter).
+## cpu: Stärke des Computers (0 leicht, 1 mittel, 2 schwer), intro: Text vor dem Kampf.
+const CAMPAIGN := [
+	{"type": "kampf", "map": "Dorf", "cpu": 0, "intro": "Alles beginnt auf dem Dorfplatz."},
+	{"type": "kampf", "map": "Burg", "cpu": 0, "intro": "Der Burgherr will sehen, was du kannst."},
+	{"type": "kampf", "map": "Friedhof", "cpu": 0, "intro": "Nachts auf dem Friedhof wartet der nächste Gegner."},
+	{"type": "kampf", "map": "Japanischer Tempel", "cpu": 1, "intro": "Im Tempel kämpfen nur die Besten weiter."},
+	{"type": "ziele", "map": "Japanischer Tempel", "intro": "Bonus-Runde: Zerstöre alle Ziele so schnell du kannst!"},
+	{"type": "kampf", "map": "Dschungel-Ruinen", "cpu": 1, "intro": "Tief im Dschungel rollt etwas Großes …"},
+	{"type": "kampf", "map": "Wüstenarena", "cpu": 1, "intro": "Die Menge in der Wüstenarena tobt."},
+	{"type": "kampf", "map": "Piratenschiff", "cpu": 1, "intro": "Auf hoher See: Halt dich fest!"},
+	{"type": "kampf", "map": "Eiswelt", "cpu": 1, "intro": "Vorsicht, der Boden ist spiegelglatt."},
+	{"type": "ziele", "map": "Eiswelt", "intro": "Bonus-Runde: Zerstöre alle Ziele so schnell du kannst!"},
+	{"type": "kampf", "map": "Unterwasser-Kuppel", "cpu": 2, "intro": "Ab jetzt kämpft der Computer mit voller Kraft."},
+	{"type": "kampf", "map": "Neonstadt bei Nacht", "cpu": 2, "intro": "Die Polizeidrohne hat dich schon im Visier."},
+	{"type": "kampf", "map": "Vulkan", "cpu": 2, "intro": "Im Vulkan wird es richtig heiß."},
+	{"type": "kampf", "map": "Wolkentempel", "cpu": 2, "intro": "Der letzte Kämpfer wartet über den Wolken."},
+	{"type": "boss", "map": "Burg", "intro": "FINALE: Der Riesen-Kampfroboter greift die Burg an!"},
+]
 const ITEM_RATES := ["Selten", "Normal", "Oft"]
 ## Sekunden zwischen zwei Items je Häufigkeit (zufällig zwischen den beiden Werten).
 const ITEM_INTERVALS := [Vector2(12, 18), Vector2(6, 10), Vector2(3, 5)]
@@ -60,6 +80,14 @@ var target_mode := false
 ## Endboss: allein gegen den Riesen-Kampfroboter.
 var boss_mode := false
 var target_records := {}
+## Kampagne: true, solange ein Kampagnen-Kampf läuft (nur im Kampf, nicht im Menü).
+var campaign := false
+## Gespeicherter Fortschritt: nächster Kampf (Index in CAMPAIGN), Gegner-Reihenfolge (Namen),
+## Niederlagen in diesem Durchgang und wie oft die Kampagne schon geschafft wurde.
+var campaign_stage := 0
+var campaign_opponents := []
+var campaign_losses := 0
+var campaign_wins := 0
 var music_volume := 7
 var sfx_volume := 8
 
@@ -88,6 +116,10 @@ func _ready() -> void:
 	solo = cfg.get_value("game", "solo", solo)
 	cpu_level = cfg.get_value("game", "cpu_level", cpu_level)
 	target_records = cfg.get_value("game", "target_records", target_records)
+	campaign_stage = clampi(cfg.get_value("campaign", "stage", campaign_stage), 0, CAMPAIGN.size() - 1)
+	campaign_opponents = cfg.get_value("campaign", "opponents", campaign_opponents)
+	campaign_losses = cfg.get_value("campaign", "losses", campaign_losses)
+	campaign_wins = cfg.get_value("campaign", "wins", campaign_wins)
 	music_volume = cfg.get_value("audio", "music_volume", music_volume)
 	sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 	if cfg.has_section("controls"):
@@ -108,6 +140,10 @@ func save() -> void:
 	cfg.set_value("game", "solo", solo)
 	cfg.set_value("game", "cpu_level", cpu_level)
 	cfg.set_value("game", "target_records", target_records)
+	cfg.set_value("campaign", "stage", campaign_stage)
+	cfg.set_value("campaign", "opponents", campaign_opponents)
+	cfg.set_value("campaign", "losses", campaign_losses)
+	cfg.set_value("campaign", "wins", campaign_wins)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
 	for action in _default_events:
@@ -116,7 +152,65 @@ func save() -> void:
 
 
 func current_map() -> Dictionary:
+	if campaign:
+		for m in MAPS:
+			if m.name == campaign_step().map:
+				return m
 	return MAPS[wrapi(map_index, 0, MAPS.size())]
+
+
+## Der aktuelle Kampagnen-Kampf (siehe CAMPAIGN).
+func campaign_step() -> Dictionary:
+	return CAMPAIGN[clampi(campaign_stage, 0, CAMPAIGN.size() - 1)]
+
+
+## Stärke des Computers: in der Kampagne fest je Kampf, sonst wie im Menü eingestellt.
+func cpu_difficulty() -> int:
+	return campaign_step().get("cpu", 1) if campaign else cpu_level
+
+
+## Fortschritt als Zeichenkette: ● geschafft, ◉ jetzt dran, ○ noch offen, ★ Bonus, ☠ Endboss.
+func campaign_dots(stage: int) -> String:
+	var dots := ""
+	for i in CAMPAIGN.size():
+		var type: String = CAMPAIGN[i].type
+		if i < stage:
+			dots += "●"
+		elif i == stage:
+			dots += "◉"
+		elif type == "ziele":
+			dots += "★"
+		elif type == "boss":
+			dots += "☠"
+		else:
+			dots += "○"
+		dots += " "
+	return dots.strip_edges()
+
+
+## Neue Kampagne: Fortschritt auf Anfang, Gegner in zufälliger Reihenfolge.
+func new_campaign() -> void:
+	campaign_stage = 0
+	campaign_losses = 0
+	campaign_opponents = Roster.FIGHTERS.map(func(f): return f.name)
+	campaign_opponents.shuffle()
+	save()
+
+
+## Gegner für den aktuellen Kampf: jedes Mal ein anderer, nie derselbe Kämpfer wie man selbst.
+func campaign_opponent(own: int) -> int:
+	var names := Roster.FIGHTERS.map(func(f): return f.name)
+	var order := campaign_opponents.filter(func(n): return n in names)
+	if order.is_empty():
+		order = names
+	var fights := 0
+	for i in campaign_stage:
+		if CAMPAIGN[i].type == "kampf":
+			fights += 1
+	var others := order.filter(func(n): return names.find(n) != own)
+	if others.is_empty():
+		return (own + 1) % names.size()
+	return names.find(others[fights % others.size()])
 
 
 ## Belegt eine Aktion neu. Hat eine andere Aktion schon diese Taste, bekommt sie die alte Taste.

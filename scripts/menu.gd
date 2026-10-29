@@ -21,6 +21,8 @@ var ignore_input_frames := 0
 
 
 func _ready() -> void:
+	# Im Menü läuft keine Kampagne: Map-Auswahl und Modi gelten wieder wie eingestellt.
+	Settings.campaign = false
 	_load_map()
 	_refresh()
 	Audio.music("menu")
@@ -106,7 +108,10 @@ func _entries() -> Array:
 			list.append_array(["reset", "back"])
 			return list
 	if Settings.solo:
-		return ["play", "mode", "cpu", "targets", "boss", "map", "options", "controls", "quit"]
+		# Solo ist eine durchgehende Kampagne: keine Map- oder Gegnerauswahl.
+		if Settings.campaign_stage > 0:
+			return ["campaign", "campaign_new", "mode", "options", "controls", "quit"]
+		return ["campaign", "mode", "options", "controls", "quit"]
 	return ["play", "mode", "targets", "boss", "map", "options", "controls", "quit"]
 
 
@@ -117,6 +122,11 @@ func _entry_text(entry: String) -> String:
 		return "%s:  %s" % [Settings.ACTION_NAMES[entry.substr(4)], key]
 	match entry:
 		"play": return "Kampf starten"
+		"campaign":
+			if Settings.campaign_stage == 0:
+				return "Kampagne starten"
+			return "Kampagne fortsetzen  (Kampf %d / %d)" % [Settings.campaign_stage + 1, Settings.CAMPAIGN.size()]
+		"campaign_new": return "Kampagne neu beginnen"
 		"targets": return "Ziele zerstören (gegen die Uhr)"
 		"boss": return "Endboss: Riesen-Kampfroboter"
 		"map": return "Map:  ◀ %s ▶" % Settings.current_map().name
@@ -184,6 +194,12 @@ func _activate(entry: String) -> void:
 			Settings.boss_mode = entry == "boss"
 			Audio.sfx("menu_select")
 			get_tree().change_scene_to_file("res://scenes/fight.tscn")
+		"campaign", "campaign_new":
+			if entry == "campaign_new" or Settings.campaign_opponents.is_empty():
+				Settings.new_campaign()
+			Settings.campaign = true
+			Audio.sfx("menu_select")
+			get_tree().change_scene_to_file("res://scenes/fight.tscn")
 		"options":
 			Audio.sfx("menu_select")
 			_open(Page.OPTIONS)
@@ -234,10 +250,22 @@ func _refresh() -> void:
 		Page.OPTIONS:
 			info_label.text = "Spezial aufladen: Die Spezialattacke braucht eine volle Energieleiste.\nSie füllt sich durch Treffen, Getroffenwerden und langsam mit der Zeit."
 		_:
-			if entries[selected] == "map":
+			if entries[selected] in ["campaign", "campaign_new"]:
+				info_label.text = _campaign_info(entries[selected] == "campaign_new")
+			elif entries[selected] == "map":
 				info_label.text = Settings.current_map().effect + ("" if Settings.map_effects else "\n(Map-Effekte sind in den Optionen ausgeschaltet)")
 			else:
 				info_label.text = "W/S wählen   A/D ändern   F bestätigen"
+
+
+## Beschreibung der Kampagne unter dem Menü, mit Fortschritt als Punkten.
+func _campaign_info(fresh: bool) -> String:
+	var stage := 0 if fresh else Settings.campaign_stage
+	var text := "%d Kämpfe nacheinander, Map für Map, der Computer wird immer stärker.\nZwei Bonus-Runden und am Ende der Riesen-Kampfroboter.\n" % Settings.CAMPAIGN.size()
+	text += Settings.campaign_dots(stage)
+	if Settings.campaign_wins > 0:
+		text += "\nSchon %d× geschafft!" % Settings.campaign_wins
+	return text
 
 
 func _bar(level: int) -> String:

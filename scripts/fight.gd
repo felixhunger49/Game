@@ -30,6 +30,11 @@ var boss_bar: ProgressBar
 var select_cards: Array[Dictionary] = []
 var select_shade: MeshInstance3D
 var select_hidden: Array[Node3D] = []
+## Kampagne: Anzeige "Kampf 3 / 15" und wie lange das Ergebnis schon steht
+## (damit ein letzter Schlag nicht sofort "weiter" drückt).
+var campaign_label: Label
+var game_over_time := 0.0
+var campaign_finished := false
 
 @onready var players: Array = [$Player1, $Player2]
 @onready var labels: Array = [$HUD/P1Label, $HUD/P2Label]
@@ -39,6 +44,12 @@ var select_hidden: Array[Node3D] = []
 
 
 func _ready() -> void:
+	if Settings.campaign:
+		# Der Kampagnen-Kampf bestimmt Modus, Map und Gegner, nicht das Menü.
+		var step := Settings.campaign_step()
+		Settings.solo = true
+		Settings.target_mode = step.type == "ziele"
+		Settings.boss_mode = step.type == "boss"
 	var map: Node3D = load(Settings.current_map().scene).instantiate()
 	add_child(map)
 	move_child(map, 0)
@@ -75,8 +86,12 @@ func _ready() -> void:
 		ready_flags[1] = true
 		players[0].stocks = 99
 	elif Settings.solo:
-		# Der Computer nimmt einen zufälligen anderen Kämpfer und ist sofort bereit.
-		Settings.choices[1] = (Settings.choices[0] + randi_range(1, Roster.count() - 1)) % Roster.count()
+		# Der Computer nimmt einen anderen Kämpfer und ist sofort bereit.
+		# In der Kampagne kommt jedes Mal der nächste Gegner aus der festen Reihenfolge.
+		if Settings.campaign:
+			Settings.choices[1] = Settings.campaign_opponent(Settings.choices[0])
+		else:
+			Settings.choices[1] = (Settings.choices[0] + randi_range(1, Roster.count() - 1)) % Roster.count()
 		players[1].set_fighter(Settings.choices[1])
 		ready_flags[1] = true
 	bottom_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -85,6 +100,8 @@ func _ready() -> void:
 	_create_select_ui()
 	_reset_item_timer()
 	_create_energy_bars()
+	if Settings.campaign:
+		_create_campaign_label()
 	Audio.music(Settings.current_map().music)
 
 
@@ -100,7 +117,10 @@ func _process(delta: float) -> void:
 		State.FIGHT:
 			_update_items(delta)
 		State.GAME_OVER:
-			if Input.is_action_just_pressed("restart"):
+			game_over_time += delta
+			if Settings.campaign:
+				_handle_campaign_continue()
+			elif Input.is_action_just_pressed("restart"):
 				get_tree().reload_current_scene()
 	_update_hud()
 	_update_camera(delta)
@@ -120,6 +140,12 @@ func _handle_select() -> void:
 			Settings.choices[i] = wrapi(Settings.choices[i] + step, 0, Roster.count())
 			players[i].set_fighter(Settings.choices[i])
 			Audio.sfx("menu_move")
+			# Kampagne: Wählt man den Kämpfer des Gegners, nimmt der Computer den nächsten.
+			if Settings.campaign and Settings.solo and not Settings.boss_mode and not Settings.target_mode:
+				var foe := Settings.campaign_opponent(Settings.choices[0])
+				if foe != Settings.choices[1]:
+					Settings.choices[1] = foe
+					players[1].set_fighter(foe)
 		if Input.is_action_just_pressed(prefix + "weak"):
 			ready_flags[i] = true
 			# Wer bereit ist, hört auf sich zu drehen und schaut nach vorne.
@@ -158,6 +184,7 @@ func _update_countdown(delta: float) -> void:
 
 func _begin_fight() -> void:
 	state = State.FIGHT
+	_shrink_campaign_label()
 	for p in players:
 		p.controls_enabled = true
 		# Der Bereit-Tastendruck soll nicht gleich als Schlag zählen.
@@ -177,7 +204,7 @@ func _begin_fight() -> void:
 	if Settings.solo:
 		cpu = CpuPlayer.new()
 		add_child(cpu)
-		cpu.setup(players[1], players[0], Settings.cpu_level)
+		cpu.setup(players[1], players[0], Settings.cpu_difficulty())
 	if Settings.map_effects:
 		map_events = MapEvents.new()
 		add_child(map_events)
@@ -220,6 +247,8 @@ func _on_boss_defeated() -> void:
 	Audio.jingle("sieg")
 	center_label.text = "Du hast den Riesen-Kampfroboter besiegt!
 R: nochmal   Esc: Menü"
+	if Settings.campaign:
+		_campaign_result(true, "Du hast den Riesen-Kampfroboter besiegt!")
 
 
 func _spawn_targets() -> void:
@@ -251,6 +280,8 @@ Zeit: %s" % _time_text(target_time)
 		text += "   Rekord: %s" % _time_text(best)
 	center_label.text = text + "
 R: nochmal   Esc: Menü"
+	if Settings.campaign:
+		_campaign_result(true, text)
 
 
 static func _time_text(seconds: float) -> String:
@@ -405,6 +436,9 @@ R: nochmal   Esc: Menü"
 	else:
 		Audio.voice("spieler_%d_gewinnt" % winner.player_id)
 		center_label.text = "%s gewinnt!\nR: nochmal   Esc: Menü" % ("Du" if Settings.solo else "Spieler %d" % winner.player_id)
+	if Settings.campaign:
+		var won: bool = winner.player_id == 1
+		_campaign_result(won, "Sieg!" if won else ("Der Riesen-Kampfroboter hat gewonnen!" if Settings.boss_mode else "Der Computer gewinnt!"))
 
 
 ## Kämpferauswahl aufbauen: oben die Überschrift, links und rechts je eine Karte mit umbrechendem Text.
@@ -414,6 +448,8 @@ func _create_select_ui() -> void:
 	var hud: Node = center_label.get_parent()
 	var title := _select_label(34, Color(1, 0.85, 0.3))
 	title.text = "Wählt eure Kämpfer!"
+	if Settings.campaign:
+		title.text = "Kampagne – Kampf %d / %d: %s" % [Settings.campaign_stage + 1, Settings.CAMPAIGN.size(), Settings.current_map().name]
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.position = Vector2(0, 10)
 	title.size = Vector2(1280, 48)
@@ -534,5 +570,75 @@ func _remove_select_ui() -> void:
 ## "Spieler 1", "Spieler 2" oder im Solo-Modus "Computer (Mittel)".
 func _player_name(i: int) -> String:
 	if Settings.solo and i == 1:
-		return "Computer (%s)" % CpuPlayer.LEVELS[Settings.cpu_level].name
+		return "Computer (%s)" % CpuPlayer.LEVELS[Settings.cpu_difficulty()].name
 	return "Spieler %d" % (i + 1)
+
+
+## Kampagne: oben in der Mitte steht, der wievielte Kampf das ist. Bei der Auswahl darunter
+## die kleine Geschichte und der Fortschritt als Punkte.
+func _create_campaign_label() -> void:
+	campaign_label = _select_label(20, Color(1, 0.85, 0.3))
+	campaign_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	campaign_label.position = Vector2(0, 540)
+	campaign_label.size = Vector2(1280, 90)
+	var step := Settings.campaign_step()
+	var kind := ""
+	match step.type:
+		"kampf": kind = "Gegner: %s (%s)" % [Roster.FIGHTERS[Settings.choices[1]].name, CpuPlayer.LEVELS[Settings.cpu_difficulty()].name]
+		"ziele": kind = "Bonus-Runde"
+		"boss": kind = "Endboss"
+	campaign_label.text = "%s\n%s\n%s" % [step.intro, kind, Settings.campaign_dots(Settings.campaign_stage)]
+	center_label.get_parent().add_child(campaign_label)
+
+
+## Nach dem Countdown wird die Anzeige klein und wandert nach oben.
+func _shrink_campaign_label() -> void:
+	if campaign_label == null:
+		return
+	campaign_label.add_theme_font_size_override("font_size", 18)
+	campaign_label.position = Vector2(0, 56)
+	campaign_label.size = Vector2(1280, 28)
+	campaign_label.text = "Kampf %d / %d · %s" % [Settings.campaign_stage + 1, Settings.CAMPAIGN.size(), Settings.current_map().name]
+
+
+## Ergebnis eines Kampagnen-Kampfs: gewonnen geht es weiter, verloren versucht man ihn nochmal.
+## Der Fortschritt wird sofort gespeichert, man kann also jederzeit ins Menü.
+func _campaign_result(won: bool, headline: String) -> void:
+	game_over_time = 0.0
+	center_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	center_label.add_theme_font_size_override("font_size", 34)
+	var total := Settings.CAMPAIGN.size()
+	if not won:
+		Settings.campaign_losses += 1
+		Settings.save()
+		center_label.text = "%s\nF oder R: Kampf %d nochmal versuchen   Esc: Menü (Fortschritt bleibt)" % [headline, Settings.campaign_stage + 1]
+		return
+	if Settings.campaign_stage >= total - 1:
+		campaign_finished = true
+		Settings.campaign_wins += 1
+		center_label.text = "KAMPAGNE GESCHAFFT!\nAlle %d Kämpfe gewonnen   Niederlagen unterwegs: %d\nF: zurück ins Menü" % [total, Settings.campaign_losses]
+		center_label.add_theme_font_size_override("font_size", 44)
+		Settings.campaign_stage = 0
+		Settings.campaign_opponents = []
+		Settings.campaign_losses = 0
+		Settings.save()
+		return
+	Settings.campaign_stage += 1
+	Settings.save()
+	var next := Settings.campaign_step()
+	var dots := Settings.campaign_dots(Settings.campaign_stage)
+	center_label.text = "%s\nWeiter: Kampf %d / %d – %s\n%s\nF: weiter   Esc: Menü (Fortschritt ist gespeichert)" % [
+		headline, Settings.campaign_stage + 1, total, next.map, dots]
+
+
+func _handle_campaign_continue() -> void:
+	if game_over_time < 1.2:
+		return
+	if not (Input.is_action_just_pressed("p1_weak") or Input.is_action_just_pressed("ui_accept")
+			or Input.is_action_just_pressed("restart")):
+		return
+	Audio.sfx("menu_select")
+	if campaign_finished:
+		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+	else:
+		get_tree().reload_current_scene()
