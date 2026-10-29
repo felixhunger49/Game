@@ -122,6 +122,8 @@ func _handle_select() -> void:
 			Audio.sfx("menu_move")
 		if Input.is_action_just_pressed(prefix + "weak"):
 			ready_flags[i] = true
+			# Wer bereit ist, hört auf sich zu drehen und schaut nach vorne.
+			players[i].showcase_spin = false
 			Audio.sfx("menu_select")
 			players[i].say("auswahl", "ha")
 	if ready_flags[0] and ready_flags[1]:
@@ -137,6 +139,7 @@ func _start_fight() -> void:
 	bottom_label.text = ""
 	_remove_select_ui()
 	for p in players:
+		p.showcase_spin = false
 		# Kurz zur Seite drehen, damit man sieht, wer gegen wen kämpft.
 		p.facing = p.start_facing
 
@@ -483,7 +486,9 @@ func _create_select_ui() -> void:
 				select_hidden.append(g)
 				break
 	# Namensschilder über den Köpfen vor der dunklen Wand zeichnen.
+	# Alle Figuren drehen sich, bis ihr Spieler bereit ist (Computer und Boss drehen sich weiter).
 	for p in players:
+		p.showcase_spin = true
 		p.get_node("Tag").render_priority = 120
 		p.get_node("Tag").outline_render_priority = 119
 

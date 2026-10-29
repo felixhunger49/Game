@@ -147,6 +147,9 @@ const CLOTH_SHADER := preload("res://scripts/cloth.gdshader")
 var opponent: CharacterBody3D
 var fighter: Dictionary = {}
 var controls_enabled := false
+## In der Kämpferauswahl dreht sich die Figur langsam, damit man sie von allen Seiten sieht.
+var showcase_spin := false
+const SHOWCASE_SPIN_SPEED := 1.2
 var damage := 0.0
 var stocks := 3
 var facing := 1
@@ -773,8 +776,11 @@ func _lose_stock() -> void:
 
 func _update_visuals(delta: float) -> void:
 	# Vor dem Kampf schauen die Figuren in die Kamera, im Kampf zum Gegner.
-	var target_angle := facing * SIDE_ANGLE if controls_enabled or hitstun > 0.0 else 0.0
-	model_root.rotation.y = lerp_angle(model_root.rotation.y, target_angle, 15.0 * delta)
+	if showcase_spin:
+		model_root.rotation.y = wrapf(model_root.rotation.y + SHOWCASE_SPIN_SPEED * delta, -PI, PI)
+	else:
+		var target_angle := facing * SIDE_ANGLE if controls_enabled or hitstun > 0.0 else 0.0
+		model_root.rotation.y = lerp_angle(model_root.rotation.y, target_angle, (6.0 if not controls_enabled else 15.0) * delta)
 
 	if roll_time <= 0.0:
 		_update_flip(delta)
