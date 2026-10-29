@@ -23,6 +23,16 @@ const MAPS := [
 		"effect": "Spiegelglatter Boden: man rutscht!\nEiszapfen fallen auf die blauen Stellen."},
 	{"name": "Wolkentempel", "scene": "res://scenes/maps/wolkentempel.tscn", "music": "wolkentempel", "event": "blitze",
 		"effect": "Blitze schlagen ein.\nGelbe Kreise zeigen, wo es gleich kracht."},
+	{"name": "Japanischer Tempel", "scene": "res://scenes/maps/tempel.tscn", "music": "tempel", "event": "gong",
+		"effect": "Der große Gong schlägt: eine goldene Schockwelle\nläuft über den Boden. Spring drüber!"},
+	{"name": "Neonstadt bei Nacht", "scene": "res://scenes/maps/neonstadt.tscn", "music": "neonstadt", "event": "drohne",
+		"effect": "Eine Polizeidrohne verfolgt einen Kämpfer\nmit dem roten Laserpunkt und feuert dann!"},
+	{"name": "Dschungel-Ruinen", "scene": "res://scenes/maps/dschungel.tscn", "music": "dschungel", "event": "felsbrocken",
+		"effect": "Ein riesiger Felsbrocken rollt durch die Ruinen.\nRauf auf die Plattformen!"},
+	{"name": "Wüstenarena", "scene": "res://scenes/maps/wueste.tscn", "music": "wueste", "event": "treibsand",
+		"effect": "Treibsand an markierten Stellen:\nwer drinsteht, wird langsam und springt kaum."},
+	{"name": "Unterwasser-Kuppel", "scene": "res://scenes/maps/unterwasser.tscn", "music": "unterwasser", "event": "blasen",
+		"effect": "Unter Wasser springt man höher.\nBlasen-Geysire schleudern alle nach oben."},
 ]
 const ITEM_RATES := ["Selten", "Normal", "Oft"]
 ## Sekunden zwischen zwei Items je Häufigkeit (zufällig zwischen den beiden Werten).
