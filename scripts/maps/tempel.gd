@@ -27,8 +27,6 @@ func _ready() -> void:
 	var wood := MapLook.mat(Color(0.45, 0.28, 0.16), 0.8)
 	var roof := MapLook.mat(Color(0.2, 0.22, 0.28), 0.6, 0.2)
 	var paper := MapLook.mat(Color(1.0, 0.92, 0.75), 0.9, 0.0, 0.8)
-	var blossom := MapLook.mat(Color(1.0, 0.72, 0.82), 1.0)
-	var blossom_light := MapLook.mat(Color(1.0, 0.85, 0.9), 1.0)
 	var bark := MapLook.mat(Color(0.3, 0.2, 0.17), 1.0)
 	var gold := MapLook.mat(Color(0.95, 0.72, 0.3), 0.3, 0.8)
 	$Spawn1.position = Vector3(-4.0, 0.2, 0)
@@ -158,15 +156,12 @@ func _ready() -> void:
 	MapLook.solid(col, Vector3(3.4, 1.4, 3.0), Vector3(12.7, -1.6, 0))
 	MapLook.box(look, Vector3(3.6, 1.5, 3.2), Vector3(12.8, -1.6, 0), stone_dark, Vector3(0, 0, -3))
 	MapLook.sphere(look, 1.5, Vector3(13.0, -2.5, 0.2), stone_dark, Vector3(1.1, 0.7, 1.0))
-	MapLook.cylinder(look, 0.35, 5.2, Vector3(13.5, 1.7, -0.8), bark, 0.2, Vector3(0, 0, 4), 10)
+	# Gemalter Kirschbaum hinter den Ästen (gleiches Bild wie im Hintergrund).
+	MapLook.sprite(look, "res://assets/maps/tempel/baum_gross.png", Vector3(13.4, -0.95, -1.4), 7.6)
 	for b in [[12.9, 1.6, 2.6, 30], [11.7, 4.4, 2.4, 55]]:
 		var pos := Vector3(b[0], b[1], 0)
 		MapLook.platform(col, Vector3(b[2], 0.3, 1.8), pos)
 		MapLook.cylinder(plat, 0.14, b[2] + 0.6, pos + Vector3(0.3, -0.1, -0.2), bark, 0.08, Vector3(0, 0, b[3] + 30), 8)
-		MapLook.sphere(plat, 1.0, pos + Vector3(0, 0.9, -0.9), blossom, Vector3(1.4, 0.7, 0.9))
-		MapLook.sphere(plat, 0.7, pos + Vector3(-0.8, 0.7, -0.5), blossom_light, Vector3(1.2, 0.7, 0.9))
-	MapLook.sphere(look, 1.9, Vector3(13.0, 6.6, -1.2), blossom, Vector3(1.3, 0.8, 1.0))
-	MapLook.sphere(look, 1.3, Vector3(14.4, 6.0, -0.9), blossom_light, Vector3(1.2, 0.8, 1.0))
 
 	# Kirschbäume: gemalt (Flux) und ausgeschnitten (BiRefNet), damit Blüten und Rinde Struktur haben.
 	# [x, z, Höhe, Bild, gespiegelt]
