@@ -19,9 +19,6 @@ func _ready() -> void:
 	var wood := MapLook.mat(Color(0.45, 0.28, 0.16), 0.8)
 	var roof := MapLook.mat(Color(0.2, 0.22, 0.28), 0.6, 0.2)
 	var paper := MapLook.mat(Color(1.0, 0.92, 0.75), 0.9, 0.0, 0.8)
-	var blossom := MapLook.mat(Color(1.0, 0.72, 0.82), 1.0)
-	var blossom_light := MapLook.mat(Color(1.0, 0.85, 0.9), 1.0)
-	var bark := MapLook.mat(Color(0.3, 0.2, 0.17), 1.0)
 	var gold := MapLook.mat(Color(0.95, 0.72, 0.3), 0.3, 0.8)
 	$Spawn1.position = Vector3(-3.0, 0.2, 0)
 	$Spawn2.position = Vector3(2.0, 0.2, 0)
@@ -118,15 +115,12 @@ func _ready() -> void:
 		MapLook.box(plat, Vector3(0.16, 4.0, 0.16), lookout + Vector3(side * 1.0, -2.1, -0.8), wood)
 		MapLook.box(plat, Vector3(0.1, 0.7, 0.1), lookout + Vector3(side * 1.25, 0.3, -0.95), red)
 
-	# Kirschbäume: Stämme und rosa Blütenkronen.
-	for t in [[-9.5, -3.0, 1.2], [9.2, -3.5, 1.0], [-13.0, -9.0, 1.4], [13.5, -10.0, 1.5], [-5.5, -11.0, 1.1]]:
-		var base := Vector3(t[0], 0.0, t[1])
-		var s: float = t[2]
-		MapLook.cylinder(bg, 0.22 * s, 3.4 * s, base + Vector3(0, 1.7 * s, 0), bark, 0.12 * s, Vector3(0, 0, 6), 8)
-		MapLook.cylinder(bg, 0.1 * s, 1.6 * s, base + Vector3(0.6 * s, 3.2 * s, 0), bark, 0.05 * s, Vector3(0, 0, -40), 6)
-		MapLook.sphere(bg, 1.6 * s, base + Vector3(0, 4.0 * s, 0), blossom, Vector3(1.3, 0.8, 1.0))
-		MapLook.sphere(bg, 1.2 * s, base + Vector3(1.2 * s, 3.8 * s, 0.3), blossom_light, Vector3(1.2, 0.8, 1.0))
-		MapLook.sphere(bg, 1.1 * s, base + Vector3(-1.1 * s, 3.6 * s, 0.2), blossom_light, Vector3(1.2, 0.8, 1.0))
+	# Kirschbäume: gemalt (Flux) und ausgeschnitten (BiRefNet), damit Blüten und Rinde Struktur haben.
+	# [x, z, Höhe, Bild, gespiegelt]
+	for t in [[-9.8, -3.0, 6.5, "baum_gross", false], [9.6, -3.5, 6.0, "baum_doppel", true],
+			[-13.5, -9.0, 7.5, "baum_doppel", false], [14.0, -10.0, 7.5, "baum_gross", true],
+			[-5.5, -11.0, 5.5, "baum_mittel", false], [5.0, -12.0, 5.0, "baum_mittel", true]]:
+		MapLook.sprite(bg, "res://assets/maps/tempel/%s.png" % t[3], Vector3(t[0], -0.15, t[1]), t[2], t[4])
 	MapLook.box(bg, Vector3(80, 0.4, 40), Vector3(0, -0.2, -22), MapLook.mat(Color(0.5, 0.6, 0.38)))
 
 	# Fallende Kirschblüten, warmes Nachmittagslicht, ein paar Vögel.
@@ -140,8 +134,8 @@ func _ready() -> void:
 	# Vordergrund: Kirschblütenzweige in den unteren Ecken.
 	var fg := MapFX.foreground(self)
 	for side in [-1, 1]:
-		MapLook.sphere(fg, 0.45, Vector3(side * 2.05, -1.30, -3.0), blossom, Vector3(1.6, 0.7, 0.6))
-		MapLook.sphere(fg, 0.3, Vector3(side * 1.6, -1.38, -3.0), blossom_light, Vector3(1.4, 0.6, 0.6))
+		MapLook.sprite(fg, "res://assets/maps/tempel/bluetenzweig.png", Vector3(side * 1.95, -1.65, -3.0), 0.75,
+			side < 0)
 	# Tiefen-Ebene: Kirschbäume, Laterne und Toriis (mit Flux gemalt, mit BiRefNet ausgeschnitten)
 	# zwischen Tempel und Hintergrundbild. Die Graskante (bei 83 % der Bildhöhe) steht auf dem Boden.
 	MapLook.layer(bg, "res://assets/maps/tempel/mittelgrund.png", -32.0, 76.0, -76.0 * 640.0 / 1536.0 * 0.17, 2,

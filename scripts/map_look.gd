@@ -168,6 +168,31 @@ static func layer(parent: Node, texture_path: String, z: float, width: float, bo
 	return holder
 
 
+## Einzelnes ausgeschnittenes Bild (z. B. ein gemalter Baum) als flache Tafel, Unterkante auf `bottom`.
+static func sprite(parent: Node, texture_path: String, bottom: Vector3, height: float, mirror := false,
+		tint := Color.WHITE) -> MeshInstance3D:
+	if not ResourceLoader.exists(texture_path):
+		return null
+	var tex: Texture2D = load(texture_path)
+	var mesh := QuadMesh.new()
+	mesh.size = Vector2(height * tex.get_width() / float(tex.get_height()), height)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_texture = tex
+	m.albedo_color = tint
+	if mirror:
+		m.uv1_scale = Vector3(-1, 1, 1)
+		m.uv1_offset = Vector3(1, 0, 0)
+	var node := MeshInstance3D.new()
+	node.mesh = mesh
+	node.material_override = m
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	node.position = bottom + Vector3(0, height / 2.0, 0)
+	parent.add_child(node)
+	return node
+
+
 ## Partikel als kleine leuchtende Plättchen (Glut, Schnee, Gischt …), die in einem Kasten entstehen.
 static func particles(parent: Node, pos: Vector3, extents: Vector3, color: Color, amount: int,
 		velocity: Vector3, size := 0.12, lifetime := 4.0, gravity := Vector3.ZERO) -> CPUParticles3D:
