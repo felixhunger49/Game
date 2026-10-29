@@ -37,6 +37,8 @@ var wall_jump_time := 0.0
 ## Ab und zu läuft der Computer woandershin (in die Höhle, aufs Dach …), statt nur dem Gegner nachzulaufen.
 var roam := -1
 var roam_time := 0.0
+## Gerade auf dem Rückweg zur Bühne (bleibt so, bis man wieder steht oder an einer Kante hängt).
+var recovering := false
 
 
 func setup(player: CharacterBody3D, opponent: CharacterBody3D, difficulty: int, stage: Node = null) -> void:
@@ -81,6 +83,7 @@ func _physics_process(delta: float) -> void:
 	hold_time = 0.0
 	# An der Kante: kurz hängen, dann hochklettern oder hochspringen.
 	if me.ledge_side != 0:
+		recovering = false
 		_hold([])
 		hang_time += delta
 		if hang_time > level.reaction + 0.2:
@@ -98,7 +101,11 @@ func _physics_process(delta: float) -> void:
 	var on_floor := me.is_on_floor()
 
 	# 1) Zurück auf die Bühne: kein Boden mehr unter einem, also zur nächsten Plattform steuern und springen.
-	if not on_floor and not _ground_below(pos, 30.0):
+	if on_floor:
+		recovering = false
+	elif not _ground_below(pos, 30.0):
+		recovering = true
+	if recovering:
 		var goal := steer if steer_time > 0.0 else _recovery_goal(pos)
 		want.append("right" if goal.x > pos.x else "left")
 		if me.velocity.y < 1.0 and me.jumps_left > 0 and think_timer <= 0.0:
