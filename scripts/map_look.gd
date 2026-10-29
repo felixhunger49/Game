@@ -106,9 +106,18 @@ static func prop(parent: Node, path: String, pos: Vector3, height: float, rot_y_
 
 ## Großes, unbeleuchtetes Hintergrundbild weit hinter der Arena (falls die Datei existiert).
 static func backdrop(parent: Node, texture_path: String, z := -60.0, width := 150.0, y := 12.0) -> MeshInstance3D:
+	# Bei Grafik "Hoch" die mit ComfyUI hochgerechnete, schärfere Fassung nehmen, falls es sie gibt.
+	var sharp := texture_path.get_base_dir().path_join("hintergrund_scharf.jpg")
+	if Settings.graphics > 0 and ResourceLoader.exists(sharp):
+		texture_path = sharp
 	if not ResourceLoader.exists(texture_path):
 		return null
 	var tex: Texture2D = load(texture_path)
+	if texture_path == sharp:
+		# Verkleinerte Stufen (Mipmaps) erzeugen, damit das große Bild beim Rauszoomen nicht flimmert.
+		var img := tex.get_image()
+		img.generate_mipmaps()
+		tex = ImageTexture.create_from_image(img)
 	var mesh := QuadMesh.new()
 	mesh.size = Vector2(width, width * tex.get_height() / float(tex.get_width()))
 	var m := StandardMaterial3D.new()
