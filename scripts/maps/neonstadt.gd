@@ -19,8 +19,8 @@ func _ready() -> void:
 	var metal_tex := MapFX.tex("metall")
 	var metal: Material = MapFX.textured(metal_tex, MapFX.tex("metall_n"), Color(0.8, 0.82, 0.9), 0.35, 0.35, 0.6) if metal_tex \
 		else MapLook.mat(Color(0.22, 0.24, 0.3), 0.35, 0.6)
-	var wall := MapLook.mat(Color(0.1, 0.1, 0.15), 0.7, 0.3)
-	var steel := MapLook.mat(Color(0.4, 0.42, 0.48), 0.4, 0.8)
+	var wall := MapFX.surface("beton", Color(0.1, 0.1, 0.15), 0.7, 0.3)
+	var steel := MapFX.surface("rost", Color(0.4, 0.42, 0.48), 0.4, 0.8)
 	var cyan := MapLook.mat(Color(0.2, 0.95, 1.0), 0.4, 0.0, 3.0)
 	var pink := MapLook.mat(Color(1.0, 0.2, 0.75), 0.4, 0.0, 3.0)
 	var purple := MapLook.mat(Color(0.6, 0.3, 1.0), 0.4, 0.0, 3.0)
@@ -89,7 +89,7 @@ func _ready() -> void:
 	# Wassertank rechts auf dem Dach: man kann draufspringen.
 	var tank := Vector3(10.8, 1.2, 0)
 	MapLook.solid(col, Vector3(2.0, 2.4, 2.0), tank + Vector3(0, 1.2, 0))
-	MapLook.cylinder(look, 1.05, 1.9, tank + Vector3(0, 1.45, 0), MapLook.mat(Color(0.35, 0.25, 0.2), 0.8), -1.0,
+	MapLook.cylinder(look, 1.05, 1.9, tank + Vector3(0, 1.45, 0), MapFX.surface("rost", Color(0.35, 0.25, 0.2), 0.8), -1.0,
 		Vector3.ZERO, 16)
 	MapLook.cylinder(look, 1.15, 0.5, tank + Vector3(0, 2.65, 0), wall, 0.2, Vector3.ZERO, 16)
 	for side in [-1, 1]:

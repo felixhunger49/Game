@@ -20,15 +20,15 @@ func _ready() -> void:
 	var floor_tex := MapFX.tex("korallen")
 	var floor_mat: Material = MapFX.textured(floor_tex, MapFX.tex("korallen_n"), Color.WHITE, 0.3) if floor_tex \
 		else MapLook.mat(Color(0.75, 0.82, 0.85))
-	var steel := MapLook.mat(Color(0.55, 0.6, 0.65), 0.35, 0.8)
+	var steel := MapFX.surface("rost", Color(0.55, 0.6, 0.65), 0.35, 0.8)
 	var glass := MapLook.mat(Color(0.7, 0.9, 1.0, 0.18), 0.05, 0.0, 0.2)
 	var glass_edge := MapLook.mat(Color(0.5, 0.95, 1.0), 0.3, 0.0, 2.0)
 	var coral_pink := MapLook.mat(Color(1.0, 0.45, 0.55), 0.8)
 	var coral_orange := MapLook.mat(Color(1.0, 0.6, 0.25), 0.8)
 	var coral_purple := MapLook.mat(Color(0.65, 0.35, 0.9), 0.8)
-	var kelp := MapLook.mat(Color(0.25, 0.55, 0.3), 1.0)
-	var seabed := MapLook.mat(Color(0.75, 0.7, 0.55), 1.0)
-	var wreck := MapLook.mat(Color(0.3, 0.25, 0.2), 1.0)
+	var kelp := MapFX.surface("moos", Color(0.25, 0.55, 0.3), 1.0)
+	var seabed := MapFX.surface("sand", Color(0.75, 0.7, 0.55), 1.0)
+	var wreck := MapFX.surface("holz", Color(0.3, 0.25, 0.2), 1.0)
 	$Spawn1.position = Vector3(-4.0, 0.2, 0)
 	$Spawn2.position = Vector3(4.0, 0.2, 0)
 	MapLook.stage_area(self, Rect2(-HALF - 0.6, ENGINE_Y, HALF * 2.0 + 1.2, 9.6 - ENGINE_Y), HALF)
@@ -174,10 +174,10 @@ func _engine_room(col: Node3D, look: Node3D, plat: Node3D, steel: Material, glow
 	for side in [-1, 1]:
 		MapLook.solid(col, Vector3(0.6, h, 4), Vector3(side * (inner + 0.3), ENGINE_Y + h / 2.0, 0))
 		MapLook.box(look, Vector3(0.7, h, 4.2), Vector3(side * (inner + 0.3), ENGINE_Y + h / 2.0, 0), steel)
-	var wall := MapLook.mat(Color(0.16, 0.2, 0.26), 0.5, 0.6)
+	var wall := MapFX.surface("rost", Color(0.16, 0.2, 0.26), 0.5, 0.6)
 	MapLook.box(look, Vector3(inner * 2.0, h, 0.3), Vector3(0, ENGINE_Y + h / 2.0, -1.95), wall)
 	# Rohre an der Rückwand.
-	var pipe := MapLook.mat(Color(0.6, 0.5, 0.3), 0.4, 0.8)
+	var pipe := MapFX.surface("rost", Color(0.6, 0.5, 0.3), 0.4, 0.8)
 	for y in [ENGINE_Y + 2.7, ENGINE_Y + 3.1]:
 		MapLook.cylinder(look, 0.12, inner * 2.0, Vector3(0, y, -1.7), pipe, -1.0, Vector3(0, 0, 90), 10)
 	for x in [-9.5, -5.0, 5.0, 9.5]:

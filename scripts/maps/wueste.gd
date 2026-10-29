@@ -25,11 +25,11 @@ func _ready() -> void:
 	var sandstone_tex := MapFX.tex("sandstein")
 	var sandstone: Material = MapFX.textured(sandstone_tex, MapFX.tex("sandstein_n"), Color.WHITE, 0.3) if sandstone_tex \
 		else MapLook.mat(Color(0.85, 0.68, 0.45))
-	var sandstone_dark := MapLook.mat(Color(0.65, 0.5, 0.33))
-	var red := MapLook.mat(Color(0.75, 0.15, 0.1), 0.8)
-	var blue := MapLook.mat(Color(0.15, 0.3, 0.7), 0.8)
-	var gold := MapLook.mat(Color(0.95, 0.75, 0.3), 0.3, 0.8)
-	var dune := MapLook.mat(Color(0.95, 0.78, 0.5), 1.0)
+	var sandstone_dark := MapFX.surface("sandstein", Color(0.65, 0.5, 0.33))
+	var red := MapFX.surface("stoff", Color(0.75, 0.15, 0.1), 0.8)
+	var blue := MapFX.surface("stoff", Color(0.15, 0.3, 0.7), 0.8)
+	var gold := MapFX.surface("gold", Color(0.95, 0.75, 0.3), 0.3, 0.8)
+	var dune := MapFX.surface("sand", Color(0.95, 0.78, 0.5), 1.0)
 	$Spawn1.position = Vector3(-4.5, 0.2, 0)
 	$Spawn2.position = Vector3(4.5, 0.2, 0)
 	MapLook.stage_area(self, Rect2(-14.4, BELOW_Y, 28.8, 6.8 - BELOW_Y), HALF)
@@ -90,7 +90,7 @@ func _ready() -> void:
 	MapLook.platform(col, Vector3(6.0, 0.3, 2.2), awning)
 	MapLook.box(plat, Vector3(6.2, 0.12, 2.4), awning + Vector3(0, -0.06, -0.2), red)
 	for k in 4:
-		MapLook.box(plat, Vector3(0.7, 0.13, 2.42), awning + Vector3(-2.25 + k * 1.5, -0.05, -0.2), MapLook.mat(Color(0.95, 0.9, 0.75), 0.9))
+		MapLook.box(plat, Vector3(0.7, 0.13, 2.42), awning + Vector3(-2.25 + k * 1.5, -0.05, -0.2), MapFX.surface("stoff", Color(0.95, 0.9, 0.75), 0.9))
 	for side in [-1, 1]:
 		MapLook.cylinder(plat, 0.06, 2.6, awning + Vector3(side * 3.0, -1.3, -1.2), MapLook.mat(Color(0.4, 0.28, 0.15)), -1.0,
 			Vector3.ZERO, 6)

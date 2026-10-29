@@ -120,7 +120,7 @@ func _crystal_cluster(parent: Node3D, pos: Vector3, size: float, crystal: Materi
 	var root := Node3D.new()
 	root.position = pos
 	parent.add_child(root)
-	MapLook.sphere(root, 0.55 * size, Vector3(0, 0.1, 0), MapLook.mat(Color(0.55, 0.6, 0.68)), Vector3(1.4, 0.6, 1.0))
+	MapLook.sphere(root, 0.55 * size, Vector3(0, 0.1, 0), MapFX.surface("fels_dunkel", Color(0.55, 0.6, 0.68)), Vector3(1.4, 0.6, 1.0))
 	MapLook.sphere(root, 0.5 * size, Vector3(0, 0.3, 0), snow, Vector3(1.3, 0.35, 0.9))
 	for c in [[0.0, 1.6, 0.0, 0.0], [-0.35, 1.1, 25.0, 10.0], [0.4, 1.2, -28.0, -8.0], [0.15, 0.8, 12.0, 35.0], [-0.2, 0.7, -15.0, -30.0]]:
 		var h: float = c[1] * size

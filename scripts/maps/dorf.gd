@@ -19,14 +19,14 @@ func _ready() -> void:
 
 	var col := Node3D.new()
 	add_child(col)
-	var wood := MapLook.mat(Color(0.5, 0.33, 0.18))
-	var red := MapLook.mat(Color(0.82, 0.18, 0.15))
-	var white := MapLook.mat(Color(0.95, 0.93, 0.88))
+	var wood := MapFX.surface("holz", Color(0.5, 0.33, 0.18))
+	var red := MapFX.surface("stoff", Color(0.82, 0.18, 0.15))
+	var white := MapFX.surface("stoff", Color(0.95, 0.93, 0.88))
 	var green := MapLook.mat(Color(0.35, 0.6, 0.25))
 	var orange := MapLook.mat(Color(0.95, 0.55, 0.15))
-	var soil := MapLook.mat(Color(0.45, 0.32, 0.2))
-	var rock := MapLook.mat(Color(0.5, 0.47, 0.42))
-	var grass := MapLook.mat(Color(0.4, 0.68, 0.3))
+	var soil := MapFX.surface("fels_dunkel", Color(0.45, 0.32, 0.2))
+	var rock := MapFX.surface("burgstein", Color(0.5, 0.47, 0.42))
+	var grass := MapFX.surface("gras", Color(0.4, 0.68, 0.3))
 	$Spawn1.position = Vector3(-2.5, 0.2, 0)
 	$Spawn2.position = Vector3(3.0, 0.2, 0)
 	MapLook.stage_area(self, Rect2(-15.2, CAVE_Y, 30.4, 8.2 - CAVE_Y), HALF)
@@ -121,7 +121,7 @@ func _ready() -> void:
 
 	# Vordergrund: Blätter in den oberen Ecken.
 	var fg := MapFX.foreground(self)
-	var leaves := MapLook.mat(Color(0.2, 0.42, 0.18))
+	var leaves := MapFX.surface("blaetter", Color(0.2, 0.42, 0.18))
 	for side in [-1, 1]:
 		MapLook.sphere(fg, 0.35, Vector3(side * 2.11, 1.22, -3.0), leaves, Vector3(1.5, 0.8, 0.6))
 		MapLook.sphere(fg, 0.25, Vector3(side * 1.72, 1.26, -3.0), leaves, Vector3(1.4, 0.7, 0.6))
@@ -161,7 +161,7 @@ func _cave(col: Node3D, soil: Material, rock: Material, wood: Material, grass: M
 	var plank := Vector3(-5.0, -2.4, 0)
 	MapLook.platform(col, Vector3(WELL_X2 - WELL_X1 - 0.2, 0.3, 1.6), plank)
 	MapLook.box(self, Vector3(WELL_X2 - WELL_X1 - 0.1, 0.15, 1.6), plank, wood)
-	MapLook.cylinder(self, 0.25, 0.4, plank + Vector3(0.4, 0.3, -0.3), MapLook.mat(Color(0.45, 0.3, 0.18)), 0.3, Vector3.ZERO, 10)
+	MapLook.cylinder(self, 0.25, 0.4, plank + Vector3(0.4, 0.3, -0.3), MapFX.surface("holz", Color(0.45, 0.3, 0.18)), 0.3, Vector3.ZERO, 10)
 	# Gras an den Höhlenkanten draußen.
 	for side in [-1, 1]:
 		MapLook.box(self, Vector3(2.0, 0.1, 3.8), Vector3(side * (CAVE_HALF - 1.0), CAVE_Y + 0.02, 0), grass)
