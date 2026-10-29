@@ -142,4 +142,8 @@ func _ready() -> void:
 	for side in [-1, 1]:
 		MapLook.sphere(fg, 0.45, Vector3(side * 2.05, -1.30, -3.0), blossom, Vector3(1.6, 0.7, 0.6))
 		MapLook.sphere(fg, 0.3, Vector3(side * 1.6, -1.38, -3.0), blossom_light, Vector3(1.4, 0.6, 0.6))
+	# Tiefen-Ebene: Kirschbäume, Laterne und Toriis (mit Flux gemalt, mit BiRefNet ausgeschnitten)
+	# zwischen Tempel und Hintergrundbild. Die Graskante (bei 83 % der Bildhöhe) steht auf dem Boden.
+	MapLook.layer(bg, "res://assets/maps/tempel/mittelgrund.png", -32.0, 76.0, -76.0 * 640.0 / 1536.0 * 0.17, 2,
+		Color(0.95, 0.93, 0.97))
 	MapLook.backdrop(bg, "res://assets/maps/tempel/hintergrund.png")

@@ -134,6 +134,40 @@ static func backdrop(parent: Node, texture_path: String, z := -60.0, width := 15
 	return node
 
 
+## Ausgeschnittene Bild-Ebene (PNG mit durchsichtigem Himmel) zwischen Arena und Hintergrund.
+## Sie steht mit der Unterkante auf `bottom_y` und verschiebt sich beim Kamerafahren anders als
+## der ferne Hintergrund, das gibt Tiefe. `tiles` > 1 setzt das Bild mehrmals (abwechselnd gespiegelt)
+## nebeneinander, damit die Ebene breit genug ist. Nebel wirkt darauf, so verschwimmt sie leicht.
+static func layer(parent: Node, texture_path: String, z: float, width: float, bottom_y := 0.0, tiles := 1,
+		tint := Color.WHITE) -> Node3D:
+	if not ResourceLoader.exists(texture_path):
+		return null
+	var tex: Texture2D = load(texture_path)
+	var height := width * tex.get_height() / float(tex.get_width())
+	var holder := Node3D.new()
+	parent.add_child(holder)
+	for i in tiles:
+		var mesh := QuadMesh.new()
+		mesh.size = Vector2(width, height)
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.albedo_texture = tex
+		m.albedo_color = tint
+		m.disable_receive_shadows = true
+		if i % 2 == 1:
+			# Gespiegelt, damit man die Wiederholung nicht sofort sieht.
+			m.uv1_scale = Vector3(-1, 1, 1)
+			m.uv1_offset = Vector3(1, 0, 0)
+		var node := MeshInstance3D.new()
+		node.mesh = mesh
+		node.material_override = m
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.position = Vector3((i - (tiles - 1) / 2.0) * width * 0.98, bottom_y + height / 2.0, z)
+		holder.add_child(node)
+	return holder
+
+
 ## Partikel als kleine leuchtende Plättchen (Glut, Schnee, Gischt …), die in einem Kasten entstehen.
 static func particles(parent: Node, pos: Vector3, extents: Vector3, color: Color, amount: int,
 		velocity: Vector3, size := 0.12, lifetime := 4.0, gravity := Vector3.ZERO) -> CPUParticles3D:
