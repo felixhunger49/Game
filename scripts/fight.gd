@@ -375,6 +375,7 @@ func _controls_hint() -> String:
 		var parts := ["%s/%s laufen" % [key.call("left"), key.call("right")]]
 		for a in short:
 			parts.append("%s %s" % [key.call(a), short[a]])
+		parts.append("%s+%s greifen" % [key.call("shield"), key.call("weak")])
 		lines.append("Spieler %d: %s" % [p, ", ".join(parts)])
 	return "\n".join(lines) + "   |   Esc: Menü"
 

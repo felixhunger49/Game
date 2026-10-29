@@ -21,6 +21,9 @@ var think_timer := 0.0
 var held := {}
 var shield_time := 0.0
 var wander := 0
+## Wie lange der Computer schon jemanden im Griff hat oder an der Kante hängt.
+var hold_time := 0.0
+var hang_time := 0.0
 
 
 func setup(player: CharacterBody3D, opponent: CharacterBody3D, difficulty: int) -> void:
@@ -42,6 +45,39 @@ func _physics_process(delta: float) -> void:
 	var toward := "right" if to_foe.x > 0.0 else "left"
 	var to_center := "right" if pos.x < 0.0 else "left"
 
+	# Gepackt: wild auf die Tasten hauen, um freizukommen.
+	if me.held_by:
+		_hold([])
+		if think_timer <= 0.0:
+			think_timer = 0.12 + level.reaction * 0.3
+			_tap(["weak", "kick", "jump"].pick_random())
+		return
+	# Selbst gepackt: kurz zuschlagen, dann werfen (am liebsten Richtung Abgrund).
+	if me.holding:
+		_hold([])
+		hold_time += delta
+		if hold_time > 0.25 + level.reaction and think_timer <= 0.0:
+			hold_time = 0.0
+			var toward_edge: bool = signf(pos.x) == float(me.facing) or absf(pos.x) < 1.0
+			me._throw(["oben", "unten"].pick_random() if randf() < 0.25 else "vorne" if toward_edge else "hinten")
+		elif think_timer <= 0.0:
+			think_timer = 0.2
+			_tap("weak")
+		return
+	hold_time = 0.0
+	# An der Kante: kurz hängen, dann hochklettern oder hochspringen.
+	if me.ledge_side != 0:
+		_hold([])
+		hang_time += delta
+		if hang_time > level.reaction + 0.2:
+			hang_time = 0.0
+			if randf() < 0.5:
+				me._climb_ledge()
+			else:
+				_tap("jump", 0.3)
+		return
+	hang_time = 0.0
+
 	# 1) Zurück auf die Bühne: Richtung Mitte und springen, solange es geht.
 	if pos.y < -0.6 or absf(pos.x) > EDGE + 1.0:
 		want.append(to_center)
@@ -58,6 +94,13 @@ func _physics_process(delta: float) -> void:
 	if shield_time > 0.0 or (dist < 2.2 and foe_attacking and think_timer <= 0.0 and randf() < level.block):
 		if shield_time == 0.0:
 			shield_time = 0.35
+		if not me.is_on_floor() and not me.air_dodge_used:
+			# In der Luft: ausweichen statt abwehren.
+			_hold([])
+			_tap("shield")
+			shield_time = 0.0
+			think_timer = level.reaction
+			return
 		_hold(["shield"])
 		return
 
@@ -97,9 +140,19 @@ func _decide(to_foe: Vector3, dist: float, toward: String) -> void:
 			_turn_to(toward)
 			_tap("special")
 			return
+	# Gegner wehrt ab (oder steht einfach dicht davor): packen, denn Greifen geht durch den Schild.
+	if me.is_on_floor() and dist < 1.3 and absf(to_foe.y) < 1.0 and (foe.shielding and randf() < level.aggression \
+			or randf() < 0.12):
+		_turn_to(toward)
+		me.start_grab()
+		return
 	if dist < 1.9 and absf(to_foe.y) < 1.4 and randf() < level.aggression:
 		_turn_to(toward)
 		var r := randf()
+		if r >= 0.5 and r < 0.75 and me.is_on_floor() and (foe.stunned > 0.0 or randf() < 0.3 * level.aggression):
+			# Smash-Angriff: starken Angriff etwas aufladen.
+			_tap("strong", 0.4 + randf() * 0.5)
+			return
 		_tap("weak" if r < 0.5 else "strong" if r < 0.75 else "kick")
 
 
