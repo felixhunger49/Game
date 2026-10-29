@@ -1188,6 +1188,11 @@ func _fall_down() -> void:
 ## Liegen und Aufstehen. Eine Taste drücken (nach kurzer Zeit) lässt früher aufstehen.
 func _update_down(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, 0.0, 30.0 * delta)
+	if not is_on_floor():
+		# Im Liegen über die Kante gerutscht: sofort wieder handeln können, damit man zurückspringen kann.
+		down_time = 0.0
+		getup_time = 0.0
+		return
 	if down_time > 0.0:
 		down_time -= delta
 		down_elapsed += delta

@@ -304,8 +304,17 @@ func _link(a: Dictionary, b: Dictionary, x: float) -> Dictionary:
 				link = {"x": a.x1, "do": "edge", "steer": Vector2(minf(a.x1 - 1.0, b.x2 - 0.6), b.y)}
 	if link.is_empty():
 		return {}
+	# Beim Hochspringen darf kein fester Boden über dem Kopf sein (sonst stößt man sich an und fällt).
+	if link.do == "jump" and not _clear_above(link.x, a.y + 0.3, maxf(b.y, a.y) + 2.0):
+		return {}
 	link.cost = absf(link.x - x) + absf(link.steer.x - link.x) + maxf(dy, 0.0) * 1.5 + absf(dy) * 0.5 + 0.5
 	return link
+
+
+## Ist senkrecht über x zwischen den Höhen y1 und y2 frei (kein fester Boden)?
+func _clear_above(x: float, y1: float, y2: float) -> bool:
+	var query := PhysicsRayQueryParameters3D.create(Vector3(x, y1, 0), Vector3(x, y2, 0), 1)
+	return me.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
 ## Wohin steuern, wenn man neben der Bühne fällt: die nächste Fläche, die man noch erreichen kann.
@@ -315,8 +324,12 @@ func _recovery_goal(pos: Vector3) -> Vector2:
 	var best_cost := INF
 	for s in _surfaces():
 		var x := clampf(pos.x, s.x1 + 0.6, s.x2 - 0.6)
-		if s.solid and pos.y < s.y - 0.5 and pos.x > s.x1 and pos.x < s.x2:
-			x = s.x1 - 0.2 if pos.x - s.x1 < s.x2 - pos.x else s.x2 + 0.2
+		if s.solid and pos.y < s.y - 0.5:
+			# Unter festem Boden kommt man nicht hindurch: außen an der Kante hochsteigen.
+			if pos.x <= s.x1 or (pos.x < s.x2 and pos.x - s.x1 < s.x2 - pos.x):
+				x = s.x1 - 0.3
+			else:
+				x = s.x2 + 0.3
 		var c: float = absf(x - pos.x) + maxf(s.y - pos.y, 0.0) * 1.5
 		if c < best_cost:
 			best_cost = c
