@@ -15,7 +15,6 @@ extends Node3D
 ##   blasen (Unterwasser): weniger Schwerkraft, Blasen-Geysire schleudern alle nach oben.
 
 ## Die Bühne reicht von x = -8 bis 8, die schwebenden Plattformen liegen bei y = 2.6.
-const STAGE_HALF_WIDTH := 7.5
 const WARN_TIME := 1.5
 
 const CANNON_ATTACK := {"damage": 12.0, "base": 6.0, "scale": 0.17, "angle": Vector2(1, 0.45)}
@@ -63,6 +62,8 @@ var events: Array = []
 var hud_label: Label
 ## Treibsand: normale Lauf- und Sprungwerte jedes Kämpfers.
 var base_values := {}
+## Halbe Breite des Hauptbodens, auf dem die Ereignisse passieren (größere Maps sagen es selbst).
+var stage_half := 7.5
 
 
 func setup(event_kind: String, all_players: Array, label: Label) -> void:
@@ -70,6 +71,9 @@ func setup(event_kind: String, all_players: Array, label: Label) -> void:
 	players = all_players
 	hud_label = label
 	timer = randf_range(4.0, 6.0)
+	var map: Node = get_parent().get_child(0) if get_parent() else null
+	if map:
+		stage_half = map.get_meta("event_half", stage_half)
 	if kind == "geister":
 		for p in players:
 			p.gravity *= GHOST_GRAVITY
@@ -123,7 +127,7 @@ func _start_event() -> void:
 			var side := 1 if randf() < 0.5 else -1
 			# Auf Bodenhöhe oder auf Höhe der Plattformen.
 			var height := 0.9 if randf() < 0.6 else 3.5
-			var warn := _warning_label("!", Color(1, 0.2, 0.15), Vector3(side * STAGE_HALF_WIDTH, height, 0.5))
+			var warn := _warning_label("!", Color(1, 0.2, 0.15), Vector3(side * stage_half, height, 0.5))
 			events.append({"phase": "warn", "time": 0.0, "side": side, "height": height, "warn": warn, "hit": []})
 			hud_label.text = "Kanone von " + ("rechts!" if side > 0 else "links!") + ("  Spring drüber!" if height < 2.0 else "  Bleib unten!")
 			Audio.sfx("warning")
@@ -137,21 +141,21 @@ func _start_event() -> void:
 			Audio.sfx("warning", 0.8)
 		"geister":
 			timer = randf_range(5.0, 8.0)
-			var x := randf_range(-STAGE_HALF_WIDTH + 0.5, STAGE_HALF_WIDTH - 0.5)
+			var x := randf_range(-stage_half + 0.5, stage_half - 0.5)
 			# Meistens taucht der Geist unter einem Kämpfer auf, damit man ausweichen muss.
 			var targets := players.filter(func(p): return p.visible and p.is_on_floor())
 			if not targets.is_empty() and randf() < 0.7:
-				x = clampf(targets.pick_random().position.x, -STAGE_HALF_WIDTH, STAGE_HALF_WIDTH)
+				x = clampf(targets.pick_random().position.x, -stage_half, stage_half)
 			var marker := _ground_marker(x)
 			events.append({"phase": "warn", "time": 0.0, "x": x, "marker": marker, "hit": []})
 			Audio.sfx("ghost_warn")
 		"lava", "eis", "blitze":
 			timer = randf_range(4.0, 7.0) if kind != "blitze" else randf_range(3.5, 6.0)
-			var x := randf_range(-STAGE_HALF_WIDTH + 0.5, STAGE_HALF_WIDTH - 0.5)
+			var x := randf_range(-stage_half + 0.5, stage_half - 0.5)
 			# Meistens trifft es die Stelle unter einem Kämpfer, damit man ausweichen muss.
 			var targets := players.filter(func(p): return p.visible)
 			if not targets.is_empty() and randf() < 0.7:
-				x = clampf(targets.pick_random().position.x, -STAGE_HALF_WIDTH, STAGE_HALF_WIDTH)
+				x = clampf(targets.pick_random().position.x, -stage_half, stage_half)
 			var colors := {"lava": Color(1.0, 0.4, 0.05, 0.7), "eis": Color(0.6, 0.9, 1.0, 0.7), "blitze": Color(1.0, 0.95, 0.3, 0.7)}
 			var marker := _ground_marker(x, colors[kind], STRIKE_RADIUS)
 			events.append({"phase": "warn", "time": 0.0, "x": x, "marker": marker, "hit": []})
@@ -186,16 +190,16 @@ func _start_event() -> void:
 		"felsbrocken":
 			timer = randf_range(9.0, 13.0)
 			var side := 1 if randf() < 0.5 else -1
-			var warn := _warning_label("!", Color(1, 0.6, 0.15), Vector3(side * STAGE_HALF_WIDTH, 1.2, 0.5))
+			var warn := _warning_label("!", Color(1, 0.6, 0.15), Vector3(side * stage_half, 1.2, 0.5))
 			events.append({"phase": "warn", "time": 0.0, "side": side, "warn": warn, "hit": []})
 			hud_label.text = "Felsbrocken von " + ("rechts!" if side > 0 else "links!") + "  Rauf auf die Plattformen!"
 			Audio.sfx("warning", 0.8)
 		"treibsand":
 			timer = randf_range(8.0, 11.0)
-			var x := randf_range(-STAGE_HALF_WIDTH + 1.5, STAGE_HALF_WIDTH - 1.5)
+			var x := randf_range(-stage_half + 1.5, stage_half - 1.5)
 			var targets := players.filter(func(p): return p.visible and p.is_on_floor())
 			if not targets.is_empty() and randf() < 0.7:
-				x = clampf(targets.pick_random().position.x, -STAGE_HALF_WIDTH + 1.0, STAGE_HALF_WIDTH - 1.0)
+				x = clampf(targets.pick_random().position.x, -stage_half + 1.0, stage_half - 1.0)
 			var marker := _ground_marker(x, Color(0.85, 0.6, 0.25, 0.7), SAND_RADIUS)
 			var ground := _ground_y(x)
 			marker.position.y = ground + 0.04
@@ -204,10 +208,10 @@ func _start_event() -> void:
 			Audio.sfx("warning", 0.9)
 		"blasen":
 			timer = randf_range(5.0, 8.0)
-			var x := randf_range(-STAGE_HALF_WIDTH + 0.5, STAGE_HALF_WIDTH - 0.5)
+			var x := randf_range(-stage_half + 0.5, stage_half - 0.5)
 			var targets := players.filter(func(p): return p.visible)
 			if not targets.is_empty() and randf() < 0.7:
-				x = clampf(targets.pick_random().position.x, -STAGE_HALF_WIDTH, STAGE_HALF_WIDTH)
+				x = clampf(targets.pick_random().position.x, -stage_half, stage_half)
 			var marker := _ground_marker(x, Color(0.5, 0.9, 1.0, 0.7), BUBBLE_RADIUS)
 			var ground := _ground_y(x)
 			marker.position.y = ground + 0.04
@@ -625,7 +629,7 @@ func _update_gong(e: Dictionary, delta: float) -> void:
 			e.hit.append(p)
 			var dir := Vector3(GONG_ATTACK.angle.x * signf(p.position.x + 0.01), GONG_ATTACK.angle.y, 0).normalized()
 			p.take_hit(GONG_ATTACK, dir)
-	if reach > STAGE_HALF_WIDTH + 2.0:
+	if reach > stage_half + 2.0:
 		wave.queue_free()
 		events.erase(e)
 
@@ -765,7 +769,7 @@ func _update_boulder(e: Dictionary, delta: float) -> void:
 			e.phase = "roll"
 			e.time = 0.0
 			e.rock = _boulder()
-			e.rock.position = Vector3(e.side * (STAGE_HALF_WIDTH + 4.0), _ground_y(e.side * STAGE_HALF_WIDTH) + BOULDER_RADIUS, 0)
+			e.rock.position = Vector3(e.side * (stage_half + 4.0), _ground_y(e.side * stage_half) + BOULDER_RADIUS, 0)
 			hud_label.text = ""
 			Audio.sfx("boulder")
 		return
@@ -783,7 +787,7 @@ func _update_boulder(e: Dictionary, delta: float) -> void:
 			e.hit.append(p)
 			p.take_hit(BOULDER_ATTACK, Vector3(BOULDER_ATTACK.angle.x * dir, BOULDER_ATTACK.angle.y, 0).normalized())
 			Audio.sfx("hit_strong", 0.7)
-	if absf(rock.position.x) > STAGE_HALF_WIDTH + 6.0 and signf(rock.position.x) == dir:
+	if absf(rock.position.x) > stage_half + 6.0 and signf(rock.position.x) == dir:
 		rock.queue_free()
 		events.erase(e)
 

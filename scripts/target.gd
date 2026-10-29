@@ -85,13 +85,14 @@ static func hit_near(node: Node3D, pos: Vector3, radius: float) -> bool:
 static func place(map: Node3D, parent: Node3D, spawn_x: float) -> Array:
 	var platforms := []
 	var floors := []
+	var area := MapLook.area_of(map).grow(1.0)
 	for body in map.find_children("*", "StaticBody3D", true, false):
 		for c in body.get_children():
 			if not (c is CollisionShape3D and c.shape is BoxShape3D):
 				continue
 			var size: Vector3 = c.shape.size * c.global_transform.basis.get_scale()
 			var top := Vector3(c.global_position.x, c.global_position.y + size.y / 2.0, 0)
-			if absf(top.x) > 13.0 or top.y > 13.0:
+			if not area.has_point(Vector2(top.x, top.y)):
 				continue
 			(platforms if body.get_collision_layer_value(MapLook.PLATFORM_LAYER) else floors).append([top, size.x])
 	var spots := []

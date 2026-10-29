@@ -118,7 +118,7 @@ const COUNTER_TIME := 1.5
 const COUNTER_BONUS := 0.6
 
 ## Alles außerhalb dieses Bereichs zählt als heruntergefallen (x links, y unten, Breite, Höhe).
-const BLAST_ZONE := Rect2(-19, -10, 38, 28)
+var blast_zone := Rect2(-19, -10, 38, 28)
 ## Die Figuren drehen sich nicht ganz zur Seite, damit man ihr Gesicht sieht (wie bei Smash Bros.).
 const SIDE_ANGLE := deg_to_rad(70)
 ## Physik-Ebene, auf der die schwebenden Plattformen liegen (man kann von unten durchspringen).
@@ -514,7 +514,7 @@ func _physics_process(delta: float) -> void:
 				on_platform = true
 	_update_visuals(delta)
 
-	if not BLAST_ZONE.has_point(Vector2(position.x, position.y)):
+	if not blast_zone.has_point(Vector2(position.x, position.y)):
 		_lose_stock()
 
 

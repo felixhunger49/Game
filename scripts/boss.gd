@@ -17,8 +17,8 @@ var rocket_timer := 3.0
 var rage_light: OmniLight3D
 
 
-func setup(player: CharacterBody3D, opponent: CharacterBody3D, _difficulty: int) -> void:
-	super.setup(player, opponent, 1)
+func setup(player: CharacterBody3D, opponent: CharacterBody3D, _difficulty: int, stage: Node = null) -> void:
+	super.setup(player, opponent, 1, stage)
 	# Reagiert langsamer, greift seltener an und blockt kaum, damit man ihn schlagen kann.
 	level = LEVELS[1].duplicate()
 	level.reaction = 0.35

@@ -6,6 +6,28 @@ class_name MapLook
 const PLATFORM_LAYER := 2
 
 
+## Bereich, in dem man stehen kann, wenn eine Map nichts anderes sagt (x von -7,5 bis 7,5, y von 0 bis 5).
+const DEFAULT_AREA := Rect2(-7.5, 0.0, 15.0, 5.0)
+
+
+## Legt fest, wie groß die Bühne ist: `area` reicht von der linken bis zur rechten Außenkante und vom tiefsten
+## Boden (z. B. einer Höhle) bis zur höchsten Plattform. Daraus richten sich Kamera, Blastzone und Gegenstände.
+## `event_half`: halbe Breite des Hauptbodens, auf dem die Map-Ereignisse (Blitze, Geister …) passieren.
+static func stage_area(map: Node, area: Rect2, event_half := 7.5) -> void:
+	map.set_meta("stage_area", area)
+	map.set_meta("event_half", event_half)
+
+
+static func area_of(map: Node) -> Rect2:
+	return map.get_meta("stage_area", DEFAULT_AREA) if map else DEFAULT_AREA
+
+
+## Wer diesen Bereich verlässt, verliert ein Leben: seitlich 11,5, unten 10 und oben 13 Meter Abstand zur Bühne.
+## (Bei Rect2 ist "oben" die Seite mit dem kleineren y, hier also unten in der Welt.)
+static func blast_zone(map: Node) -> Rect2:
+	return area_of(map).grow_individual(11.5, 10.0, 11.5, 13.0)
+
+
 ## Fester Boden (man kann nicht hindurchspringen). `pos` ist die Mitte, die Oberkante liegt bei pos.y + size.y / 2.
 static func solid(parent: Node, size: Vector3, pos: Vector3) -> StaticBody3D:
 	return _body(parent, size, pos, 1)

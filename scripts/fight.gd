@@ -68,6 +68,7 @@ func _ready() -> void:
 		p.position = spawn.position
 		p.spawn_position = spawn.position
 		p.stocks = Settings.stocks
+		p.blast_zone = MapLook.blast_zone(map)
 		p.set_fighter(Settings.choices[i])
 		p.fell_off.connect(_on_player_fell_off)
 	if Settings.boss_mode:
@@ -200,12 +201,12 @@ func _begin_fight() -> void:
 	if Settings.boss_mode:
 		boss_ai = BossAI.new()
 		add_child(boss_ai)
-		boss_ai.setup(players[1], players[0], 2)
+		boss_ai.setup(players[1], players[0], 2, map_node)
 		return
 	if Settings.solo:
 		cpu = CpuPlayer.new()
 		add_child(cpu)
-		cpu.setup(players[1], players[0], Settings.cpu_difficulty())
+		cpu.setup(players[1], players[0], Settings.cpu_difficulty(), map_node)
 	if Settings.map_effects:
 		map_events = MapEvents.new()
 		add_child(map_events)
@@ -301,7 +302,8 @@ func _update_items(delta: float) -> void:
 	var item := Item.new()
 	add_child(item)
 	item.setup(Item.TYPES.keys().pick_random(), players)
-	item.position = Vector3(randf_range(-7.0, 7.0), 9.0, 0.0)
+	var area := MapLook.area_of(map_node)
+	item.position = Vector3(randf_range(area.position.x + 1.0, area.end.x - 1.0), area.end.y + 4.0, 0.0)
 
 
 func _reset_item_timer() -> void:
@@ -421,10 +423,14 @@ func _update_camera(delta: float) -> void:
 		max_pos = max_pos.max(p.position)
 	var mid := (min_pos + max_pos) / 2.0
 	var spread := maxf(max_pos.x - min_pos.x, (max_pos.y - min_pos.y) * 1.6)
+	# Wie weit die Kamera wandern und herauszoomen darf, hängt von der Größe der Bühne ab.
+	var area := MapLook.area_of(map_node)
+	var side := maxf(area.size.x / 2.0 - 1.5, 6.0)
+	var center_x := area.get_center().x
 	var target := Vector3(
-		clampf(mid.x * 0.6, -6.0, 6.0),
-		clampf(mid.y * 0.5 + 2.2, 1.8, 7.0),
-		clampf(9.0 + spread * 0.9, 14.0, 26.0))
+		clampf(mid.x * 0.6 + center_x * 0.4, center_x - side, center_x + side),
+		clampf(mid.y * 0.5 + 2.2, area.position.y + 1.8, area.end.y + 2.0),
+		clampf(9.0 + spread * 0.9, 14.0, 26.0 + maxf(area.size.x - 15.0, 0.0) * 0.45))
 	if state == State.SELECT:
 		target = Vector3(clampf(mid.x, -8.0, 8.0), mid.y + 1.5, 8.5 + maxf(spread - 5.0, 0.0) * 0.8)
 	camera.position = camera.position.lerp(target, 3.0 * delta)
