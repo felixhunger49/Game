@@ -76,7 +76,7 @@ const FIGHTERS := [
 		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.0},
 		"anim_trim": {"weak": [0.35, 0.85], "strong": [0.30, 1.05], "kick": [0.25, 0.95], "special": [0.50, 1.60]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Barbarian.glb", "2H_Axe", Vector3(-85, 110, 158)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Barbarian.glb", "2H_Axe", Vector3(-85, 110, 158), Vector3(0.02, 0.19, -0.01)],
 		},
 	},
 	{
@@ -112,8 +112,8 @@ const FIGHTERS := [
 		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.3},
 		"anim_trim": {"weak": [0.05, 0.55], "strong": [0.20, 0.95], "kick": [0.00, 0.70]},
 		"attach_from": {
-			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", Vector3(-43, -116, 106)],
-			"mixamorig_LeftHand": [KAYKIT_CHARS + "Paladin.glb", "Rectangle_Shield", Vector3(-90, 0, 135)],
+			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", Vector3(-43, -116, 106), Vector3(0.26, -0.15, 0.11)],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Paladin.glb", "Rectangle_Shield", Vector3(-90, 45, 0), Vector3(-0.35, 0, 0)],
 		},
 	},
 	{
@@ -129,7 +129,7 @@ const FIGHTERS := [
 		"anim_speeds": {"weak": 2.0, "strong": 1.35, "kick": 1.6, "special": 1.0},
 		"anim_trim": {"weak": [0.35, 0.85], "strong": [1.00, 2.00], "kick": [0.25, 0.95], "special": [0.20, 1.20]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Hexe.glb", "1H_Wand", Vector3(0, -90, -90)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Hexe.glb", "1H_Wand", Vector3(-41, 59, -91), Vector3(0, 0.07, 0)],
 			"mixamorig_LeftHand": [KAYKIT_CHARS + "Hexe.glb", "Spellbook_open", Vector3(0, -90, -90)],
 		},
 	},
