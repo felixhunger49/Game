@@ -163,10 +163,10 @@ const FIGHTERS := [
 		"anim_trim": {"weak": [0.00, 0.40], "strong": [0.00, 1.10], "kick": [0.25, 0.95]},
 	},
 	{
-		# Eigene Figur aus ComfyUI (Flux + Trellis), ersetzt den Magier. Noch ohne Skelett.
+		# Eigene Figur aus ComfyUI (Flux + Trellis), ersetzt den Magier. Skelett und Animationen von Mixamo.
 		"name": "Magierin", "passive": "arkan", "flip": "pirouette", "voice": 1.2,
-		"scene": "res://assets/magierin/magierin.glb", "scale": 1.75, "special": "feuerball",
-		"anims": {},
+		"scene": "res://assets/magierin/idle.fbx", "anim_dir": "res://assets/magierin/", "scale": 195.0,
+		"special": "feuerball",
 	},
 ]
 
