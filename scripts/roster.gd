@@ -117,9 +117,17 @@ const FIGHTERS := [
 		},
 	},
 	{
+		# Eigene Figur aus ComfyUI (Flux + Trellis), Schwert-und-Schild-Animationen von Mixamo.
+		# Axt und Rundschild vom alten KayKit-Brummbart.
 		"name": "Brummbart", "passive": "schwergewicht", "flip": "purzeln", "voice": 0.75,
-		"scene": KAYKIT_CHARS + "Brummbart.glb", "keep": ["1H_Axe", "Barbarian_Round_Shield"], "special": "erdbeben",
-		"weak": "1H_Melee_Attack_Slice_Horizontal", "strong": "1H_Melee_Attack_Chop",
+		"scene": "res://assets/brummbart/idle.fbx", "anim_dir": "res://assets/brummbart/", "scale": 195.0,
+		"special": "erdbeben",
+		"anim_speeds": {"weak": 1.5, "strong": 1.1, "kick": 1.4, "special": 1.1},
+		"anim_trim": {"weak": [0.40, 1.15], "strong": [0.40, 1.50], "kick": [0.20, 0.80], "special": [0.40, 1.60]},
+		"attach_from": {
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Brummbart.glb", "1H_Axe", Vector3(0, -90, -90)],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Brummbart.glb", "Barbarian_Round_Shield", Vector3(-90, 0, 135)],
+		},
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), Zauber-Animationen von Mixamo (Magier-Paket),
@@ -134,10 +142,14 @@ const FIGHTERS := [
 		},
 	},
 	{
+		# Eigene Figur aus ComfyUI (Flux + Trellis), Bogen-Animationen von Mixamo.
 		"name": "Jägerin", "passive": "flink", "flip": "doppel_rueckwaerts", "voice": 1.3,
-		"scene": KAYKIT_CHARS + "Jaegerin.glb", "keep": ["1H_Crossbow", "Knife_Offhand"], "special": "pfeilregen",
-		"bow": true,
-		"weak": "Dualwield_Melee_Attack_Stab", "strong": "1H_Melee_Attack_Chop",
+		"scene": "res://assets/jaegerin/idle.fbx", "anim_dir": "res://assets/jaegerin/", "scale": 185.0,
+		"special": "pfeilregen", "bow": true,
+		"anim_speeds": {"weak": 1.5, "strong": 1.2, "kick": 1.4, "special": 1.0},
+		"anim_trim": {"weak": [0.15, 0.60], "strong": [0.20, 1.00], "kick": [0.35, 1.05], "special": [0.00, 1.50]},
+		# Selbst gebauter Bogen in der linken Hand (Drehung, Versatz).
+		"bow_hand": [Vector3(0, 0, 90), Vector3(0, 0.08, 0)],
 	},
 	{
 		# Platzhalter: rote Variante der KayKit-Schurkin, bis das eigene Modell aus ComfyUI fertig ist.
