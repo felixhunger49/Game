@@ -162,7 +162,8 @@ func _add_extra_players(_map: Node3D) -> void:
 		label.offset_left = 24 + slot * width
 		label.offset_right = 24 + (slot + 1) * width - 12
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		label.add_theme_font_size_override("font_size", 24)
+		label.add_theme_font_size_override("font_size", 20)
+		label.clip_text = true
 
 
 ## Startplatz: Spieler 1 und 2 an den Plätzen der Map, 3 und 4 dazwischen (etwas höher, sie fallen herunter).

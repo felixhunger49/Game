@@ -769,7 +769,8 @@ func _wolf(c: Color, energy_scale: float) -> Node3D:
 		[Vector3(0.14, 0.55, 0.14), Vector3(-0.5, 0.28, -0.15)],
 	]
 	for part in parts:
-		var m := _glow(_box(part[0]), c, 1.2 * minf(energy_scale, 1.3))
+		# Fest statt additiv, sonst werden die überlappenden Teile weiß.
+		var m := _solid(_box(part[0]), Color(c, 0.8), 1.2 * minf(energy_scale, 1.3))
 		m.reparent(wolf, false)
 		m.position = part[1]
 	var eye := _glow(_box(Vector3(0.1, 0.06, 0.5)), Color(1, 1, 1), 4.0)
