@@ -119,9 +119,9 @@ const FIGHTERS := [
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), Schwert-und-Schild-Animationen von Mixamo.
-		# Axt und Rundschild vom alten KayKit-Brummbart.
+		# Axt und Rundschild vom alten KayKit-Brummbart. modell.fbx: in Blender geglättete Hände (keine Fetzen mehr).
 		"name": "Brummbart", "passive": "schwergewicht", "flip": "purzeln", "voice": 0.75,
-		"scene": "res://assets/brummbart/idle.fbx", "anim_dir": "res://assets/brummbart/", "scale": 195.0,
+		"scene": "res://assets/brummbart/modell.fbx", "anim_dir": "res://assets/brummbart/", "scale": 195.0,
 		"special": "erdbeben",
 		"anim_speeds": {"weak": 2.0, "strong": 1.4, "kick": 1.4, "special": 1.2},
 		"anim_trim": {"weak": [0.30, 1.20], "strong": [0.35, 1.55], "kick": [0.20, 0.90], "special": [0.30, 1.75]},
@@ -144,8 +144,9 @@ const FIGHTERS := [
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), Bogen-Animationen von Mixamo.
+		# modell.fbx: in Blender hängt der ganze Kopf mit Kapuze am Kopfknochen (Haare stechen nicht mehr durch).
 		"name": "Jägerin", "passive": "flink", "flip": "doppel_rueckwaerts", "voice": 1.3,
-		"scene": "res://assets/jaegerin/idle.fbx", "anim_dir": "res://assets/jaegerin/", "scale": 185.0,
+		"scene": "res://assets/jaegerin/modell.fbx", "anim_dir": "res://assets/jaegerin/", "scale": 185.0,
 		"special": "pfeilregen", "bow": true,
 		"anim_speeds": {"weak": 1.8, "strong": 1.2, "kick": 1.4, "special": 1.0},
 		"anim_trim": {"weak": [0.10, 0.85], "strong": [0.20, 1.00], "kick": [0.20, 1.05], "special": [0.00, 1.50]},
@@ -177,8 +178,9 @@ const FIGHTERS := [
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), ersetzt den Magier. Skelett und Animationen von Mixamo.
+		# modell.fbx: in Blender hängen die Haare nur am Kopf (vorher zogen die Arme sie übers Gesicht).
 		"name": "Magierin", "passive": "arkan", "flip": "pirouette", "voice": 1.2,
-		"scene": "res://assets/magierin/idle.fbx", "anim_dir": "res://assets/magierin/", "scale": 195.0,
+		"scene": "res://assets/magierin/modell.fbx", "anim_dir": "res://assets/magierin/", "scale": 195.0,
 		"special": "feuerball",
 		"anim_speeds": {"weak": 2.0, "strong": 1.6, "kick": 1.6, "special": 1.3},
 		"anim_trim": {"strong": [0.20, 1.90], "kick": [0.30, 1.30], "special": [0.10, 1.50]},

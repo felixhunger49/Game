@@ -343,6 +343,14 @@ func set_fighter(index: int) -> void:
 	model.rotation_degrees.y = fighter.get("rotation_y", 0.0)
 
 	anim_player = model.find_child("AnimationPlayer", true, false)
+	if anim_player == null and fighter.has("anim_dir"):
+		# In Blender reparierte Modelle (modell.fbx) haben keine eigene Animation: Player dazu bauen.
+		# Die Spuren heißen "Skeleton3D:<Knochen>", also zeigt root_node auf den Knoten über dem Skelett.
+		var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false)
+		if skeleton:
+			anim_player = AnimationPlayer.new()
+			model.add_child(anim_player)
+			anim_player.root_node = anim_player.get_path_to(skeleton.get_parent())
 	_load_anim_files()
 	if anim_player:
 		for action in ["idle", "run", "jump", "fall", "shield", "stunned", "ledge_hang", "grab_hold"]:
