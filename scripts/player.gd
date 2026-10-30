@@ -34,6 +34,9 @@ const ATTACKS := {
 		"cooldown": 1.0, "angle": Vector2(1, 0.4), "anim_speed": 1.6},
 	"wirbel": {"damage": 11.0, "base": 6.0, "scale": 0.18, "range": Vector2(2.2, 1.5), "startup": 0.15,
 		"cooldown": 1.1, "angle": Vector2(1, 0.8), "anim_speed": 1.5},
+	# Konter: Rückschlag, wenn man in der Konter-Haltung getroffen wird (mindestens so stark, sonst 1,3× der Treffer).
+	"konter": {"damage": 9.0, "base": 7.0, "scale": 0.2, "range": Vector2(2.0, 1.6), "startup": 0.0, "cooldown": 0.35,
+		"angle": Vector2(1, 0.6), "anim_speed": 2.2},
 	"aufwaerts": {"damage": 9.0, "base": 6.0, "scale": 0.15, "range": Vector2(1.4, 2.8), "startup": 0.1,
 		"cooldown": 0.9, "angle": Vector2(0.2, 1), "anim_speed": 1.6, "zone": "oben"},
 	# Alle: in der Luft hoch + schlagen = Uppercut nach oben (Animation vom Himmelshieb des Helden).
@@ -113,8 +116,13 @@ const LUFT_TRIM := [0.40, 1.30]
 ## daher reicht ein Satz für alle (eine Figur kann in ihrem anim_dir eine eigene Datei gleichen Namens haben).
 ## Wert: [von, bis] in Sekunden ([] = ganze Animation).
 const SMASH_ANIM_DIR := "res://assets/smash/"
+## Konter (runter + Spezial): so lange fängt man Treffer ab, dann so lange warten bis zum nächsten Konter.
+const KONTER_TIME := 0.45
+const KONTER_COOLDOWN := 1.6
+## Rettungssprung (hoch + Spezial): Sprungkraft nach oben.
+const UP_SPECIAL_JUMP := 14.0
 ## Richtungs-Angriffe: eigene Animation aus assets/smash (oder dem Figurenordner), sonst die hier genannte.
-const DIR_ATTACKS := {"weak_hoch": "luft", "weak_tief": "kick", "strong_hoch": "luft", "strong_tief": "kick",
+const DIR_ATTACKS := {"aufwaerts": "luft", "weak_hoch": "luft", "weak_tief": "kick", "strong_hoch": "luft", "strong_tief": "kick",
 	"luft_vor": "weak", "luft_hinten": "kick", "luft_tief": "strong"}
 ## Zuschnitt der Richtungs-Animationen aus assets/smash (Mixamo) in Sekunden.
 const DIR_TRIM := {"weak_hoch": [0.15, 1.0], "weak_tief": [0.0, 1.0], "strong_hoch": [0.35, 1.35],
@@ -239,6 +247,8 @@ var pending_time := 0.0
 var dash_time := 0.0
 var dash_hit_done := false
 var special_air_used := false
+var konter_time := 0.0
+var konter_cooldown := 0.0
 var shielding := false
 var shield_hp := SHIELD_MAX
 ## Wie lange das Schild schon gehalten wird (für perfektes Abwehren).
@@ -423,6 +433,8 @@ func _aim_two_hand_weapon() -> void:
 
 func _physics_process(delta: float) -> void:
 	attack_timer = max(attack_timer - delta, 0.0)
+	konter_time = maxf(konter_time - delta, 0.0)
+	konter_cooldown = maxf(konter_cooldown - delta, 0.0)
 	hitstun = max(hitstun - delta, 0.0)
 	stunned = max(stunned - delta, 0.0)
 	power_time = max(power_time - delta, 0.0)
@@ -609,7 +621,11 @@ func _handle_input(delta: float) -> void:
 				start_attack(kind)
 			return
 	if Input.is_action_just_pressed(_action("special")):
-		start_special()
+		# Spezial je Richtung: hoch = Rettungssprung, runter = Konter, sonst das eigene Spezial der Figur.
+		match _held_dir():
+			"hoch": start_up_special()
+			"tief": start_counter()
+			_: start_special()
 
 
 ## Richtung, die gerade gehalten wird: "hoch", "tief" oder "" (keine).
@@ -650,6 +666,60 @@ func start_attack(kind: String) -> void:
 				_shout()
 		"kick", "luft_hinten":
 			Audio.sfx("kick")
+
+
+## Hoch + Spezial (alle Figuren, kostet keine Energie): Rettungssprung mit Schlag nach oben,
+## einmal pro Sprung, um von unten zurück auf die Bühne zu kommen.
+func start_up_special() -> void:
+	if special_air_used:
+		Audio.sfx("fizzle")
+		attack_timer = 0.2
+		return
+	special_air_used = true
+	launched = false
+	fast_falling = false
+	fast_fall_armed = false
+	_end_flip()
+	velocity.y = UP_SPECIAL_JUMP
+	velocity.x = Input.get_axis(_action("left"), _action("right")) * 4.0
+	start_attack("aufwaerts")
+	Audio.sfx("uppercut")
+	SpecialFX.pillar(self)
+
+
+## Runter + Spezial (alle Figuren, kostet keine Energie): kurz in Konter-Haltung. Wer jetzt zuschlägt,
+## trifft ins Leere und bekommt selbst einen harten Schlag ab.
+func start_counter() -> void:
+	if konter_cooldown > 0.0:
+		Audio.sfx("fizzle")
+		attack_timer = 0.2
+		return
+	konter_time = KONTER_TIME
+	konter_cooldown = KONTER_COOLDOWN
+	attack_timer = KONTER_TIME + 0.25
+	pending_attack = ""
+	_end_flip()
+	_play("shield")
+	Audio.sfx("special_start", 1.4, -4.0)
+	SpecialFX._ring(get_parent(), global_position + Vector3(0, 1.0, 0), Color(0.6, 0.85, 1.0), 0.3, 1.3, 0.3, false)
+
+
+func _counter_strike(atk: Dictionary) -> void:
+	konter_time = 0.0
+	SpecialFX.popup(self, "KONTER!", Color(0.6, 0.85, 1.0))
+	SpecialFX.slow_motion(self, 0.3, 0.25)
+	Audio.sfx("hit_strong")
+	if opponent == null or not opponent.visible or global_position.distance_to(opponent.global_position) > 3.5:
+		# Fernangriff (z. B. Feuerball): nur abgefangen.
+		return
+	facing = 1 if opponent.global_position.x > global_position.x else -1
+	var hit: Dictionary = ATTACKS.konter.duplicate()
+	hit.damage = maxf(atk.get("damage", 0.0) * 1.3, hit.damage)
+	_play("strong", 2.2)
+	attack_timer = maxf(attack_timer, 0.35)
+	if opponent.take_hit(hit, Vector3(facing, 0.6, 0).normalized(), false, outgoing_multiplier()):
+		add_special_energy(hit.damage * SPECIAL_PER_DAMAGE_DEALT)
+		SpecialFX.hit(self, opponent.global_position.lerp(global_position, 0.25) + Vector3(0, 1.0, 0), color, hit.damage)
 
 
 func start_special() -> void:
@@ -904,6 +974,9 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 	if dome_time > 0.0:
 		# In der Lichtkuppel des Paladins prallt alles ab.
 		Audio.sfx("shield_block", 1.3)
+		return false
+	if konter_time > 0.0:
+		_counter_strike(atk)
 		return false
 	var multiplier := (POWER_MULTIPLIER if powered else 1.0) * attacker_multiplier
 	if shielding:
@@ -1200,6 +1273,8 @@ func _update_visuals(delta: float) -> void:
 		_play("stunned")
 	elif roll_time > 0.0:
 		return
+	elif konter_time > 0.0:
+		_play("shield")
 	elif current_anim in ATTACKS or current_anim in ["weak", "strong", "kick", "special", "grab", "throw", "smash_charge"]:
 		if attack_timer > 0.0 or _attack_anim_running():
 			return

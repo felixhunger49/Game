@@ -51,6 +51,7 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 | Starker Angriff | G | K (oder Num 2) |
 | Tritt | H | L (oder Num 3) |
 | Spezialattacke | T | I (oder Num 5) |
+| Rettungssprung / Konter | W + T / S + T | Pfeil hoch + I / Pfeil runter + I |
 | Richtungs-Angriffe | W oder S halten + F/G; in der Luft: F mit W, S oder zurück (A/D) | genauso mit Pfeilen und J/K |
 | Ausweichrolle | 2× schnell links oder rechts, oder Umschalt halten + A/D | 2× schnell Pfeil links oder rechts, oder Abwehren halten + links/rechts |
 | Smash-Angriff aufladen | G gedrückt halten, loslassen | K gedrückt halten, loslassen |
@@ -81,6 +82,8 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 **Greifen und Werfen:** Abwehren halten und schwach angreifen packt den Gegner, auch wenn er gerade abwehrt. Im Griff: schwacher Angriff schlägt zu, vor/zurück wirft nach vorne oder hinter sich, hoch wirft nach oben, runter nach unten. Wer gepackt ist, kommt durch schnelles Tastendrücken früher frei. Daneben gegriffen: kurz ohne Schild.
 
 **In der Luft:** Abwehren antippen = ausweichen (kurz unverwundbar, einmal pro Sprung). Runter halten = schnell fallen. In der Luft dreht man sich nicht um (wie bei Smash), so gibt es auch einen Angriff nach hinten.
+
+**Spezial je Richtung:** Spezial ohne Richtung (oder zur Seite) ist das eigene Spezial der Figur und braucht volle Energie. Dazu haben alle Figuren zwei Spezials, die keine Energie kosten: hoch + Spezial ist ein Rettungssprung mit Schlag nach oben (einmal pro Sprung, um von unten zurück auf die Bühne zu kommen), runter + Spezial ist ein Konter: Wer in dieser kurzen Haltung zuschlägt, trifft ins Leere und bekommt selbst einen harten Schlag ab (danach kurz warten bis zum nächsten Konter).
 
 **Richtungs-Angriffe:** Wie bei Smash hängt der Angriff von der gehaltenen Richtung ab. Am Boden: hoch + schwach = Schlag nach oben, runter + schwach = tiefer Schlag, hoch + stark = großer Hieb nach oben, runter + stark = Feger, der vorne und hinten trifft (beide lassen sich wie der Smash-Angriff aufladen). In der Luft mit dem schwachen oder starken Angriff: ohne Richtung oder vorwärts = Tritt nach vorne, zurück = Drehtritt nach hinten, hoch = Uppercut, runter = Schlag nach unten (schleudert den Gegner in die Tiefe, steht er am Boden, prallt er ab).
 

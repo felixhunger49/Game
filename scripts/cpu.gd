@@ -111,13 +111,21 @@ func _physics_process(delta: float) -> void:
 		if me.velocity.y < 1.0 and me.jumps_left > 0 and think_timer <= 0.0:
 			_tap("jump", 0.3)
 			think_timer = 0.25
-		elif me.jumps_left == 0 and me.special_ready() and me.fighter.get("special", "") == "aufwaerts":
+		elif me.jumps_left == 0 and not me.special_air_used and me.velocity.y < 0.0:
+			# Keine Sprünge mehr: Rettungssprung (hoch + Spezial).
+			_tap("up", 0.15)
 			_tap("special")
 		_hold(want)
 		return
 
-	# 2) Blocken, wenn der Gegner nah ist und gerade zuschlägt.
+	# 2) Blocken, wenn der Gegner nah ist und gerade zuschlägt (manchmal stattdessen kontern).
 	var foe_attacking: bool = foe.pending_attack != "" or foe.attack_timer > 0.15
+	if dist < 2.0 and foe.pending_attack != "" and me.konter_cooldown <= 0.0 and think_timer <= 0.0 \
+			and randf() < level.block * 0.3:
+		think_timer = 0.4
+		_tap("down", 0.12)
+		_tap("special")
+		return
 	if shield_time > 0.0 or (dist < 2.2 and foe_attacking and think_timer <= 0.0 and randf() < level.block):
 		if shield_time == 0.0:
 			shield_time = 0.35
