@@ -83,7 +83,7 @@ func _ready() -> void:
 			MapLook.sphere(plat, 0.5, pos + Vector3(width * 0.45, 0.25, -0.4), leaf_light, Vector3(1.4, 0.6, 1.0))
 		MapLook.cylinder(plat, 0.04, 1.3, pos + Vector3(-width * 0.3, -0.7, 0.6), vine, 0.02, Vector3.ZERO, 5)
 	# Blätterkrone über dem obersten Ast.
-	if not MapLook.sprite(plat, D + "krone.png", Vector3(-9.8, 7.6, -1.6), 4.2):
+	if not MapLook.sprite(plat, D + "krone.png", Vector3(-9.8, 6.6, -1.6), 5.5):
 		MapLook.sphere(plat, 2.6, Vector3(-9.8, 9.4, -1.4), leaf, Vector3(1.6, 0.6, 1.0))
 		MapLook.sphere(plat, 1.8, Vector3(-7.6, 8.9, -1.0), leaf_light, Vector3(1.4, 0.5, 1.0))
 		MapLook.sphere(plat, 1.4, Vector3(-12.4, 8.6, -0.9), leaf_light, Vector3(1.4, 0.5, 1.0))
@@ -135,7 +135,7 @@ func _ready() -> void:
 		var base := Vector3(t[0], 0.0, t[1])
 		var s: float = t[2]
 		tree_i += 1
-		if MapLook.sprite(bg, D + "baum_%d.png" % (1 + tree_i % 2), base + Vector3(0, -0.15, 0), 9.5 * s, t[0] > 0.0,
+		if MapLook.sprite(bg, D + "baum_%d.png" % (1 + tree_i % 3), base + Vector3(0, -0.15, 0), 8.5 * s, t[0] > 0.0,
 				Color(0.92, 0.97, 0.92)):
 			continue
 		MapLook.cylinder(bg, 0.35 * s, 7.0 * s, base + Vector3(0, 3.5 * s, 0), trunk, 0.25 * s, Vector3.ZERO, 8)
