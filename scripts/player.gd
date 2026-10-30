@@ -1043,13 +1043,25 @@ func _update_visuals(delta: float) -> void:
 	elif roll_time > 0.0:
 		return
 	elif current_anim in ATTACKS or current_anim in ["weak", "strong", "kick", "special", "grab", "throw", "smash_charge"]:
-		if attack_timer > 0.0:
+		if attack_timer > 0.0 or _attack_anim_running():
 			return
 		_play_movement()
 	elif shielding:
 		_play("shield")
 	else:
 		_play_movement()
+
+
+## Ein Schlag darf ganz zu Ende gespielt werden (auch wenn man schon wieder angreifen könnte), solange die Figur
+## still steht bzw. beim Luftangriff noch in der Luft ist. Laufen, Springen, Schild oder ein Treffer brechen ihn ab.
+func _attack_anim_running() -> bool:
+	if anim_player == null or not anim_player.is_playing() or shielding:
+		return false
+	if anim_player.current_animation != Roster.anim_name(fighter, current_anim):
+		return false
+	if current_anim == "luft":
+		return not is_on_floor()
+	return is_on_floor() and absf(velocity.x) < 0.5
 
 
 ## Lädt bei Figuren mit "anim_dir" jede Aktion aus einer eigenen Datei (z. B. von Mixamo) in eine
@@ -1344,42 +1356,39 @@ func _setup_weapons(model: Node3D) -> void:
 	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false)
 	if skeleton == null:
 		return
-	# Waffen aus einem anderen Modell (z. B. Schwert und Schild des KayKit-Ritters) an Knochen hängen.
+	# Waffen aus einem anderen Modell (z. B. Schwert und Schild des KayKit-Ritters) in die Hände legen:
+	# {Knochen: [Modell, Knotenname, Einstellungen]}. Wie die Waffe in der Faust liegt, wird aus den
+	# Fingerknochen der Figur berechnet (siehe _hand_grip), deshalb passt sie bei jeder Figur.
 	var attach_from: Dictionary = fighter.get("attach_from", {})
 	for bone_name in attach_from:
 		if skeleton.find_bone(bone_name) == -1:
 			continue
-		var source: Node = load(attach_from[bone_name][0]).instantiate()
-		var weapon: Node3D = source.find_child(attach_from[bone_name][1], true, false)
+		var entry: Array = attach_from[bone_name]
+		var source: Node = load(entry[0]).instantiate()
+		var weapon: Node3D = source.find_child(entry[1], true, false)
 		if weapon:
 			weapon = weapon.duplicate()
 			var slot := BoneAttachment3D.new()
 			slot.bone_name = bone_name
 			skeleton.add_child(slot)
 			slot.add_child(weapon)
-			# Optional: [Modell, Knoten, Drehung in Grad, Versatz, Größe]. Größe 1 wie beim KayKit-Ritter (Skala 0.8).
-			# Die Drehung hängt von der Figur ab: Mixamo legt die Handknochen je nach Modell etwas anders
-			# (siehe tools_tmp/hand_rotation.gd, rechnet sie aus der Haltung beim Held aus).
-			var entry: Array = attach_from[bone_name]
-			var rot: Vector3 = entry[2] if entry.size() > 2 else Vector3.ZERO
-			var offset: Vector3 = entry[3] if entry.size() > 3 else Vector3.ZERO
-			var s: float = 0.8 / fighter.get("scale", 0.8) * (entry[4] if entry.size() > 4 else 1.0)
-			weapon.transform = Transform3D(Basis.from_euler(rot * PI / 180.0).scaled(Vector3.ONE * s), offset * s)
+			var opts: Dictionary = entry[2] if entry.size() > 2 else {}
+			var s: float = 0.8 / fighter.get("scale", 0.8) * opts.get("groesse", 1.0)
+			weapon.transform = _hold_transform(skeleton, bone_name, opts, s)
 			weapon.visible = true
 			if fighter.get("two_handed", false) and bone_name == "mixamorig_RightHand":
 				two_hand_weapon = weapon
 				two_hand_skeleton = skeleton
 		source.free()
 
-	# Gebauter Bogen in der linken Hand: [Drehung in Grad, Versatz] (siehe _make_bow).
+	# Gebauter Bogen in der linken Hand (siehe _make_bow), Einstellungen wie bei attach_from.
 	if fighter.has("bow_hand") and skeleton.find_bone("mixamorig_LeftHand") != -1:
 		var slot := BoneAttachment3D.new()
 		slot.bone_name = "mixamorig_LeftHand"
 		skeleton.add_child(slot)
 		var bow := _make_bow()
-		var s: float = 0.8 / fighter.get("scale", 0.8)
-		var rot: Vector3 = fighter.bow_hand[0]
-		bow.transform = Transform3D(Basis.from_euler(rot * PI / 180.0).scaled(Vector3.ONE * s), fighter.bow_hand[1] * s)
+		var opts: Dictionary = fighter.bow_hand
+		bow.transform = _hold_transform(skeleton, "mixamorig_LeftHand", opts, 0.8 / fighter.get("scale", 0.8) * opts.get("groesse", 1.0))
 		slot.add_child(bow)
 
 	var attach: Dictionary = fighter.get("attach", {})
@@ -1392,6 +1401,78 @@ func _setup_weapons(model: Node3D) -> void:
 		slot.bone_name = bone_name
 		skeleton.add_child(slot)
 		slot.add_child(load(attach[bone_name]).instantiate())
+
+
+## Faust einer Hand im Raum des Handknochens: origin = Mitte der Faust (dort, wo ein Griff durchgeht),
+## x = Richtung, in die ein gehaltener Stiel zum Daumen hin herausschaut, y = Richtung der Fingerknöchel
+## (nach vorne aus der Faust), z = Handfläche. Mixamo-Hände: Finger entlang +y, Daumen bei der rechten Hand
+## auf +x, bei der linken auf -x, Handfläche +z. Die genaue Lage kommt aus den Fingerknochen der Figur.
+func _hand_grip(skeleton: Skeleton3D, bone_name: String) -> Transform3D:
+	var bone := skeleton.find_bone(bone_name)
+	var hand := skeleton.get_bone_global_rest(bone).affine_inverse()
+	var prefix := bone_name  # z. B. mixamorig_RightHand -> mixamorig_RightHandIndex1
+	var knuckles: Array[Vector3] = []
+	for finger in ["Index1", "Middle1", "Ring1", "Pinky1"]:
+		var i := skeleton.find_bone(prefix + finger)
+		if i != -1:
+			knuckles.append(hand * skeleton.get_bone_global_rest(i).origin)
+	var side := -1.0 if "Left" in bone_name else 1.0
+	# Länge der Hand: Unterarm-Länge als Maß, falls die Fingerknochen fehlen oder komisch sitzen.
+	var size := skeleton.get_bone_rest(bone).origin.length() * 0.85
+	var knuckle := Vector3(0, size, 0)
+	if not knuckles.is_empty():
+		knuckle = Vector3.ZERO
+		for k in knuckles:
+			knuckle += k
+		knuckle /= knuckles.size()
+		if knuckles.size() == 1:
+			# Nur der Zeigefinger: die Mitte der Knöchel liegt etwas weiter zum kleinen Finger hin.
+			knuckle.x -= side * knuckle.length() * 0.2
+		knuckle = knuckle.normalized() * clampf(knuckle.length(), size * 0.6, size * 1.3)
+	var forward := knuckle.normalized()
+	var up := (Vector3(side, 0, 0) - forward * forward.x * side).normalized()
+	var palm := side * up.cross(forward)
+	var length := knuckle.length()
+	return Transform3D(Basis(up, forward, palm), knuckle * 0.92 + palm * length * 0.28)
+
+
+## Lage einer gehaltenen Sache im Handknochen. opts: "art" (griff, schild, buch, bogen), "griff" (Stelle auf dem
+## Stiel in Waffen-Einheiten, an der die Faust sitzt), "dreh" (zusätzliche Drehung in Grad), "versatz"
+## (zusätzliche Verschiebung in Faust-Richtungen x = Daumen, y = Knöchel, z = Handfläche, in Waffen-Einheiten),
+## "umgekehrt" (Rückhandgriff: Klinge zeigt zum kleinen Finger), "rolle" (Faust um die Knöchel-Richtung drehen,
+## in Grad, für Hände, deren Knochen anders liegt als bei Mixamo üblich).
+func _hold_transform(skeleton: Skeleton3D, bone_name: String, opts: Dictionary, s: float) -> Transform3D:
+	var fist := _hand_grip(skeleton, bone_name)
+	var forward := fist.basis.y
+	# "rolle": Faust um die Knöchel-Richtung drehen, für Hände ohne Daumenknochen, deren Knochen anders liegt.
+	var roll := deg_to_rad(opts.get("rolle", 0.0))
+	var up := fist.basis.x.rotated(forward, roll)
+	var palm := fist.basis.z.rotated(forward, roll)
+	if opts.get("umgekehrt", false):
+		up = -up
+	var basis: Basis
+	var origin := fist.origin
+	match opts.get("art", "griff"):
+		"schild":
+			# Schild vor der Faust, Vorderseite (+z) nach vorne, oben (+y) Richtung Daumen.
+			basis = Basis(up.cross(forward), up, forward)
+		"buch":
+			# Aufgeschlagenes Buch liegt auf der Handfläche.
+			basis = Basis(up, palm.cross(up), palm)
+		"bogen":
+			# Bogen: Wurfarme entlang des Griffs, Bauch (+z) nach vorne, Sehne zum Körper.
+			basis = Basis(up.cross(forward), up, forward)
+		_:
+			# Stielwaffe: Stiel (+y) zum Daumen hinaus, Schneide/Kopf (-x) nach vorne aus der Faust.
+			basis = Basis(-forward, up, -forward.cross(up))
+	var extra: Vector3 = opts.get("dreh", Vector3.ZERO)
+	basis = basis * Basis.from_euler(extra * PI / 180.0)
+	var shift: Vector3 = opts.get("versatz", Vector3.ZERO)
+	origin += (up * shift.x + forward * shift.y + palm * shift.z) * s
+	# Die Griffstelle der Waffe kommt in die Faust.
+	var grip: float = opts.get("griff", 0.0)
+	origin -= basis.y * grip * s
+	return Transform3D(basis.scaled(Vector3.ONE * s), origin)
 
 
 ## Einfacher Holzbogen aus Zylindern: Griff in der Mitte (Ursprung), Wurfarme entlang y, Sehne dahinter (-z).
