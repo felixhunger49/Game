@@ -8,7 +8,8 @@ class_name Roster
 ## special:  Art der Spezialattacke (siehe SPECIALS)
 ## anims:    welche Animation des Modells für welche Aktion benutzt wird
 ## anim_overrides: einzelne Animationen, die von den Standard-Animationen abweichen
-## attach_from: Waffen aus einem anderen Modell an Knochen hängen: {Knochen: [Modell, Knotenname]}
+## attach_from: Waffen aus einem anderen Modell in die Hände legen: {Knochen: [Modell, Knotenname, Einstellungen]}
+##           (Einstellungen siehe Player._hold_transform: art, griff, groesse, dreh, versatz, umgekehrt)
 ## anim_dir: Ordner mit einer Animationsdatei pro Aktion (idle.fbx, run.fbx, weak.fbx, special.fbx …)
 ## anim_files: andere Datei für eine Aktion als <aktion>.fbx: {Aktion: Dateiname}
 ## anim_speeds: Abspielgeschwindigkeit je Aktion statt der Standardwerte aus Player.ATTACKS
@@ -73,10 +74,10 @@ const FIGHTERS := [
 		# vom Kampfroboter. Große Axt vom KayKit-Barbaren (einhändig).
 		"name": "Barbar", "passive": "berserker", "flip": "rad", "voice": 0.85,
 		"scene": "res://assets/barbar/modell.fbx", "anim_dir": "res://assets/barbar/", "scale": 200.0, "special": "wirbel",
-		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.0},
-		"anim_trim": {"weak": [0.35, 0.85], "strong": [0.30, 1.05], "kick": [0.25, 0.95], "special": [0.50, 1.60]},
+		"anim_speeds": {"weak": 2.5, "strong": 1.6, "kick": 1.6, "special": 1.3},
+		"anim_trim": {"weak": [0.40, 1.40], "strong": [0.30, 1.40], "kick": [0.20, 1.10], "special": [0.30, 1.80]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Barbarian.glb", "2H_Axe", Vector3(-85, 110, 158), Vector3(0.02, 0.19, -0.01)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Barbarian.glb", "2H_Axe", {"griff": -0.1}],
 		},
 	},
 	{
@@ -84,11 +85,11 @@ const FIGHTERS := [
 		# (rechts normaler Griff, links Rückhandgriff).
 		"name": "Schurke", "passive": "kritisch", "flip": "doppelsalto", "voice": 1.2,
 		"scene": "res://assets/schurkin/idle.fbx", "anim_dir": "res://assets/schurkin/", "scale": 185.0, "special": "sturm",
-		"anim_speeds": {"weak": 1.5, "strong": 1.1, "kick": 1.6, "special": 1.4},
-		"anim_trim": {"weak": [0.05, 0.50], "strong": [0.20, 1.00], "kick": [0.25, 0.95], "special": [0.00, 1.40]},
+		"anim_speeds": {"weak": 2.2, "strong": 1.8, "kick": 1.6, "special": 1.4},
+		"anim_trim": {"weak": [0.15, 1.15], "strong": [0.50, 1.90], "kick": [0.30, 1.35], "special": [0.00, 1.50]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Rogue.glb", "Knife", Vector3(0, -69, -50), Vector3.ZERO, 0.5],
-			"mixamorig_LeftHand": [KAYKIT_CHARS + "Rogue.glb", "Knife_Offhand", Vector3(49, -19, 179), Vector3.ZERO, 0.5],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Rogue.glb", "Knife", {"griff": -0.1, "groesse": 0.5}],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Rogue.glb", "Knife_Offhand", {"griff": -0.1, "groesse": 0.5, "umgekehrt": true}],
 		},
 	},
 	{
@@ -96,11 +97,11 @@ const FIGHTERS := [
 		"name": "Held", "passive": "heldenmut", "flip": "salto", "voice": 1.0, "scene": "res://assets/ritter_neu/idle.fbx",
 		"anim_dir": "res://assets/ritter_neu/", "scale": 195.0, "special": "justice",
 		# Nur der eigentliche Angriff, ohne langes Ausholen und Zurückgehen.
-		"anim_speeds": {"weak": 1.4, "strong": 1.0, "kick": 1.2},
-		"anim_trim": {"weak": [0.25, 1.00], "strong": [0.15, 1.25], "kick": [0.30, 1.00], "special": [0.40, 1.30]},
+		"anim_speeds": {"weak": 2.0, "strong": 1.3, "kick": 1.2},
+		"anim_trim": {"weak": [0.15, 1.10], "strong": [0.15, 1.25], "kick": [0.25, 1.00], "special": [0.40, 1.30]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Knight.glb", "1H_Sword", Vector3(0, -90, -90)],
-			"mixamorig_LeftHand": [KAYKIT_CHARS + "Knight.glb", "Badge_Shield", Vector3(-90, 0, 135)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Knight.glb", "1H_Sword", {"griff": -0.15, "rolle": -90.0}],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Knight.glb", "Badge_Shield", {"art": "schild", "versatz": Vector3(0, 0.2, 0)}],
 		},
 	},
 	{
@@ -109,11 +110,11 @@ const FIGHTERS := [
 		# und Langschild vom KayKit-Paladin.
 		"name": "Paladin", "passive": "heilung", "flip": "schraube", "voice": 0.95,
 		"scene": "res://assets/paladin/modell.fbx", "anim_dir": "res://assets/paladin/", "scale": 190.0, "special": "lichtschild",
-		"anim_speeds": {"weak": 2.0, "strong": 1.0, "kick": 1.6, "special": 1.3},
-		"anim_trim": {"weak": [0.05, 0.55], "strong": [0.20, 0.95], "kick": [0.00, 0.70]},
+		"anim_speeds": {"weak": 1.6, "strong": 1.3, "kick": 1.6, "special": 1.3},
+		"anim_trim": {"weak": [0.05, 0.85], "strong": [0.20, 1.20], "kick": [0.05, 0.85]},
 		"attach_from": {
-			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", Vector3(-43, -116, 106), Vector3(0.26, -0.15, 0.11)],
-			"mixamorig_LeftHand": [KAYKIT_CHARS + "Paladin.glb", "Rectangle_Shield", Vector3(-90, 45, 0), Vector3(-0.35, 0, 0)],
+			"mixamorig_RightHand": ["res://assets/paladin/hammer.glb", "Hammer", {"griff": 0.0, "groesse": 0.8}],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Paladin.glb", "Rectangle_Shield", {"art": "schild", "versatz": Vector3(0, 0.2, 0)}],
 		},
 	},
 	{
@@ -122,11 +123,11 @@ const FIGHTERS := [
 		"name": "Brummbart", "passive": "schwergewicht", "flip": "purzeln", "voice": 0.75,
 		"scene": "res://assets/brummbart/idle.fbx", "anim_dir": "res://assets/brummbart/", "scale": 195.0,
 		"special": "erdbeben",
-		"anim_speeds": {"weak": 1.5, "strong": 1.1, "kick": 1.4, "special": 1.1},
-		"anim_trim": {"weak": [0.40, 1.15], "strong": [0.40, 1.50], "kick": [0.20, 0.80], "special": [0.40, 1.60]},
+		"anim_speeds": {"weak": 2.0, "strong": 1.4, "kick": 1.4, "special": 1.2},
+		"anim_trim": {"weak": [0.30, 1.20], "strong": [0.35, 1.55], "kick": [0.20, 0.90], "special": [0.30, 1.75]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Brummbart.glb", "1H_Axe", Vector3(0, -90, -90)],
-			"mixamorig_LeftHand": [KAYKIT_CHARS + "Brummbart.glb", "Barbarian_Round_Shield", Vector3(-90, 0, 135)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Brummbart.glb", "1H_Axe", {"griff": -0.1}],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Brummbart.glb", "Barbarian_Round_Shield", {"art": "schild", "versatz": Vector3(0, 0.2, 0)}],
 		},
 	},
 	{
@@ -134,11 +135,11 @@ const FIGHTERS := [
 		# Fallen/Landen/Tritt/Block/Rolle/Taumeln/Jubel vom Kampfroboter. Zauberstab und Buch von der KayKit-Hexe.
 		"name": "Hexe", "passive": "gleiten", "flip": "schweben", "voice": 1.25,
 		"scene": "res://assets/hexe/modell.fbx", "anim_dir": "res://assets/hexe/", "scale": 190.0, "special": "schwein",
-		"anim_speeds": {"weak": 2.0, "strong": 1.35, "kick": 1.6, "special": 1.0},
-		"anim_trim": {"weak": [0.35, 0.85], "strong": [1.00, 2.00], "kick": [0.25, 0.95], "special": [0.20, 1.20]},
+		"anim_speeds": {"weak": 2.4, "strong": 1.6, "kick": 1.6, "special": 1.2},
+		"anim_trim": {"weak": [0.30, 1.40], "strong": [0.80, 2.30], "kick": [0.25, 1.30], "special": [0.20, 1.45]},
 		"attach_from": {
-			"mixamorig_RightHand": [KAYKIT_CHARS + "Hexe.glb", "1H_Wand", Vector3(-41, 59, -91), Vector3(0, 0.07, 0)],
-			"mixamorig_LeftHand": [KAYKIT_CHARS + "Hexe.glb", "Spellbook_open", Vector3(0, -90, -90)],
+			"mixamorig_RightHand": [KAYKIT_CHARS + "Hexe.glb", "1H_Wand", {"griff": -0.1}],
+			"mixamorig_LeftHand": [KAYKIT_CHARS + "Hexe.glb", "Spellbook_open", {"art": "buch", "groesse": 0.5, "versatz": Vector3(0, 0, 0.1)}],
 		},
 	},
 	{
@@ -146,10 +147,10 @@ const FIGHTERS := [
 		"name": "Jägerin", "passive": "flink", "flip": "doppel_rueckwaerts", "voice": 1.3,
 		"scene": "res://assets/jaegerin/idle.fbx", "anim_dir": "res://assets/jaegerin/", "scale": 185.0,
 		"special": "pfeilregen", "bow": true,
-		"anim_speeds": {"weak": 1.5, "strong": 1.2, "kick": 1.4, "special": 1.0},
-		"anim_trim": {"weak": [0.15, 0.60], "strong": [0.20, 1.00], "kick": [0.35, 1.05], "special": [0.00, 1.50]},
-		# Selbst gebauter Bogen in der linken Hand (Drehung, Versatz).
-		"bow_hand": [Vector3(0, 0, 90), Vector3(0, 0.08, 0)],
+		"anim_speeds": {"weak": 1.8, "strong": 1.2, "kick": 1.4, "special": 1.0},
+		"anim_trim": {"weak": [0.10, 0.85], "strong": [0.20, 1.00], "kick": [0.20, 1.05], "special": [0.00, 1.50]},
+		# Selbst gebauter Bogen in der linken Hand (Einstellungen wie bei attach_from).
+		"bow_hand": {"art": "bogen"},
 	},
 	{
 		# Platzhalter: rote Variante der KayKit-Schurkin, bis das eigene Modell aus ComfyUI fertig ist.
@@ -163,22 +164,24 @@ const FIGHTERS := [
 		"scene": "res://assets/moench/run.fbx", "anim_dir": "res://assets/moench/", "scale": 185.0,
 		"special": "hundert_faeuste",
 		# Mixamo-Schläge sind lang: nur der eigentliche Schlag, schneller abgespielt, damit er in der Angriffszeit ganz abläuft.
-		"anim_speeds": {"weak": 1.5, "strong": 1.7, "kick": 1.6},
-		"anim_trim": {"weak": [0.10, 0.45], "strong": [0.20, 1.40], "kick": [0.25, 0.95]},
+		"anim_speeds": {"weak": 1.8, "strong": 1.7, "kick": 1.6},
+		"anim_trim": {"weak": [0.05, 0.80], "strong": [0.20, 1.55], "kick": [0.30, 1.35]},
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), Skelett und Animationen von Mixamo.
 		"name": "Kampfroboter", "passive": "overcharge", "flip": "propeller", "voice": 0.8,
 		"scene": "res://assets/kampfroboter/idle.fbx", "anim_dir": "res://assets/kampfroboter/", "scale": 215.0,
 		"special": "laser",
-		"anim_speeds": {"weak": 1.7, "strong": 1.5, "kick": 1.6},
-		"anim_trim": {"weak": [0.00, 0.40], "strong": [0.00, 1.10], "kick": [0.25, 0.95]},
+		"anim_speeds": {"weak": 1.7, "strong": 1.5, "kick": 1.7},
+		"anim_trim": {"weak": [0.05, 0.75], "strong": [0.00, 1.10], "kick": [0.35, 1.40]},
 	},
 	{
 		# Eigene Figur aus ComfyUI (Flux + Trellis), ersetzt den Magier. Skelett und Animationen von Mixamo.
 		"name": "Magierin", "passive": "arkan", "flip": "pirouette", "voice": 1.2,
 		"scene": "res://assets/magierin/idle.fbx", "anim_dir": "res://assets/magierin/", "scale": 195.0,
 		"special": "feuerball",
+		"anim_speeds": {"weak": 2.0, "strong": 1.6, "kick": 1.6, "special": 1.3},
+		"anim_trim": {"strong": [0.20, 1.90], "kick": [0.30, 1.30], "special": [0.10, 1.50]},
 	},
 ]
 
