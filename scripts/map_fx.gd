@@ -218,7 +218,7 @@ const TEX_MEAN := {
 	"stoff": Color(0.789, 0.750, 0.663),
 	"sand": Color(0.948, 0.681, 0.234),
 	"sandstein": Color(0.897, 0.683, 0.325),
-	"rost": Color(0.35, 0.25, 0.2),
+	"rost": Color(0.170, 0.155, 0.144),
 }
 
 
