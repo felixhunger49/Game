@@ -9,6 +9,10 @@ const COUNTDOWN_VOICES := ["drei", "zwei", "eins", "kampf"]
 
 var state := State.SELECT
 var ready_flags := [false, false]
+## Farben von Spieler 3 und 4 und der Teams (Rot, Blau) im Team-Modus.
+const EXTRA_COLORS := [Color(0.45, 0.95, 0.45), Color(1, 0.5, 0.85)]
+const TEAM_COLORS := [Color(1, 0.38, 0.3), Color(0.35, 0.65, 1)]
+const TEAM_NAMES := ["Team Rot", "Team Blau"]
 var item_timer := 0.0
 ## Die Smash-Kugel kommt seltener als normale Items (Sekunden bis zur nächsten).
 const SMASH_BALL_INTERVAL := Vector2(25, 40)
@@ -18,8 +22,8 @@ var countdown_time := 0.0
 var countdown_step := -1
 var map_events: MapEvents
 var energy_bars: Array[ProgressBar] = []
-## Solo-Modus: der Computer steuert Spieler 2.
-var cpu: CpuPlayer
+## Computer-Spieler: im Solo-Modus Spieler 2, im Mehrspieler-Kampf Spieler 3 und 4 ohne Controller.
+var cpus: Array[CpuPlayer] = []
 var map_node: Node3D
 ## Ziele zerstören: Zeit läuft, bis alle Ziele kaputt sind.
 var targets_total := 0
@@ -68,19 +72,23 @@ func _ready() -> void:
 	_add_vignette()
 	_apply_graphics(map)
 
-	players[0].opponent = players[1]
-	players[1].opponent = players[0]
+	if _multi():
+		_add_extra_players(map)
+	for p in players:
+		p.rivals = players.filter(func(other): return other != p)
+		if Settings.teams and _multi():
+			p.team = 1 if p.player_id % 2 == 1 else 2
+			p.color = TEAM_COLORS[p.team - 1] if p.player_id <= 2 else TEAM_COLORS[p.team - 1].lightened(0.35)
 	for i in players.size():
 		var p = players[i]
-		var spawn: Node3D = map.get_node("Spawn%d" % (i + 1))
-		p.position = spawn.position
-		p.spawn_position = spawn.position
+		var spawn_pos := _spawn_position(map, i)
+		p.position = spawn_pos
+		p.spawn_position = spawn_pos
 		p.stocks = Settings.stocks
 		p.blast_zone = MapLook.blast_zone(map)
 		p.set_fighter(Settings.choices[i])
 		p.fell_off.connect(_on_player_fell_off)
 		p.ko_hit.connect(_on_ko_hit)
-		p.final_smash_started.connect(_on_final_smash)
 	if Settings.boss_mode:
 		# Spieler 2 wird zum Riesen-Kampfroboter und ist sofort bereit.
 		var index := Roster.FIGHTERS.map(func(x): return x.name).find("Kampfroboter")
@@ -106,6 +114,12 @@ func _ready() -> void:
 			Settings.choices[1] = (Settings.choices[0] + randi_range(1, Roster.count() - 1)) % Roster.count()
 		players[1].set_fighter(Settings.choices[1])
 		ready_flags[1] = true
+	# Spieler 3 und 4 ohne Controller: der Computer nimmt zufällig einen Kämpfer und ist sofort bereit.
+	for i in range(2, players.size()):
+		if not Settings.is_human(i + 1):
+			Settings.choices[i] = randi() % Roster.count()
+			players[i].set_fighter(Settings.choices[i])
+			ready_flags[i] = true
 	bottom_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	bottom_label.add_theme_font_size_override("font_size", 15)
 	bottom_label.add_theme_constant_override("outline_size", 6)
@@ -117,6 +131,49 @@ func _ready() -> void:
 	if Settings.campaign:
 		_create_campaign_label()
 	Audio.music(Settings.current_map().music)
+
+
+## Mehrspieler-Kampf mit mehr als zwei Kämpfern (nicht Solo, Ziele oder Endboss).
+func _multi() -> bool:
+	return Settings.fighters > 2 and not (Settings.solo or Settings.campaign or Settings.target_mode or Settings.boss_mode)
+
+
+## Spieler 3 und 4 als Kopien von Spieler 1, mit eigener Farbe und Anzeige oben.
+func _add_extra_players(_map: Node3D) -> void:
+	var scene: PackedScene = load("res://scenes/player.tscn")
+	for i in range(2, Settings.fighters):
+		var p: CharacterBody3D = scene.instantiate()
+		p.player_id = i + 1
+		p.color = EXTRA_COLORS[i - 2]
+		p.start_facing = 1 if i == 2 else -1
+		p.name = "Player%d" % (i + 1)
+		add_child(p)
+		players.append(p)
+		ready_flags.append(false)
+		var label: Label = labels[0].duplicate()
+		label.name = "P%dLabel" % (i + 1)
+		labels[0].get_parent().add_child(label)
+		labels.append(label)
+	# Vier Anzeigen nebeneinander statt zwei: Spieler 1, 3, 4, 2 von links nach rechts.
+	var order := [0, 2, 3, 1] if players.size() == 4 else [0, 2, 1]
+	var width := 1232.0 / order.size()
+	for slot in order.size():
+		var label: Label = labels[order[slot]]
+		label.offset_left = 24 + slot * width
+		label.offset_right = 24 + (slot + 1) * width - 12
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		label.add_theme_font_size_override("font_size", 24)
+
+
+## Startplatz: Spieler 1 und 2 an den Plätzen der Map, 3 und 4 dazwischen (etwas höher, sie fallen herunter).
+func _spawn_position(map: Node3D, i: int) -> Vector3:
+	var a: Vector3 = map.get_node("Spawn1").position
+	var b: Vector3 = map.get_node("Spawn2").position
+	match i:
+		0: return a
+		1: return b
+		2: return a.lerp(b, 0.3) + Vector3(0, 1.0, 0)
+	return a.lerp(b, 0.7) + Vector3(0, 1.0, 0)
 
 
 func _process(delta: float) -> void:
@@ -143,7 +200,7 @@ func _process(delta: float) -> void:
 func _handle_select() -> void:
 	for i in players.size():
 		var prefix := "p%d_" % (i + 1)
-		if ready_flags[i] or (Settings.solo and i == 1):
+		if ready_flags[i] or (Settings.solo and i == 1) or not Settings.is_human(i + 1):
 			continue
 		var step := 0
 		if Input.is_action_just_pressed(prefix + "left"):
@@ -166,7 +223,7 @@ func _handle_select() -> void:
 			players[i].showcase_spin = false
 			Audio.sfx("menu_select")
 			players[i].say("auswahl", "ha")
-	if ready_flags[0] and ready_flags[1]:
+	if not ready_flags.has(false):
 		_start_fight()
 
 
@@ -215,10 +272,12 @@ func _begin_fight() -> void:
 		add_child(boss_ai)
 		boss_ai.setup(players[1], players[0], 2, map_node)
 		return
-	if Settings.solo:
-		cpu = CpuPlayer.new()
-		add_child(cpu)
-		cpu.setup(players[1], players[0], Settings.cpu_difficulty(), map_node)
+	for i in range(1, players.size()):
+		if (Settings.solo and i == 1) or not Settings.is_human(i + 1):
+			var cpu := CpuPlayer.new()
+			add_child(cpu)
+			cpu.setup(players[i], players[0], Settings.cpu_difficulty(), map_node)
+			cpus.append(cpu)
 	if Settings.map_effects:
 		map_events = MapEvents.new()
 		add_child(map_events)
@@ -385,6 +444,10 @@ func _create_energy_bars() -> void:
 		bar.show_percentage = false
 		bar.size = Vector2(300, 18)
 		bar.position = Vector2(24 if i == 0 else 1280 - 24 - 300, 108)
+		if players.size() > 2:
+			var label: Label = labels[i]
+			bar.size = Vector2(minf(260.0, label.offset_right - label.offset_left), 14)
+			bar.position = Vector2(label.offset_left, 96)
 		var bg := StyleBoxFlat.new()
 		bg.bg_color = Color(0, 0, 0, 0.55)
 		bg.set_corner_radius_all(6)
@@ -393,7 +456,7 @@ func _create_energy_bars() -> void:
 		fill.set_corner_radius_all(6)
 		bar.add_theme_stylebox_override("background", bg)
 		bar.add_theme_stylebox_override("fill", fill)
-		if i == 1:
+		if i == 1 and players.size() == 2:
 			bar.fill_mode = ProgressBar.FILL_END_TO_BEGIN
 		labels[i].get_parent().add_child(bar)
 		energy_bars.append(bar)
@@ -445,12 +508,6 @@ func _add_vignette() -> void:
 
 
 ## Ein Treffer schleudert eine Figur gleich aus der Arena: Zeitlupe und Zoom auf sie, wie bei Smash Bros.
-## Final Smash: die Kamera fährt während des Aufladens an die Figur heran.
-func _on_final_smash(player: CharacterBody3D) -> void:
-	ko_focus = player
-	ko_focus_time = player.FINAL_CHARGE
-
-
 func _on_ko_hit(player: CharacterBody3D) -> void:
 	if state != State.FIGHT:
 		return
@@ -462,6 +519,9 @@ func _on_ko_hit(player: CharacterBody3D) -> void:
 func _update_camera(delta: float) -> void:
 	var visible_players := players.filter(func(p): return p.visible)
 	if visible_players.is_empty():
+		return
+	if not get_tree().get_nodes_in_group(FinalSmash.GROUP).is_empty():
+		# Ein Final Smash läuft: die Szene führt die Kamera selbst.
 		return
 	if ko_focus_time > 0.0 and is_instance_valid(ko_focus):
 		# Während der Zeitlupe läuft delta langsamer, die Kamera soll aber in Echtzeit heranfahren.
@@ -493,15 +553,28 @@ func _update_camera(delta: float) -> void:
 func _on_player_fell_off(player: CharacterBody3D) -> void:
 	if player.stocks > 0 or state == State.GAME_OVER:
 		return
+	# Wer noch Leben hat; im Team-Modus zählt, ob vom Team noch jemand übrig ist.
+	var alive := players.filter(func(p): return p.stocks > 0 and p.visible)
+	var sides := {}
+	for p in alive:
+		sides[p.team if p.team > 0 else -p.player_id] = true
+	if sides.size() > 1:
+		# Noch nicht vorbei: kurz anzeigen, wer raus ist.
+		center_label.text = "%s ist raus!" % _player_name(player.player_id - 1)
+		get_tree().create_timer(1.5).timeout.connect(func():
+			if state == State.FIGHT:
+				center_label.text = "")
+		return
 	state = State.GAME_OVER
 	if map_events:
 		map_events.stop()
-	var winner: CharacterBody3D = player.opponent
-	winner.cheer()
+	var winner: CharacterBody3D = alive[0] if not alive.is_empty() else players[0]
+	for p in alive:
+		p.cheer()
 	Audio.jingle("sieg")
-	if cpu:
+	for cpu in cpus:
 		cpu.queue_free()
-		cpu = null
+	cpus.clear()
 	if boss_ai:
 		boss_ai.queue_free()
 		boss_ai = null
@@ -510,9 +583,12 @@ func _on_player_fell_off(player: CharacterBody3D) -> void:
 R: nochmal   Esc: Menü"
 	elif Settings.solo and winner.player_id == 2:
 		center_label.text = "Der Computer gewinnt!\nR: nochmal   Esc: Menü"
+	elif winner.team > 0:
+		center_label.text = "%s gewinnt!\nR: nochmal   Esc: Menü" % TEAM_NAMES[winner.team - 1]
 	else:
-		Audio.voice("spieler_%d_gewinnt" % winner.player_id)
-		center_label.text = "%s gewinnt!\nR: nochmal   Esc: Menü" % ("Du" if Settings.solo else "Spieler %d" % winner.player_id)
+		if winner.player_id <= 2:
+			Audio.voice("spieler_%d_gewinnt" % winner.player_id)
+		center_label.text = "%s gewinnt!\nR: nochmal   Esc: Menü" % ("Du" if Settings.solo else _player_name(winner.player_id - 1))
 	if Settings.campaign:
 		var won: bool = winner.player_id == 1
 		_campaign_result(won, "Sieg!" if won else ("Der Riesen-Kampfroboter hat gewonnen!" if Settings.boss_mode else "Der Computer gewinnt!"))
@@ -554,7 +630,7 @@ func _create_select_ui() -> void:
 		if Settings.target_mode and i == 1:
 			continue
 		var panel := PanelContainer.new()
-		panel.position = Vector2(24 if i == 0 else 1280 - 24 - 440, 100)
+		panel.position = Vector2(24 if i % 2 == 0 else 1280 - 24 - 440, 100 if i < 2 else 390)
 		panel.custom_minimum_size = Vector2(440, 0)
 		panel.size = Vector2(440, 0)
 		var box := VBoxContainer.new()
@@ -670,8 +746,10 @@ func _update_select_card(i: int) -> void:
 		var f: Dictionary = players[i].fighter
 		var is_ready: bool = ready_flags[i]
 		card.who.text = _player_name(i)
-		card.ready.visible = is_ready and not (Settings.solo and i == 1)
-		card.name.text = "◀  %s  ▶" % f.get("name", "") if not is_ready or (Settings.solo and i == 1) else f.get("name", "")
+		var extra_cpu := not Settings.is_human(i + 1)
+		var solo_cpu := Settings.solo and i == 1
+		card.ready.visible = is_ready and not solo_cpu and not extra_cpu
+		card.name.text = f.get("name", "") if extra_cpu or (is_ready and not solo_cpu) else "◀  %s  ▶" % f.get("name", "")
 		card.special.text = Roster.SPECIALS.get(f.get("special", ""), "")
 		card.passive.text = Roster.PASSIVES.get(f.get("passive", ""), "")
 		var style := UiStyle.card(players[i].color)
@@ -700,6 +778,8 @@ func _remove_select_ui() -> void:
 func _player_name(i: int) -> String:
 	if Settings.solo and i == 1:
 		return "Computer (%s)" % CpuPlayer.LEVELS[Settings.cpu_difficulty()].name
+	if not Settings.is_human(i + 1):
+		return "Computer %d" % (i + 1)
 	return "Spieler %d" % (i + 1)
 
 
