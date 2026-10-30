@@ -122,10 +122,10 @@ const KONTER_COOLDOWN := 1.6
 ## Rettungssprung (hoch + Spezial): Sprungkraft nach oben.
 const UP_SPECIAL_JUMP := 14.0
 ## Richtungs-Angriffe: eigene Animation aus assets/smash (oder dem Figurenordner), sonst die hier genannte.
-const DIR_ATTACKS := {"aufwaerts": "luft", "weak_hoch": "luft", "weak_tief": "kick", "strong_hoch": "luft", "strong_tief": "kick",
+const DIR_ATTACKS := {"aufwaerts": "luft", "konter": "shield", "weak_hoch": "luft", "weak_tief": "kick", "strong_hoch": "luft", "strong_tief": "kick",
 	"luft_vor": "weak", "luft_hinten": "kick", "luft_tief": "strong"}
 ## Zuschnitt der Richtungs-Animationen aus assets/smash (Mixamo) in Sekunden.
-const DIR_TRIM := {"weak_hoch": [0.15, 1.0], "weak_tief": [0.0, 1.0], "strong_hoch": [0.35, 1.35],
+const DIR_TRIM := {"aufwaerts": [0.0, 1.0], "konter": [0.0, 0.6], "weak_hoch": [0.15, 1.0], "weak_tief": [0.0, 1.0], "strong_hoch": [0.35, 1.35],
 	"strong_tief": [0.3, 1.35], "luft_vor": [0.1, 0.85], "luft_hinten": [0.5, 1.5], "luft_tief": [1.0, 2.2]}
 const SMASH_ANIMS := {"ledge_hang": [], "ledge_climb": [], "grab": [0.0, 0.9], "grab_hold": [],
 	"throw": [0.3, 1.4], "smash_charge": [0.0, 1.2],
@@ -699,7 +699,7 @@ func start_counter() -> void:
 	attack_timer = KONTER_TIME + 0.25
 	pending_attack = ""
 	_end_flip()
-	_play("shield")
+	_play("konter")
 	Audio.sfx("special_start", 1.4, -4.0)
 	SpecialFX._ring(get_parent(), global_position + Vector3(0, 1.0, 0), Color(0.6, 0.85, 1.0), 0.3, 1.3, 0.3, false)
 
@@ -1274,7 +1274,8 @@ func _update_visuals(delta: float) -> void:
 	elif roll_time > 0.0:
 		return
 	elif konter_time > 0.0:
-		_play("shield")
+		if current_anim != "konter" and current_anim != "shield":
+			_play("konter")
 	elif current_anim in ATTACKS or current_anim in ["weak", "strong", "kick", "special", "grab", "throw", "smash_charge"]:
 		if attack_timer > 0.0 or _attack_anim_running():
 			return
@@ -1317,7 +1318,7 @@ func _load_anim_files() -> void:
 		var source: AnimationPlayer = scene.find_child("AnimationPlayer", true, false)
 		if source and not source.get_animation_list().is_empty():
 			var anim: Animation = source.get_animation(source.get_animation_list()[0]).duplicate()
-			_strip_root_motion(anim, not action.begins_with("luft_"))
+			_strip_root_motion(anim, not action.begins_with("luft_") and action != "aufwaerts")
 			var trim: Array = fighter.get("anim_trim", {}).get(action,
 				LUFT_TRIM if action == "luft" else SMASH_ANIMS.get(action, DIR_TRIM.get(action, [])))
 			if trim.size() == 2:
