@@ -30,6 +30,9 @@ func _physics_process(delta: float) -> void:
 	for body in get_overlapping_bodies():
 		if not body is CharacterBody3D or not body.visible:
 			continue
+		# In der Kämpferauswahl und im Countdown steht man still, auch wenn der Startplatz auf dem Feld liegt.
+		if "controls_enabled" in body and not body.controls_enabled:
+			continue
 		if updraft:
 			body.velocity.y = move_toward(body.velocity.y, strength, 45.0 * delta)
 		elif body.velocity.y <= 1.0:

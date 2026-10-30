@@ -25,7 +25,8 @@ func _ready() -> void:
 	var pink := MapLook.mat(Color(1.0, 0.2, 0.75), 0.4, 0.0, 3.0)
 	var purple := MapLook.mat(Color(0.6, 0.3, 1.0), 0.4, 0.0, 3.0)
 	var holo := MapLook.mat(Color(0.25, 0.9, 1.0, 0.45), 0.2, 0.0, 1.5)
-	$Spawn1.position = Vector3(-5.0, 0.2, 0)
+	# Nicht im Aufwind des Lüftungsschachts (x -5.2) starten, sonst schwebt man schon in der Auswahl hoch.
+	$Spawn1.position = Vector3(-3.6, 0.2, 0)
 	$Spawn2.position = Vector3(5.0, 1.4, 0)
 	MapLook.stage_area(self, Rect2(-15.5, ARCADE_Y, 31.0, 8.4 - ARCADE_Y), HALF)
 
