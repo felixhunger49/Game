@@ -29,6 +29,8 @@ const FIRE_SHADER := preload("res://scripts/feuer.gdshader")
 const GHOST_SHADER := preload("res://scripts/geist.gdshader")
 const DRAGON_SHADER := preload("res://scripts/drache.gdshader")
 const GLOW_SHADER := preload("res://scripts/glut.gdshader")
+## Ordner mit den Flux-Texturen des Drachen (schuppen.png, bauch.png, flosse.png, je mit _normal.png).
+const DRAGON_TEX := "res://assets/final_smash/drache/"
 ## Lage eines Wolfsauges im Wolf-Modell (x = seitlich, z = nach vorne zur Schnauze).
 const WOLF_EYE := Vector3(0.17, 2.32, 2.25)
 ## Kleine Treffer während der Szene (nur Schaden, kein Wegfliegen).
@@ -473,6 +475,13 @@ func _moench() -> void:
 	add_child(body)
 	var body_mat := ShaderMaterial.new()
 	body_mat.shader = DRAGON_SHADER
+	# Gemalte Texturen benutzen, sobald sie im Projekt liegen (sonst die gezeichneten Schuppen).
+	if ResourceLoader.exists(DRAGON_TEX + "schuppen.png") and ResourceLoader.exists(DRAGON_TEX + "bauch.png"):
+		body_mat.set_shader_parameter("texturen", true)
+		for key in ["schuppen", "bauch"]:
+			body_mat.set_shader_parameter(key + "_tex", load(DRAGON_TEX + key + ".png"))
+			if ResourceLoader.exists(DRAGON_TEX + key + "_normal.png"):
+				body_mat.set_shader_parameter(key + "_n", load(DRAGON_TEX + key + "_normal.png"))
 	var gold_mat := StandardMaterial3D.new()
 	gold_mat.albedo_color = gold
 	gold_mat.emission_enabled = true
