@@ -35,6 +35,10 @@ var select_hidden: Array[Node3D] = []
 var campaign_label: Label
 var game_over_time := 0.0
 var campaign_finished := false
+## Echtzeit-Sekunden, die die Kamera noch auf den K.-o.-Treffer zoomt, und wohin.
+const KO_FOCUS_SECONDS := 0.6
+var ko_focus_time := 0.0
+var ko_focus: CharacterBody3D
 
 @onready var players: Array = [$Player1, $Player2]
 @onready var labels: Array = [$HUD/P1Label, $HUD/P2Label]
@@ -71,6 +75,7 @@ func _ready() -> void:
 		p.blast_zone = MapLook.blast_zone(map)
 		p.set_fighter(Settings.choices[i])
 		p.fell_off.connect(_on_player_fell_off)
+		p.ko_hit.connect(_on_ko_hit)
 	if Settings.boss_mode:
 		# Spieler 2 wird zum Riesen-Kampfroboter und ist sofort bereit.
 		var index := Roster.FIGHTERS.map(func(x): return x.name).find("Kampfroboter")
@@ -414,9 +419,25 @@ func _add_vignette() -> void:
 	add_child(layer)
 
 
+## Ein Treffer schleudert eine Figur gleich aus der Arena: Zeitlupe und Zoom auf sie, wie bei Smash Bros.
+func _on_ko_hit(player: CharacterBody3D) -> void:
+	if state != State.FIGHT:
+		return
+	ko_focus = player
+	ko_focus_time = KO_FOCUS_SECONDS
+	SpecialFX.ko_moment(player, KO_FOCUS_SECONDS)
+
+
 func _update_camera(delta: float) -> void:
 	var visible_players := players.filter(func(p): return p.visible)
 	if visible_players.is_empty():
+		return
+	if ko_focus_time > 0.0 and is_instance_valid(ko_focus):
+		# Während der Zeitlupe läuft delta langsamer, die Kamera soll aber in Echtzeit heranfahren.
+		var real_delta := delta / maxf(Engine.time_scale, 0.01)
+		ko_focus_time -= real_delta
+		var zoom_target := ko_focus.position + Vector3(0, 1.0, 7.5)
+		camera.position = camera.position.lerp(zoom_target, minf(8.0 * real_delta, 1.0))
 		return
 	var min_pos: Vector3 = visible_players[0].position
 	var max_pos: Vector3 = min_pos

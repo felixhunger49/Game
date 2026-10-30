@@ -2,6 +2,8 @@ extends CharacterBody3D
 
 ## Wird ausgelöst, wenn die Figur aus der Arena gefallen ist.
 signal fell_off(player)
+## Ein Treffer, der die Figur aus der Arena schleudern wird (für Zeitlupe und Zoom wie bei Smash Bros.).
+signal ko_hit(player)
 ## Nur beim Endboss: seine Lebensleiste ist leer.
 signal boss_defeated
 
@@ -124,6 +126,10 @@ const SIDE_ANGLE := deg_to_rad(70)
 ## Physik-Ebene, auf der die schwebenden Plattformen liegen (man kann von unten durchspringen).
 const PLATFORM_LAYER := 2
 const SHIELD_MAX := 100.0
+## Perfektes Abwehren: Schild in diesem Zeitfenster (Sekunden) vor dem Treffer gedrückt.
+const PARRY_WINDOW := 0.15
+## So lange taumelt man, wenn das Schild zerbricht.
+const SHIELD_BREAK_STUN := 3.0
 const POWER_MULTIPLIER := 1.4
 ## Energie für die Spezialattacke: füllt sich mit der Zeit, durch Treffen und durch Getroffenwerden.
 const SPECIAL_MAX := 100.0
@@ -212,6 +218,10 @@ var dash_hit_done := false
 var special_air_used := false
 var shielding := false
 var shield_hp := SHIELD_MAX
+## Wie lange das Schild schon gehalten wird (für perfektes Abwehren).
+var shield_hold := 0.0
+## Sterne über dem Kopf nach einem Schildbruch.
+var dizzy_fx: Node3D
 var power_time := 0.0
 var speed_time := 0.0
 var special_energy := 0.0
@@ -452,8 +462,13 @@ func _physics_process(delta: float) -> void:
 	shielding = can_act and pig_time <= 0.0 and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0 \
 		and roll_time <= 0.0 and drop_time <= 0.0 and not charging and pending_attack != "griff" and grab_lag <= 0.0 and holding == null
 	if shielding:
+		shield_hold += delta
 		shield_hp = max(shield_hp - 18.0 * delta * (0.5 if passive == "schildmeister" else 1.0), 0.0)
+		if shield_hp <= 0.0:
+			# Zu lange gehalten: das Schild ist leer und zerbricht.
+			_break_shield()
 	else:
+		shield_hold = 0.0
 		shield_hp = min(shield_hp + 12.0 * delta, SHIELD_MAX)
 
 	if down_time > 0.0 or getup_time > 0.0:
@@ -833,19 +848,16 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 		return false
 	var multiplier := (POWER_MULTIPLIER if powered else 1.0) * attacker_multiplier
 	if shielding:
+		if shield_hold < PARRY_WINDOW:
+			_perfect_shield()
+			return false
 		shield_hp -= atk.damage * 3.0 * multiplier * (0.5 if passive == "schildmeister" else 1.0)
 		if passive == "schildmeister":
 			counter_time = COUNTER_TIME
 			SpecialFX.popup(self, "KONTER!", Color(0.6, 0.85, 1.0))
 		velocity.x = direction.x * 3.0
 		if shield_hp <= 0.0:
-			# Schild zerbrochen: kurz betäubt.
-			shield_hp = SHIELD_MAX * 0.4
-			shielding = false
-			stunned = 2.5
-			velocity.y = 6.0
-			Audio.sfx("shield_break")
-			say("au")
+			_break_shield()
 		else:
 			Audio.sfx("shield_block")
 		return false
@@ -881,12 +893,76 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 	getup_time = 0.0
 	launched = knockback > 11.0
 	_play_hit(direction, knockback)
+	if knockback > 13.0 and not boss and _flies_out():
+		ko_hit.emit(self)
 	add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_TAKEN)
 	var heavy: bool = atk.damage * multiplier >= 10.0
 	Audio.sfx("hit_strong" if heavy else "hit_weak")
 	if heavy or randf() < 0.3:
 		say("au", "au", randf_range(0.97, 1.03), -2.0)
 	return true
+
+
+## Schild genau im richtigen Moment gedrückt: kein Schaden am Schild, der Angreifer stockt kurz.
+func _perfect_shield() -> void:
+	Audio.sfx("shield_block", 1.8)
+	SpecialFX.perfect_shield(self)
+	if passive == "schildmeister":
+		counter_time = COUNTER_TIME
+	if opponent and is_instance_valid(opponent) and not opponent.boss \
+			and opponent.global_position.distance_to(global_position) < 4.0:
+		opponent.stunned = maxf(opponent.stunned, 0.45)
+
+
+## Schild zerbrochen: die Figur springt hoch und taumelt mit Sternen über dem Kopf.
+func _break_shield() -> void:
+	shield_hp = SHIELD_MAX * 0.4
+	shielding = false
+	shield_hold = 0.0
+	stunned = SHIELD_BREAK_STUN
+	velocity.y = 10.0
+	Audio.sfx("shield_break")
+	say("au")
+	SpecialFX.shield_break(self)
+	_show_dizzy()
+
+
+func _show_dizzy() -> void:
+	if dizzy_fx == null:
+		dizzy_fx = Node3D.new()
+		dizzy_fx.position.y = 2.15 * size_scale
+		add_child(dizzy_fx)
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_color = Color(1.0, 0.9, 0.25)
+		for i in 3:
+			var star := MeshInstance3D.new()
+			var mesh := PrismMesh.new()
+			mesh.size = Vector3(0.32, 0.32, 0.08)
+			star.mesh = mesh
+			star.material_override = mat
+			var a := TAU * i / 3.0
+			star.position = Vector3(cos(a) * 0.55, 0, sin(a) * 0.55)
+			dizzy_fx.add_child(star)
+	dizzy_fx.visible = true
+
+
+## Sagt voraus, ob die Figur mit ihrer jetzigen Geschwindigkeit aus der Arena fliegt
+## (vereinfachte Flugbahn ohne Plattformen, wie im Spiel: Schwerkraft und Abbremsen in der Luft).
+func _flies_out() -> bool:
+	var pos := Vector2(position.x, position.y)
+	var vel := Vector2(velocity.x, velocity.y)
+	var dt := 1.0 / 30.0
+	for i in 60:
+		vel.x = move_toward(vel.x, 0.0, 8.0 * dt)
+		vel.y -= gravity * dt
+		pos += vel * dt
+		if not blast_zone.has_point(pos):
+			# Nach unten raus zählt nur, wenn die Figur dabei nicht über der Bühne ist.
+			return pos.y > blast_zone.position.y or absf(pos.x - blast_zone.get_center().x) > blast_zone.size.x * 0.3
+		if vel.y < 0.0 and pos.y < position.y - 1.0:
+			return false
+	return false
 
 
 ## Macht aus der Figur einen Endboss: größer, Lebenspunkte statt Prozent, kaum wegzuschleudern.
@@ -942,6 +1018,8 @@ func cheer() -> void:
 
 
 func _lose_stock() -> void:
+	if visible and not boss:
+		SpecialFX.blast(self, blast_zone)
 	stocks -= 1
 	damage = 0.0
 	hitstun = 0.0
@@ -1002,7 +1080,20 @@ func _update_visuals(delta: float) -> void:
 	_update_cloth(delta)
 
 	shield_bubble.visible = shielding
-	shield_bubble.scale = Vector3.ONE * lerpf(0.5, 1.0, shield_hp / SHIELD_MAX)
+	var shield_left := shield_hp / SHIELD_MAX
+	shield_bubble.scale = Vector3.ONE * lerpf(0.35, 1.0, shield_left)
+	if shielding:
+		# Fast leeres Schild wird rot und flackert.
+		var mat := shield_bubble.material_override as StandardMaterial3D
+		var tint := color.lerp(Color(1, 0.15, 0.1), clampf(1.0 - shield_left * 2.0, 0.0, 1.0))
+		var alpha := 0.35
+		if shield_left < 0.25:
+			alpha = 0.2 + 0.25 * absf(sin(Time.get_ticks_msec() * 0.02))
+		mat.albedo_color = Color(tint, alpha)
+		mat.emission = tint
+	if dizzy_fx and dizzy_fx.visible:
+		dizzy_fx.visible = stunned > 0.0
+		dizzy_fx.rotation.y += 5.0 * delta
 
 	var text := "P%d" % player_id
 	if held_by:

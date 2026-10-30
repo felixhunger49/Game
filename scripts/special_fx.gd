@@ -296,10 +296,93 @@ static func popup(player: Node3D, text: String, color: Color) -> void:
 	tween.tween_callback(label.queue_free)
 
 
+## Bis wann (Echtzeit in ms) die K.-o.-Zeitlupe läuft. Andere Zeitlupen und Treffer-Stopps warten so lange.
+static var _ko_until := 0
+
+
 ## Kurze Zeitlupe für alles (in Echtzeit-Sekunden).
 static func slow_motion(node: Node, scale: float, seconds: float) -> void:
+	if Time.get_ticks_msec() < _ko_until:
+		return
 	Engine.time_scale = scale
-	node.get_tree().create_timer(seconds, true, false, true).timeout.connect(func(): Engine.time_scale = 1.0)
+	node.get_tree().create_timer(seconds, true, false, true).timeout.connect(func():
+		if Time.get_ticks_msec() >= _ko_until:
+			Engine.time_scale = 1.0)
+
+
+## Der entscheidende Treffer (die Figur fliegt gleich aus der Arena): starke Zeitlupe, Lichtblitz und Knall.
+## Die Kamera zoomt dabei heran (siehe Fight._on_ko_hit).
+static func ko_moment(player: Node3D, seconds: float) -> void:
+	var world := player.get_parent()
+	var pos := player.global_position + Vector3(0, 1.0, 0)
+	_flash_sphere(world, pos, Color(1, 1, 1), 0.3, 2.6, 0.5)
+	_ring(world, pos, Color(1, 0.85, 0.3), 0.5, 4.5, 0.6, true)
+	_sparks(world, pos, Color(1, 0.9, 0.5), 70, 10.0, 0.8)
+	_flash_light(world, pos, Color(1, 0.95, 0.8), 16.0, 10.0, 0.6)
+	Audio.sfx("special_hit", 0.8)
+	_ko_until = Time.get_ticks_msec() + int(seconds * 1000.0)
+	Engine.time_scale = 0.12
+	player.get_tree().create_timer(seconds, true, false, true).timeout.connect(func():
+		_ko_until = 0
+		Engine.time_scale = 1.0)
+
+
+## Aus der Arena geflogen: bunter Lichtstrahl vom Rand in Richtung Bühne, wie bei Smash Bros.
+static func blast(player: Node3D, zone: Rect2) -> void:
+	var world := player.get_parent()
+	var color: Color = player.get("color")
+	var center := Vector3(zone.get_center().x, zone.position.y + zone.size.y * 0.4, 0)
+	# Start am Rand der Arena, etwas nach innen, damit man ihn im Bild sieht.
+	var start := Vector3(clampf(player.global_position.x, zone.position.x + 2.0, zone.end.x - 2.0),
+		clampf(player.global_position.y, zone.position.y + 2.0, zone.end.y - 2.0), 0)
+	var dir := (center - start).normalized()
+	var length := 16.0
+	for layer in 2:
+		var beam := MeshInstance3D.new()
+		var cone := CylinderMesh.new()
+		cone.top_radius = 0.05
+		cone.bottom_radius = 2.2 if layer == 0 else 1.1
+		cone.height = length
+		beam.mesh = cone
+		beam.material_override = _glow_material(Color(color if layer == 0 else Color(1, 1, 1), 0.9), 3.5)
+		world.add_child(beam)
+		# Breites Ende am Rand, Spitze zur Bühne.
+		var y := dir
+		var x := y.cross(Vector3(0, 0, 1)).normalized()
+		beam.global_transform = Transform3D(Basis(x, y, x.cross(y)), start + dir * length * 0.5)
+		var tween := beam.create_tween().set_parallel()
+		tween.tween_property(beam, "scale:x", 0.05, 0.9).set_ease(Tween.EASE_IN)
+		tween.tween_property(beam, "scale:z", 0.05, 0.9).set_ease(Tween.EASE_IN)
+		tween.tween_property(beam.material_override, "albedo_color:a", 0.0, 0.9)
+		tween.chain().tween_callback(beam.queue_free)
+	_flash_sphere(world, start, color, 0.5, 4.0, 0.5)
+	_sparks(world, start, color, 90, 14.0, 0.9)
+	_flash_light(world, start, color, 20.0, 18.0, 0.7)
+	shake(player, 0.6, 0.6)
+
+
+## Perfekt abgewehrt: weißer Blitz um das Schild und Schriftzug.
+static func perfect_shield(player: Node3D) -> void:
+	var world := player.get_parent()
+	var pos := player.global_position + Vector3(0, 0.9, 0)
+	_flash_sphere(world, pos, Color(1, 1, 1), 1.0, 1.8, 0.25)
+	_ring(world, pos, Color(0.7, 0.95, 1.0), 0.8, 2.6, 0.35, true)
+	_sparks(world, pos, Color(0.8, 0.95, 1.0), 30, 7.0, 0.4)
+	popup(player, "PERFEKT!", Color(0.75, 0.95, 1.0))
+	hit_stop(player, 0.12)
+
+
+## Schild zerbrochen: Splitter in der Farbe des Spielers, Schriftzug, Wackeln.
+static func shield_break(player: Node3D) -> void:
+	var world := player.get_parent()
+	var color: Color = player.get("color")
+	var pos := player.global_position + Vector3(0, 0.9, 0)
+	_flash_sphere(world, pos, color, 1.0, 2.4, 0.35)
+	_sparks(world, pos, color, 80, 11.0, 0.8)
+	_sparks(world, pos, Color(1, 1, 1), 30, 8.0, 0.5)
+	popup(player, "SCHILD KAPUTT!", Color(1, 0.4, 0.3))
+	hit_stop(player, 0.15)
+	shake(player, 0.4, 0.4)
 
 
 ## Treffer-Stopp: das Bild friert für einen Augenblick fast ein, das macht Treffer wuchtig.
