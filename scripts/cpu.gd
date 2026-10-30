@@ -52,11 +52,15 @@ func _physics_process(delta: float) -> void:
 	if me == null or not me.controls_enabled or not me.visible:
 		_hold([])
 		return
+	# Mit mehr als zwei Kämpfern: immer den nächsten Gegner angehen.
+	var nearest: CharacterBody3D = me.opponent
+	if nearest:
+		foe = nearest
 	shield_time = maxf(shield_time - delta, 0.0)
 	think_timer -= delta
 	var want: Array = []
 	var pos := me.global_position
-	var to_foe := foe.global_position - pos
+	var to_foe := _goal_pos() - pos
 	var dist := absf(to_foe.x)
 	var toward := "right" if to_foe.x > 0.0 else "left"
 	var to_center := "right" if pos.x < 0.0 else "left"
@@ -111,13 +115,21 @@ func _physics_process(delta: float) -> void:
 		if me.velocity.y < 1.0 and me.jumps_left > 0 and think_timer <= 0.0:
 			_tap("jump", 0.3)
 			think_timer = 0.25
-		elif me.jumps_left == 0 and me.special_ready() and me.fighter.get("special", "") == "aufwaerts":
+		elif me.jumps_left == 0 and not me.special_air_used and me.velocity.y < 0.0:
+			# Keine Sprünge mehr: Rettungssprung (hoch + Spezial).
+			_tap("up", 0.15)
 			_tap("special")
 		_hold(want)
 		return
 
-	# 2) Blocken, wenn der Gegner nah ist und gerade zuschlägt.
+	# 2) Blocken, wenn der Gegner nah ist und gerade zuschlägt (manchmal stattdessen kontern).
 	var foe_attacking: bool = foe.pending_attack != "" or foe.attack_timer > 0.15
+	if dist < 2.0 and foe.pending_attack != "" and me.konter_cooldown <= 0.0 and think_timer <= 0.0 \
+			and randf() < level.block * 0.3:
+		think_timer = 0.4
+		_tap("down", 0.12)
+		_tap("special")
+		return
 	if shield_time > 0.0 or (dist < 2.2 and foe_attacking and think_timer <= 0.0 and randf() < level.block):
 		if shield_time == 0.0:
 			shield_time = 0.35
@@ -235,8 +247,8 @@ func _surface_under(p: Vector3, list: Array) -> int:
 func _plan_route() -> Dictionary:
 	var list := _surfaces()
 	var start := _surface_under(me.global_position, list)
-	var goal := _surface_under(foe.global_position, list)
-	var far: bool = absf(foe.global_position.x - me.global_position.x) > 3.0
+	var goal := _surface_under(_goal_pos(), list)
+	var far: bool = absf(_goal_pos().x - me.global_position.x) > 3.0
 	if roam_time <= 0.0 and far and not list.is_empty() and randf() < 0.025:
 		roam = randi() % list.size()
 		roam_time = 5.0
@@ -359,6 +371,13 @@ func _recovery_goal(pos: Vector3) -> Vector2:
 
 ## Entscheidung im Takt der Reaktionszeit: springen, schlagen, treten, Spezial.
 func _decide(to_foe: Vector3, dist: float, toward: String) -> void:
+	# Final Smash bereit und der Gegner etwa auf gleicher Höhe: abfeuern.
+	if me.final_smash_ready:
+		var real := foe.global_position - me.global_position
+		if foe.visible and absf(real.y) < 2.0 and randf() < 0.5 + level.aggression * 0.5:
+			_turn_to("right" if real.x > 0.0 else "left")
+			_tap("special")
+			return
 	# Gegner deutlich tiefer und man steht auf einer Plattform: hindurchfallen (wie doppelt "runter").
 	if to_foe.y < -1.2 and me.on_platform and route.is_empty():
 		me._drop_through()
@@ -384,14 +403,36 @@ func _decide(to_foe: Vector3, dist: float, toward: String) -> void:
 		_turn_to(toward)
 		me.start_grab()
 		return
+	# Richtungs-Angriffe: Gegner über einem = nach oben schlagen, unter einem (in der Luft) = nach unten.
+	if dist < 1.4 and to_foe.y > 1.0 and to_foe.y < 2.6 and randf() < level.aggression:
+		_turn_to(toward)
+		_tap("up", 0.12)
+		_tap("strong" if me.is_on_floor() and randf() < 0.4 else "weak")
+		return
+	if not me.is_on_floor() and dist < 1.2 and to_foe.y < -0.6 and to_foe.y > -2.2 and randf() < level.aggression:
+		_tap("down", 0.12)
+		_tap("weak")
+		return
 	if dist < 1.9 and absf(to_foe.y) < 1.4 and randf() < level.aggression:
 		_turn_to(toward)
 		var r := randf()
+		if me.is_on_floor() and r < 0.75 and randf() < 0.3:
+			# Manchmal tief schlagen (schwach oder stark).
+			_tap("down", 0.12)
 		if r >= 0.5 and r < 0.75 and me.is_on_floor() and (foe.stunned > 0.0 or randf() < 0.3 * level.aggression):
 			# Smash-Angriff: starken Angriff etwas aufladen.
 			_tap("strong", 0.4 + randf() * 0.5)
 			return
 		_tap("weak" if r < 0.5 else "strong" if r < 0.75 else "kick")
+
+
+## Wohin der Computer will: zum Gegner, oder zur Smash-Kugel, wenn sie nicht zu weit weg ist.
+func _goal_pos() -> Vector3:
+	if not me.final_smash_ready:
+		for ball in get_tree().get_nodes_in_group(Target.GROUP):
+			if ball.has_method("hit_by") and ball.global_position.distance_to(me.global_position) < 9.0:
+				return ball.global_position - Vector3(0, 1.0, 0)
+	return foe.global_position
 
 
 ## Kurz in Richtung des Gegners drehen, damit der Schlag nach vorne geht.

@@ -59,9 +59,9 @@ const ITEM_RATES := ["Selten", "Normal", "Oft"]
 const ITEM_INTERVALS := [Vector2(12, 18), Vector2(6, 10), Vector2(3, 5)]
 
 ## Aktionen, die man in den Optionen neu belegen kann (ohne "p1_"/"p2_").
-const BINDABLE := ["left", "right", "jump", "shield", "weak", "strong", "kick", "special"]
+const BINDABLE := ["left", "right", "up", "down", "jump", "shield", "weak", "strong", "kick", "special"]
 const ACTION_NAMES := {
-	"left": "Links", "right": "Rechts", "jump": "Springen", "shield": "Abwehren",
+	"left": "Links", "right": "Rechts", "up": "Hoch", "down": "Runter", "jump": "Springen", "shield": "Abwehren",
 	"weak": "Schwacher Angriff", "strong": "Starker Angriff", "kick": "Tritt", "special": "Spezialattacke",
 }
 
@@ -69,7 +69,13 @@ var items_enabled := true
 var item_rate := 1
 var stocks := 3
 var map_index := 0
-var choices := [0, 1]
+var choices := [0, 1, 2, 3]
+## Wie viele Kämpfer im Mehrspieler-Kampf (2 bis 4). Spieler 3 und 4 spielen mit Controller,
+## sonst steuert sie der Computer (siehe is_human).
+const MAX_FIGHTERS := 4
+var fighters := 2
+## Team-Modus: Team Rot (Spieler 1 und 3) gegen Team Blau (Spieler 2 und 4), kein Schaden im eigenen Team.
+var teams := false
 var map_effects := true
 var special_charge := true
 ## Solo: Spieler 2 ist der Computer (Schwierigkeit 0 leicht, 1 mittel, 2 schwer).
@@ -94,12 +100,15 @@ var sfx_volume := 8
 const GRAPHICS := ["Niedrig", "Hoch"]
 var graphics := 1
 
+## Version der Standardbelegung. Erhöhen, wenn sich die Tasten so ändern, dass alte Belegungen nicht mehr passen.
+const CONTROLS_VERSION := 2
 ## Standardbelegung aus project.godot, damit man sie wiederherstellen kann.
 var _default_events := {}
 
 
 func _ready() -> void:
-	for p in [1, 2]:
+	_add_pad_players()
+	for p in range(1, MAX_FIGHTERS + 1):
 		for a in BINDABLE:
 			var action := "p%d_%s" % [p, a]
 			_default_events[action] = InputMap.action_get_events(action)
@@ -114,6 +123,10 @@ func _ready() -> void:
 	choices = cfg.get_value("game", "choices", choices)
 	# Gespeicherte Auswahl kann auf eine inzwischen entfernte Figur zeigen.
 	choices = choices.map(func(c): return clampi(c, 0, Roster.FIGHTERS.size() - 1))
+	while choices.size() < MAX_FIGHTERS:
+		choices.append(choices.size() % Roster.FIGHTERS.size())
+	fighters = clampi(cfg.get_value("game", "fighters", fighters), 2, MAX_FIGHTERS)
+	teams = cfg.get_value("game", "teams", teams)
 	map_effects = cfg.get_value("game", "map_effects", map_effects)
 	special_charge = cfg.get_value("game", "special_charge", special_charge)
 	solo = cfg.get_value("game", "solo", solo)
@@ -126,7 +139,9 @@ func _ready() -> void:
 	music_volume = cfg.get_value("audio", "music_volume", music_volume)
 	sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 	graphics = clampi(cfg.get_value("video", "graphics", graphics), 0, GRAPHICS.size() - 1)
-	if cfg.has_section("controls"):
+	# Ältere Spielstände haben noch W = Springen und S = Abwehren (vor den Richtungs-Angriffen):
+	# deren Tastenbelegung passt nicht mehr, dann gilt die neue Standardbelegung.
+	if cfg.has_section("controls") and cfg.get_value("game", "controls_version", 1) == CONTROLS_VERSION:
 		for action in cfg.get_section_keys("controls"):
 			if action in _default_events:
 				_set_events(action, cfg.get_value("controls", action))
@@ -142,6 +157,8 @@ func save() -> void:
 	cfg.set_value("game", "map_effects", map_effects)
 	cfg.set_value("game", "special_charge", special_charge)
 	cfg.set_value("game", "solo", solo)
+	cfg.set_value("game", "fighters", fighters)
+	cfg.set_value("game", "teams", teams)
 	cfg.set_value("game", "cpu_level", cpu_level)
 	cfg.set_value("game", "target_records", target_records)
 	cfg.set_value("campaign", "stage", campaign_stage)
@@ -151,6 +168,7 @@ func save() -> void:
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
 	cfg.set_value("video", "graphics", graphics)
+	cfg.set_value("game", "controls_version", CONTROLS_VERSION)
 	for action in _default_events:
 		cfg.set_value("controls", action, InputMap.action_get_events(action))
 	cfg.save(SAVE_PATH)
@@ -256,8 +274,8 @@ func event_text(e: InputEvent) -> String:
 			KEY_UP: return "Pfeil hoch"
 			KEY_DOWN: return "Pfeil runter"
 			KEY_SPACE: return "Leertaste"
-			KEY_SHIFT: return "Umschalt"
-			KEY_CTRL: return "Strg"
+			KEY_SHIFT: return "Umschalt" + _side_text(e)
+			KEY_CTRL: return "Strg" + _side_text(e)
 			KEY_ALT: return "Alt"
 			KEY_ENTER: return "Enter"
 			KEY_KP_ENTER: return "Ziffernblock Enter"
@@ -273,6 +291,46 @@ func event_text(e: InputEvent) -> String:
 	return e.as_text()
 
 
+## Spieler 3 und 4: Aktionen anlegen, Standard ist Controller 1 bzw. 2 (Stick/Steuerkreuz, A springen,
+## B Spezial, X schwach, Y stark, RB abwehren, LB Tritt).
+func _add_pad_players() -> void:
+	var buttons := {"jump": JOY_BUTTON_A, "special": JOY_BUTTON_B, "weak": JOY_BUTTON_X, "strong": JOY_BUTTON_Y,
+		"shield": JOY_BUTTON_RIGHT_SHOULDER, "kick": JOY_BUTTON_LEFT_SHOULDER, "left": JOY_BUTTON_DPAD_LEFT,
+		"right": JOY_BUTTON_DPAD_RIGHT, "up": JOY_BUTTON_DPAD_UP, "down": JOY_BUTTON_DPAD_DOWN}
+	var sticks := {"left": [JOY_AXIS_LEFT_X, -1.0], "right": [JOY_AXIS_LEFT_X, 1.0],
+		"up": [JOY_AXIS_LEFT_Y, -1.0], "down": [JOY_AXIS_LEFT_Y, 1.0]}
+	for p in [3, 4]:
+		for a in BINDABLE:
+			var action := "p%d_%s" % [p, a]
+			if InputMap.has_action(action):
+				continue
+			InputMap.add_action(action, 0.5)
+			var button := InputEventJoypadButton.new()
+			button.device = p - 3
+			button.button_index = buttons[a]
+			InputMap.action_add_event(action, button)
+			if a in sticks:
+				var motion := InputEventJoypadMotion.new()
+				motion.device = p - 3
+				motion.axis = sticks[a][0]
+				motion.axis_value = sticks[a][1]
+				InputMap.action_add_event(action, motion)
+
+
+## Spielt hier ein Mensch? Spieler 1 und 2 immer; 3 und 4 nur, wenn ihre Tasten auf der Tastatur liegen
+## oder ihr Controller angeschlossen ist. Sonst steuert sie der Computer.
+func is_human(player_id: int) -> bool:
+	if player_id <= 2:
+		return true
+	var pads := Input.get_connected_joypads()
+	for e in InputMap.action_get_events("p%d_jump" % player_id) + InputMap.action_get_events("p%d_weak" % player_id):
+		if e is InputEventKey:
+			return true
+		if (e is InputEventJoypadButton or e is InputEventJoypadMotion) and e.device in pads:
+			return true
+	return false
+
+
 func _set_events(action: String, events: Array) -> void:
 	InputMap.action_erase_events(action)
 	for e in events:
@@ -284,9 +342,17 @@ func _same_input(a: InputEvent, b: InputEvent) -> bool:
 	if a is InputEventKey and b is InputEventKey:
 		var ka: Key = a.physical_keycode if a.physical_keycode != KEY_NONE else a.keycode
 		var kb: Key = b.physical_keycode if b.physical_keycode != KEY_NONE else b.keycode
-		return ka == kb
+		return ka == kb and (a.location == KEY_LOCATION_UNSPECIFIED or b.location == KEY_LOCATION_UNSPECIFIED \
+			or a.location == b.location)
 	if a is InputEventJoypadButton and b is InputEventJoypadButton:
 		return a.button_index == b.button_index and a.device == b.device
 	if a is InputEventJoypadMotion and b is InputEventJoypadMotion:
 		return a.axis == b.axis and signf(a.axis_value) == signf(b.axis_value) and a.device == b.device
 	return false
+
+
+func _side_text(e: InputEventKey) -> String:
+	match e.location:
+		KEY_LOCATION_LEFT: return " links"
+		KEY_LOCATION_RIGHT: return " rechts"
+	return ""

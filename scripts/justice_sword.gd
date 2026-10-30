@@ -111,9 +111,8 @@ func _impact() -> void:
 	Audio.sfx("special_hit")
 	Audio.sfx("sword_clash", 0.8)
 	marker.queue_free()
-	var target: CharacterBody3D = shooter.opponent
-	if target and target.visible:
-		var offset := target.global_position + Vector3(0, 0.9, 0) - center
+	for target in shooter._enemies():
+		var offset: Vector3 = target.global_position + Vector3(0, 0.9, 0) - center
 		if absf(offset.x) < RADIUS + 0.4 and absf(offset.y) < 2.2:
 			var atk: Dictionary = shooter.ATTACKS.justice
 			var side := 1.0 if offset.x >= 0.0 else -1.0

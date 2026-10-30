@@ -2,6 +2,10 @@ extends CharacterBody3D
 
 ## Wird ausgelöst, wenn die Figur aus der Arena gefallen ist.
 signal fell_off(player)
+## Ein Treffer, der die Figur aus der Arena schleudern wird (für Zeitlupe und Zoom wie bei Smash Bros.).
+signal ko_hit(player)
+## Der Final Smash beginnt (die Kamera zoomt heran, siehe Fight).
+signal final_smash_started(player)
 ## Nur beim Endboss: seine Lebensleiste ist leer.
 signal boss_defeated
 
@@ -32,11 +36,31 @@ const ATTACKS := {
 		"cooldown": 1.0, "angle": Vector2(1, 0.4), "anim_speed": 1.6},
 	"wirbel": {"damage": 11.0, "base": 6.0, "scale": 0.18, "range": Vector2(2.2, 1.5), "startup": 0.15,
 		"cooldown": 1.1, "angle": Vector2(1, 0.8), "anim_speed": 1.5},
+	# Konter: Rückschlag, wenn man in der Konter-Haltung getroffen wird (mindestens so stark, sonst 1,3× der Treffer).
+	"konter": {"damage": 9.0, "base": 7.0, "scale": 0.2, "range": Vector2(2.0, 1.6), "startup": 0.0, "cooldown": 0.35,
+		"angle": Vector2(1, 0.6), "anim_speed": 2.2},
 	"aufwaerts": {"damage": 9.0, "base": 6.0, "scale": 0.15, "range": Vector2(1.4, 2.8), "startup": 0.1,
-		"cooldown": 0.9, "angle": Vector2(0.2, 1), "anim_speed": 1.6},
-	# Alle: in der Luft schlagen = Uppercut nach oben (Animation vom Himmelshieb des Helden).
+		"cooldown": 0.9, "angle": Vector2(0.2, 1), "anim_speed": 1.6, "zone": "oben"},
+	# Alle: in der Luft hoch + schlagen = Uppercut nach oben (Animation vom Himmelshieb des Helden).
 	"luft": {"damage": 6.0, "base": 4.5, "scale": 0.12, "range": Vector2(1.4, 2.2), "startup": 0.08,
-		"cooldown": 0.55, "angle": Vector2(0.25, 1), "anim_speed": 1.5},
+		"cooldown": 0.55, "angle": Vector2(0.25, 1), "anim_speed": 1.5, "zone": "oben"},
+	# Richtungs-Angriffe wie bei Smash: Richtung (hoch/runter, in der Luft auch nach hinten) halten und angreifen.
+	# "zone": wo der Schlag trifft (oben = über einem, unten = unter einem, hinten, beide = vorne und hinten).
+	"weak_hoch": {"damage": 5.0, "base": 3.5, "scale": 0.08, "range": Vector2(1.3, 2.3), "startup": 0.12,
+		"cooldown": 0.3, "angle": Vector2(0.15, 1), "anim_speed": 1.8, "zone": "oben"},
+	"weak_tief": {"damage": 4.5, "base": 3.0, "scale": 0.07, "range": Vector2(1.8, 0.8), "startup": 0.1,
+		"cooldown": 0.28, "angle": Vector2(1, 0.6), "anim_speed": 2.2},
+	"strong_hoch": {"damage": 14.0, "base": 7.0, "scale": 0.22, "range": Vector2(1.6, 2.8), "startup": 0.35,
+		"cooldown": 0.8, "angle": Vector2(0.1, 1), "anim_speed": 1.3, "zone": "oben"},
+	"strong_tief": {"damage": 12.0, "base": 6.5, "scale": 0.2, "range": Vector2(2.2, 0.9), "startup": 0.25,
+		"cooldown": 0.8, "angle": Vector2(1, 0.3), "anim_speed": 1.4, "zone": "beide"},
+	"luft_vor": {"damage": 7.0, "base": 4.5, "scale": 0.13, "range": Vector2(1.6, 1.3), "startup": 0.15,
+		"cooldown": 0.5, "angle": Vector2(1, 0.45), "anim_speed": 1.5},
+	"luft_hinten": {"damage": 9.0, "base": 5.5, "scale": 0.16, "range": Vector2(1.6, 1.3), "startup": 0.2,
+		"cooldown": 0.55, "angle": Vector2(1, 0.35), "anim_speed": 1.6, "zone": "hinten"},
+	# Nach unten in der Luft: schlägt den Gegner nach unten (am Boden prallt er ab und fliegt hoch).
+	"luft_tief": {"damage": 8.0, "base": 4.0, "scale": 0.14, "range": Vector2(1.2, 2.2), "startup": 0.28,
+		"cooldown": 0.6, "angle": Vector2(0.1, -1), "anim_speed": 1.8, "zone": "unten"},
 	# Held: ein riesiges goldenes Lichtschwert fällt auf den Gegner (siehe JusticeSword).
 	"justice": {"damage": 14.0, "base": 8.0, "scale": 0.2, "startup": 0.3, "cooldown": 1.1,
 		"angle": Vector2(0.35, 1), "anim_speed": 1.4},
@@ -94,6 +118,17 @@ const LUFT_TRIM := [0.40, 1.30]
 ## daher reicht ein Satz für alle (eine Figur kann in ihrem anim_dir eine eigene Datei gleichen Namens haben).
 ## Wert: [von, bis] in Sekunden ([] = ganze Animation).
 const SMASH_ANIM_DIR := "res://assets/smash/"
+## Konter (runter + Spezial): so lange fängt man Treffer ab, dann so lange warten bis zum nächsten Konter.
+const KONTER_TIME := 0.45
+const KONTER_COOLDOWN := 1.6
+## Rettungssprung (hoch + Spezial): Sprungkraft nach oben.
+const UP_SPECIAL_JUMP := 14.0
+## Richtungs-Angriffe: eigene Animation aus assets/smash (oder dem Figurenordner), sonst die hier genannte.
+const DIR_ATTACKS := {"aufwaerts": "luft", "konter": "shield", "weak_hoch": "luft", "weak_tief": "kick", "strong_hoch": "luft", "strong_tief": "kick",
+	"luft_vor": "weak", "luft_hinten": "kick", "luft_tief": "strong"}
+## Zuschnitt der Richtungs-Animationen aus assets/smash (Mixamo) in Sekunden.
+const DIR_TRIM := {"aufwaerts": [0.0, 1.0], "konter": [0.0, 0.6], "weak_hoch": [0.15, 1.0], "weak_tief": [0.0, 1.0], "strong_hoch": [0.35, 1.35],
+	"strong_tief": [0.3, 1.35], "luft_vor": [0.1, 0.85], "luft_hinten": [0.5, 1.5], "luft_tief": [1.0, 2.2]}
 const SMASH_ANIMS := {"ledge_hang": [], "ledge_climb": [], "grab": [0.0, 0.9], "grab_hold": [],
 	"throw": [0.3, 1.4], "smash_charge": [0.0, 1.2],
 	"hit_front": [0.0, 0.9], "hit_back": [0.0, 1.0], "launch_front": [0.0, 0.6], "launch_back": [0.0, 0.8],
@@ -124,6 +159,10 @@ const SIDE_ANGLE := deg_to_rad(70)
 ## Physik-Ebene, auf der die schwebenden Plattformen liegen (man kann von unten durchspringen).
 const PLATFORM_LAYER := 2
 const SHIELD_MAX := 100.0
+## Perfektes Abwehren: Schild in diesem Zeitfenster (Sekunden) vor dem Treffer gedrückt.
+const PARRY_WINDOW := 0.15
+## So lange taumelt man, wenn das Schild zerbricht.
+const SHIELD_BREAK_STUN := 3.0
 const POWER_MULTIPLIER := 1.4
 ## Energie für die Spezialattacke: füllt sich mit der Zeit, durch Treffen und durch Getroffenwerden.
 const SPECIAL_MAX := 100.0
@@ -192,7 +231,16 @@ const THROWS := {
 const FLIP_PIVOT_HEIGHT := 0.9
 const CLOTH_SHADER := preload("res://scripts/cloth.gdshader")
 
-var opponent: CharacterBody3D
+## Alle anderen Kämpfer im Kampf (bei zwei Spielern nur einer).
+var rivals: Array = []
+## Team im Team-Modus (1 Rot, 2 Blau); 0 = jeder gegen jeden. Das eigene Team kann man nicht treffen.
+var team := 0
+## Der nächste Gegner (zum Zielen, Kontern, Greifen). Zuweisen setzt den einzigen Gegner.
+var opponent: CharacterBody3D:
+	get:
+		return _nearest_enemy()
+	set(value):
+		rivals = [value] if value else []
 var fighter: Dictionary = {}
 var controls_enabled := false
 ## In der Kämpferauswahl dreht sich die Figur langsam, damit man sie von allen Seiten sieht.
@@ -210,8 +258,21 @@ var pending_time := 0.0
 var dash_time := 0.0
 var dash_hit_done := false
 var special_air_used := false
+var konter_time := 0.0
+## Smash-Kugel zerschlagen: der nächste Druck auf Spezial löst den Final Smash aus.
+var final_smash_ready := false
+## Läuft der Final Smash: Aufladen, dann der riesige Strahl. Solange ist die Figur unverwundbar.
+var final_time := 0.0
+## Im Final Smash eines Gegners gefangen: festgehalten, bis der Abschlussschlag kommt (siehe FinalSmash).
+var caught := false
+var final_aura: CPUParticles3D
+var konter_cooldown := 0.0
 var shielding := false
 var shield_hp := SHIELD_MAX
+## Wie lange das Schild schon gehalten wird (für perfektes Abwehren).
+var shield_hold := 0.0
+## Sterne über dem Kopf nach einem Schildbruch.
+var dizzy_fx: Node3D
 var power_time := 0.0
 var speed_time := 0.0
 var special_energy := 0.0
@@ -231,7 +292,7 @@ var was_rising := false
 var cloth_materials: Array[ShaderMaterial] = []
 var fall_wind := 0.0
 ## Zeitpunkt des letzten Tastendrucks je Richtung, um doppeltes Tippen zu erkennen.
-var last_tap := {"left": -1.0, "right": -1.0, "shield": -1.0}
+var last_tap := {"left": -1.0, "right": -1.0, "down": -1.0}
 var roll_time := 0.0
 var roll_dir := 1
 var roll_cooldown := 0.0
@@ -390,6 +451,8 @@ func _aim_two_hand_weapon() -> void:
 
 func _physics_process(delta: float) -> void:
 	attack_timer = max(attack_timer - delta, 0.0)
+	konter_time = maxf(konter_time - delta, 0.0)
+	konter_cooldown = maxf(konter_cooldown - delta, 0.0)
 	hitstun = max(hitstun - delta, 0.0)
 	stunned = max(stunned - delta, 0.0)
 	power_time = max(power_time - delta, 0.0)
@@ -446,21 +509,31 @@ func _physics_process(delta: float) -> void:
 	_update_pending_attack(delta)
 	_update_dash(delta)
 
-	var can_act := controls_enabled and hitstun == 0.0 and stunned == 0.0 and down_time <= 0.0 and getup_time <= 0.0
+	var can_act := controls_enabled and hitstun == 0.0 and stunned == 0.0 and down_time <= 0.0 and getup_time <= 0.0 \
+		and not caught and final_time <= 0.0
 	if can_act and roll_time <= 0.0 and dash_time <= 0.0:
 		_check_double_taps()
 	shielding = can_act and pig_time <= 0.0 and is_on_floor() and Input.is_action_pressed(_action("shield")) and shield_hp > 0.0 \
 		and roll_time <= 0.0 and drop_time <= 0.0 and not charging and pending_attack != "griff" and grab_lag <= 0.0 and holding == null
 	if shielding:
+		shield_hold += delta
 		shield_hp = max(shield_hp - 18.0 * delta * (0.5 if passive == "schildmeister" else 1.0), 0.0)
+		if shield_hp <= 0.0:
+			# Zu lange gehalten: das Schild ist leer und zerbricht.
+			_break_shield()
 	else:
+		shield_hold = 0.0
 		shield_hp = min(shield_hp + 12.0 * delta, SHIELD_MAX)
 
-	if down_time > 0.0 or getup_time > 0.0:
+	if caught:
+		velocity = Vector3.ZERO
+	elif down_time > 0.0 or getup_time > 0.0:
 		_update_down(delta)
 	elif hitstun > 0.0:
 		# Getroffen: keine Kontrolle, die Figur fliegt weiter.
 		velocity.x = move_toward(velocity.x, 0.0, 8.0 * delta) + wind_speed * delta
+	elif final_time > 0.0:
+		_update_final_smash(delta)
 	elif dash_time > 0.0:
 		pass
 	elif roll_time > 0.0:
@@ -484,7 +557,7 @@ func _physics_process(delta: float) -> void:
 			# Aus dem Schild zur Seite rollen.
 			_start_roll(1 if Input.is_action_just_pressed(_action("right")) else -1)
 
-	# In der Luft: Abwehren = ausweichen, gedrückt halten = schnell fallen.
+	# In der Luft: Abwehren = ausweichen, Runter halten = schnell fallen.
 	if can_act and not is_on_floor() and roll_time <= 0.0 and dash_time <= 0.0:
 		_update_air_moves()
 	if fast_falling and hitstun == 0.0:
@@ -536,7 +609,8 @@ func _handle_input(delta: float) -> void:
 	# Wind schiebt in der Luft stärker als am Boden.
 	var wind := wind_speed * (0.6 if is_on_floor() else 1.0)
 	velocity.x = move_toward(velocity.x, direction * top_speed + wind, accel * delta)
-	if direction != 0.0:
+	# Wie bei Smash dreht man sich nur am Boden (und beim Absprung) um: so geht in der Luft auch ein Angriff nach hinten.
+	if direction != 0.0 and (is_on_floor() or Input.is_action_just_pressed(_action("jump"))):
 		facing = int(sign(direction))
 
 	if Input.is_action_just_pressed(_action("jump")) and jumps_left > 0:
@@ -557,16 +631,47 @@ func _handle_input(delta: float) -> void:
 		return
 	for kind in ["weak", "strong", "kick"]:
 		if Input.is_action_just_pressed(_action(kind)):
+			var dir := _held_dir()
 			if kind != "kick" and not is_on_floor():
-				start_attack("luft")
-				velocity.y = maxf(velocity.y, 5.0)
+				var air := _air_attack(dir)
+				start_attack(air)
+				velocity.y = maxf(velocity.y, 5.0 if air == "luft" else 1.5)
 			elif kind == "strong":
-				_start_charge()
+				_start_charge("strong" + ("_" + dir if dir != "" else ""))
+			elif kind == "weak" and dir != "":
+				start_attack("weak_" + dir)
 			else:
 				start_attack(kind)
 			return
+	if Input.is_action_just_pressed(_action("special")) and final_smash_ready:
+		start_final_smash()
+		return
 	if Input.is_action_just_pressed(_action("special")):
-		start_special()
+		# Spezial je Richtung: hoch = Rettungssprung, runter = Konter, sonst das eigene Spezial der Figur.
+		match _held_dir():
+			"hoch": start_up_special()
+			"tief": start_counter()
+			_: start_special()
+
+
+## Richtung, die gerade gehalten wird: "hoch", "tief" oder "" (keine).
+func _held_dir() -> String:
+	if InputMap.has_action(_action("up")) and Input.is_action_pressed(_action("up")):
+		return "hoch"
+	if InputMap.has_action(_action("down")) and Input.is_action_pressed(_action("down")):
+		return "tief"
+	return ""
+
+
+## Luftangriff nach Richtung: hoch = Uppercut, runter = nach unten, zurück = nach hinten, sonst nach vorne.
+func _air_attack(dir: String) -> String:
+	if dir == "hoch":
+		return "luft"
+	if dir == "tief":
+		return "luft_tief"
+	if Input.get_axis(_action("left"), _action("right")) * facing < -0.5:
+		return "luft_hinten"
+	return "luft_vor"
 
 
 ## Holt zum Angriff aus. Der Treffer kommt nach der Ausholzeit (startup).
@@ -579,13 +684,140 @@ func start_attack(kind: String) -> void:
 	_end_flip()
 	_play(kind, atk.anim_speed)
 	match kind:
-		"weak":
+		"weak", "weak_hoch", "weak_tief", "luft_vor":
 			Audio.sfx("swing_weak")
-		"strong":
+		"strong", "strong_hoch", "strong_tief", "luft_tief":
 			Audio.sfx("swing_strong")
-			_shout()
-		"kick":
+			if kind.begins_with("strong"):
+				_shout()
+		"kick", "luft_hinten":
 			Audio.sfx("kick")
+
+
+## Smash-Kugel zerschlagen: leuchtende Aura, bis man den Final Smash auslöst.
+func gain_final_smash() -> void:
+	if final_smash_ready or boss:
+		return
+	final_smash_ready = true
+	SpecialFX.popup(self, "FINAL SMASH!", color)
+	say("spezial")
+	final_aura = SpecialFX._particles(color.lightened(0.3), 50, 0.8, 0.12)
+	final_aura.one_shot = false
+	final_aura.explosiveness = 0.0
+	final_aura.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	final_aura.emission_sphere_radius = 0.8
+	final_aura.direction = Vector3.UP
+	final_aura.spread = 60.0
+	final_aura.initial_velocity_min = 1.0
+	final_aura.initial_velocity_max = 2.5
+	final_aura.gravity = Vector3.ZERO
+	add_child(final_aura)
+	final_aura.position = Vector3(0, 1.0 * size_scale, 0)
+	final_aura.emitting = true
+
+
+## Final Smash: jede Figur hat ihre eigene Filmszene (siehe FinalSmash). Solange sie läuft, ist die Figur
+## unverwundbar und wird von der Szene gesteuert.
+func start_final_smash() -> void:
+	final_smash_ready = false
+	if is_instance_valid(final_aura):
+		final_aura.queue_free()
+	final_time = 99.0
+	pending_attack = ""
+	charging = false
+	attack_timer = 99.0
+	velocity = Vector3.ZERO
+	_end_flip()
+	var scene := FinalSmash.new()
+	get_parent().add_child(scene)
+	scene.start(self)
+	final_smash_started.emit(self)
+
+
+## Von der Szene aufgerufen, wenn sie vorbei ist.
+func end_final_smash() -> void:
+	final_time = 0.0
+	attack_timer = 0.2
+	model_root.visible = pig_time <= 0.0
+
+
+func _update_final_smash(_delta: float) -> void:
+	velocity = Vector3.ZERO
+
+
+## Alle Gegner, die gerade im Spiel sind (ohne Mitspieler aus dem eigenen Team).
+func _enemies() -> Array:
+	return rivals.filter(func(r): return is_instance_valid(r) and r.visible and (team == 0 or r.team != team))
+
+
+func _nearest_enemy() -> CharacterBody3D:
+	return nearest_enemy_to(global_position)
+
+
+## Der Gegner, der einer Stelle am nächsten ist (z. B. für Geschosse).
+func nearest_enemy_to(pos: Vector3) -> CharacterBody3D:
+	var best: CharacterBody3D = null
+	var best_distance := INF
+	for e in _enemies():
+		var d: float = pos.distance_squared_to(e.global_position)
+		if d < best_distance:
+			best = e
+			best_distance = d
+	return best
+
+
+## Hoch + Spezial (alle Figuren, kostet keine Energie): Rettungssprung mit Schlag nach oben,
+## einmal pro Sprung, um von unten zurück auf die Bühne zu kommen.
+func start_up_special() -> void:
+	if special_air_used:
+		Audio.sfx("fizzle")
+		attack_timer = 0.2
+		return
+	special_air_used = true
+	launched = false
+	fast_falling = false
+	fast_fall_armed = false
+	_end_flip()
+	velocity.y = UP_SPECIAL_JUMP
+	velocity.x = Input.get_axis(_action("left"), _action("right")) * 4.0
+	start_attack("aufwaerts")
+	Audio.sfx("uppercut")
+	SpecialFX.pillar(self)
+
+
+## Runter + Spezial (alle Figuren, kostet keine Energie): kurz in Konter-Haltung. Wer jetzt zuschlägt,
+## trifft ins Leere und bekommt selbst einen harten Schlag ab.
+func start_counter() -> void:
+	if konter_cooldown > 0.0:
+		Audio.sfx("fizzle")
+		attack_timer = 0.2
+		return
+	konter_time = KONTER_TIME
+	konter_cooldown = KONTER_COOLDOWN
+	attack_timer = KONTER_TIME + 0.25
+	pending_attack = ""
+	_end_flip()
+	_play("konter")
+	Audio.sfx("special_start", 1.4, -4.0)
+	SpecialFX._ring(get_parent(), global_position + Vector3(0, 1.0, 0), Color(0.6, 0.85, 1.0), 0.3, 1.3, 0.3, false)
+
+
+func _counter_strike(atk: Dictionary) -> void:
+	konter_time = 0.0
+	SpecialFX.popup(self, "KONTER!", Color(0.6, 0.85, 1.0))
+	SpecialFX.slow_motion(self, 0.3, 0.25)
+	Audio.sfx("hit_strong")
+	if opponent == null or not opponent.visible or global_position.distance_to(opponent.global_position) > 3.5:
+		# Fernangriff (z. B. Feuerball): nur abgefangen.
+		return
+	facing = 1 if opponent.global_position.x > global_position.x else -1
+	var hit: Dictionary = ATTACKS.konter.duplicate()
+	hit.damage = maxf(atk.get("damage", 0.0) * 1.3, hit.damage)
+	_play("strong", 2.2)
+	attack_timer = maxf(attack_timer, 0.35)
+	if opponent.take_hit(hit, Vector3(facing, 0.6, 0).normalized(), false, outgoing_multiplier()):
+		add_special_energy(hit.damage * SPECIAL_PER_DAMAGE_DEALT)
+		SpecialFX.hit(self, opponent.global_position.lerp(global_position, 0.25) + Vector3(0, 1.0, 0), color, hit.damage)
 
 
 func start_special() -> void:
@@ -702,7 +934,7 @@ func _update_pending_attack(delta: float) -> void:
 	pending_time -= delta
 	if pending_time > 0.0:
 		return
-	if pending_attack == "strong" and charging and _update_charge(delta):
+	if pending_attack.begins_with("strong") and charging and _update_charge(delta):
 		return
 	var kind := pending_attack
 	pending_attack = ""
@@ -712,7 +944,7 @@ func _update_pending_attack(delta: float) -> void:
 			# Daneben gegriffen: kurz ungeschützt.
 			grab_lag = 0.4
 		return
-	if kind == "strong" and charge_time > 0.0:
+	if kind.begins_with("strong") and charge_time > 0.0:
 		# Aufgeladener Smash-Angriff: mehr Schaden und Rückstoß.
 		var bonus := 1.0 + CHARGE_BONUS * charge_time / CHARGE_MAX
 		charge_time = 0.0
@@ -785,37 +1017,53 @@ func _update_dash(delta: float) -> void:
 ## Trifft den Gegner, wenn er in Reichweite ist. both_sides: trifft vorne und hinten.
 func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 	Target.hit_melee(self, atk.range, both_sides)
-	if opponent == null or not opponent.visible:
-		return false
-	var offset := opponent.global_position - global_position
+	var any_in_range := false
+	for foe in _enemies():
+		if _try_hit_one(atk, both_sides, foe):
+			any_in_range = true
+	return any_in_range
+
+
+func _try_hit_one(atk: Dictionary, both_sides: bool, foe: CharacterBody3D) -> bool:
+	var offset := foe.global_position - global_position
 	var forward := offset.x * facing
 	var reach: Vector2 = atk.range * reach_scale
 	var in_range := false
+	var zone: String = atk.get("zone", "")
+	if zone == "beide":
+		both_sides = true
 	if both_sides:
 		in_range = absf(offset.x) <= reach.x and absf(offset.y) <= reach.y
-	elif atk == ATTACKS.aufwaerts or atk == ATTACKS.luft:
+	elif zone == "oben":
 		in_range = absf(offset.x) <= reach.x and offset.y > -1.6 and offset.y <= reach.y
+	elif zone == "unten":
+		in_range = absf(offset.x) <= reach.x and offset.y < 0.8 and offset.y >= -reach.y
+	elif zone == "hinten":
+		in_range = forward < 0.3 and forward >= -reach.x and absf(offset.y) <= reach.y
 	else:
 		in_range = forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y
 	if not in_range:
 		return false
-	var side := facing
+	var side := -facing if zone == "hinten" else facing
 	if both_sides:
 		side = 1 if offset.x >= 0.0 else -1
 	var angle: Vector2 = atk.angle
-	var landed: bool = opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0,
+	if angle.y < 0.0 and foe.is_on_floor():
+		# Nach unten geschlagen, aber der Gegner steht: er prallt vom Boden ab.
+		angle = Vector2(0.6, 0.5)
+	var landed: bool = foe.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0,
 		outgoing_multiplier())
 	if landed:
 		add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
-		on_hit_landed(opponent)
+		on_hit_landed(foe)
 	var special := false
 	for kind in SPECIAL_KINDS:
 		if atk == ATTACKS[kind] and landed:
-			SpecialFX.impact(self, opponent.global_position + Vector3(0, 1.0, 0), color)
+			SpecialFX.impact(self, foe.global_position + Vector3(0, 1.0, 0), color)
 			special = true
 	if landed and not special:
 		# Trefferpunkt zwischen beiden Figuren, etwas näher am Getroffenen.
-		var spot: Vector3 = opponent.global_position.lerp(global_position, 0.25) + Vector3(0, 1.0, 0)
+		var spot: Vector3 = foe.global_position.lerp(global_position, 0.25) + Vector3(0, 1.0, 0)
 		SpecialFX.hit(self, spot, color, atk.damage * (POWER_MULTIPLIER if power_time > 0.0 else 1.0))
 	return true
 
@@ -831,21 +1079,23 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 		# In der Lichtkuppel des Paladins prallt alles ab.
 		Audio.sfx("shield_block", 1.3)
 		return false
+	if konter_time > 0.0:
+		_counter_strike(atk)
+		return false
+	if final_time > 0.0 or caught:
+		return false
 	var multiplier := (POWER_MULTIPLIER if powered else 1.0) * attacker_multiplier
 	if shielding:
+		if shield_hold < PARRY_WINDOW:
+			_perfect_shield()
+			return false
 		shield_hp -= atk.damage * 3.0 * multiplier * (0.5 if passive == "schildmeister" else 1.0)
 		if passive == "schildmeister":
 			counter_time = COUNTER_TIME
 			SpecialFX.popup(self, "KONTER!", Color(0.6, 0.85, 1.0))
 		velocity.x = direction.x * 3.0
 		if shield_hp <= 0.0:
-			# Schild zerbrochen: kurz betäubt.
-			shield_hp = SHIELD_MAX * 0.4
-			shielding = false
-			stunned = 2.5
-			velocity.y = 6.0
-			Audio.sfx("shield_break")
-			say("au")
+			_break_shield()
 		else:
 			Audio.sfx("shield_block")
 		return false
@@ -881,12 +1131,76 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 	getup_time = 0.0
 	launched = knockback > 11.0
 	_play_hit(direction, knockback)
+	if knockback > 13.0 and not boss and _flies_out():
+		ko_hit.emit(self)
 	add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_TAKEN)
 	var heavy: bool = atk.damage * multiplier >= 10.0
 	Audio.sfx("hit_strong" if heavy else "hit_weak")
 	if heavy or randf() < 0.3:
 		say("au", "au", randf_range(0.97, 1.03), -2.0)
 	return true
+
+
+## Schild genau im richtigen Moment gedrückt: kein Schaden am Schild, der Angreifer stockt kurz.
+func _perfect_shield() -> void:
+	Audio.sfx("shield_block", 1.8)
+	SpecialFX.perfect_shield(self)
+	if passive == "schildmeister":
+		counter_time = COUNTER_TIME
+	if opponent and is_instance_valid(opponent) and not opponent.boss \
+			and opponent.global_position.distance_to(global_position) < 4.0:
+		opponent.stunned = maxf(opponent.stunned, 0.45)
+
+
+## Schild zerbrochen: die Figur springt hoch und taumelt mit Sternen über dem Kopf.
+func _break_shield() -> void:
+	shield_hp = SHIELD_MAX * 0.4
+	shielding = false
+	shield_hold = 0.0
+	stunned = SHIELD_BREAK_STUN
+	velocity.y = 10.0
+	Audio.sfx("shield_break")
+	say("au")
+	SpecialFX.shield_break(self)
+	_show_dizzy()
+
+
+func _show_dizzy() -> void:
+	if dizzy_fx == null:
+		dizzy_fx = Node3D.new()
+		dizzy_fx.position.y = 2.15 * size_scale
+		add_child(dizzy_fx)
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_color = Color(1.0, 0.9, 0.25)
+		for i in 3:
+			var star := MeshInstance3D.new()
+			var mesh := PrismMesh.new()
+			mesh.size = Vector3(0.32, 0.32, 0.08)
+			star.mesh = mesh
+			star.material_override = mat
+			var a := TAU * i / 3.0
+			star.position = Vector3(cos(a) * 0.55, 0, sin(a) * 0.55)
+			dizzy_fx.add_child(star)
+	dizzy_fx.visible = true
+
+
+## Sagt voraus, ob die Figur mit ihrer jetzigen Geschwindigkeit aus der Arena fliegt
+## (vereinfachte Flugbahn ohne Plattformen, wie im Spiel: Schwerkraft und Abbremsen in der Luft).
+func _flies_out() -> bool:
+	var pos := Vector2(position.x, position.y)
+	var vel := Vector2(velocity.x, velocity.y)
+	var dt := 1.0 / 30.0
+	for i in 60:
+		vel.x = move_toward(vel.x, 0.0, 8.0 * dt)
+		vel.y -= gravity * dt
+		pos += vel * dt
+		if not blast_zone.has_point(pos):
+			# Nach unten raus zählt nur, wenn die Figur dabei nicht über der Bühne ist.
+			return pos.y > blast_zone.position.y or absf(pos.x - blast_zone.get_center().x) > blast_zone.size.x * 0.3
+		if vel.y < 0.0 and pos.y < position.y - 1.0:
+			return false
+	return false
 
 
 ## Macht aus der Figur einen Endboss: größer, Lebenspunkte statt Prozent, kaum wegzuschleudern.
@@ -942,8 +1256,15 @@ func cheer() -> void:
 
 
 func _lose_stock() -> void:
+	if visible and not boss:
+		SpecialFX.blast(self, blast_zone)
 	stocks -= 1
 	damage = 0.0
+	# Wer rausfliegt, verliert auch einen nicht benutzten Final Smash.
+	final_smash_ready = false
+	caught = false
+	if is_instance_valid(final_aura):
+		final_aura.queue_free()
 	hitstun = 0.0
 	stunned = 0.0
 	power_time = 0.0
@@ -1002,7 +1323,20 @@ func _update_visuals(delta: float) -> void:
 	_update_cloth(delta)
 
 	shield_bubble.visible = shielding
-	shield_bubble.scale = Vector3.ONE * lerpf(0.5, 1.0, shield_hp / SHIELD_MAX)
+	var shield_left := shield_hp / SHIELD_MAX
+	shield_bubble.scale = Vector3.ONE * lerpf(0.35, 1.0, shield_left)
+	if shielding:
+		# Fast leeres Schild wird rot und flackert.
+		var mat := shield_bubble.material_override as StandardMaterial3D
+		var tint := color.lerp(Color(1, 0.15, 0.1), clampf(1.0 - shield_left * 2.0, 0.0, 1.0))
+		var alpha := 0.35
+		if shield_left < 0.25:
+			alpha = 0.2 + 0.25 * absf(sin(Time.get_ticks_msec() * 0.02))
+		mat.albedo_color = Color(tint, alpha)
+		mat.emission = tint
+	if dizzy_fx and dizzy_fx.visible:
+		dizzy_fx.visible = stunned > 0.0
+		dizzy_fx.rotation.y += 5.0 * delta
 
 	var text := "P%d" % player_id
 	if held_by:
@@ -1044,12 +1378,17 @@ func _update_visuals(delta: float) -> void:
 		return
 	if ledge_side != 0 or holding or down_time > 0.0 or getup_time > 0.0:
 		return
-	if hitstun > 0.0:
+	if caught:
+		_play("stunned" if _has_anim("stunned") else "hit")
+	elif hitstun > 0.0:
 		_play(hit_anim, 1.5 if hit_anim == "hit" else 1.0)
 	elif stunned > 0.0:
 		_play("stunned")
 	elif roll_time > 0.0:
 		return
+	elif konter_time > 0.0:
+		if current_anim != "konter" and current_anim != "shield":
+			_play("konter")
 	elif current_anim in ATTACKS or current_anim in ["weak", "strong", "kick", "special", "grab", "throw", "smash_charge"]:
 		if attack_timer > 0.0 or _attack_anim_running():
 			return
@@ -1067,7 +1406,7 @@ func _attack_anim_running() -> bool:
 		return false
 	if anim_player.current_animation != Roster.anim_name(fighter, current_anim):
 		return false
-	if current_anim == "luft":
+	if current_anim == "luft" or current_anim.begins_with("luft_"):
 		return not is_on_floor()
 	return is_on_floor() and absf(velocity.x) < 0.5
 
@@ -1080,11 +1419,11 @@ func _load_anim_files() -> void:
 		return
 	var lib := AnimationLibrary.new()
 	for action in ["idle", "run", "jump", "fall", "weak", "strong", "kick", "special", "shield",
-			"hit", "stunned", "dodge", "cheer", "luft"] + SMASH_ANIMS.keys():
+			"hit", "stunned", "dodge", "cheer", "luft"] + SMASH_ANIMS.keys() + DIR_ATTACKS.keys():
 		var path: String = dir + fighter.get("anim_files", {}).get(action, action + ".fbx")
 		if action == "luft" and not ResourceLoader.exists(path):
 			path = LUFT_ANIM
-		if action in SMASH_ANIMS and not ResourceLoader.exists(path):
+		if (action in SMASH_ANIMS or action in DIR_ATTACKS) and not ResourceLoader.exists(path):
 			path = SMASH_ANIM_DIR + action + ".fbx"
 		if not ResourceLoader.exists(path):
 			continue
@@ -1092,8 +1431,9 @@ func _load_anim_files() -> void:
 		var source: AnimationPlayer = scene.find_child("AnimationPlayer", true, false)
 		if source and not source.get_animation_list().is_empty():
 			var anim: Animation = source.get_animation(source.get_animation_list()[0]).duplicate()
-			_strip_root_motion(anim)
-			var trim: Array = fighter.get("anim_trim", {}).get(action, LUFT_TRIM if action == "luft" else SMASH_ANIMS.get(action, []))
+			_strip_root_motion(anim, not action.begins_with("luft_") and action != "aufwaerts")
+			var trim: Array = fighter.get("anim_trim", {}).get(action,
+				LUFT_TRIM if action == "luft" else SMASH_ANIMS.get(action, DIR_TRIM.get(action, [])))
 			if trim.size() == 2:
 				anim = _trim_animation(anim, trim[0], trim[1])
 			lib.add_animation(action, anim)
@@ -1103,14 +1443,15 @@ func _load_anim_files() -> void:
 	anim_player.add_animation_library(Roster.ANIM_LIB, lib)
 
 
-func _strip_root_motion(anim: Animation) -> void:
+## keep_height false: auch das Hoch und Runter der Hüfte entfernen (Luftangriffe, die im Original springen).
+func _strip_root_motion(anim: Animation, keep_height := true) -> void:
 	for t in anim.get_track_count():
 		if anim.track_get_type(t) != Animation.TYPE_POSITION_3D or not str(anim.track_get_path(t)).ends_with("Hips"):
 			continue
 		var start: Vector3 = anim.track_get_key_value(t, 0)
 		for k in anim.track_get_key_count(t):
 			var p: Vector3 = anim.track_get_key_value(t, k)
-			anim.track_set_key_value(t, k, Vector3(start.x, p.y, start.z))
+			anim.track_set_key_value(t, k, Vector3(start.x, p.y if keep_height else start.y, start.z))
 
 
 ## Schneidet eine Animation auf den Bereich von `from` bis `to` Sekunden zu
@@ -1155,7 +1496,10 @@ func _play_movement() -> void:
 
 
 func _play(action: String, speed_scale := 1.0) -> void:
-	var is_attack := action in ["weak", "strong", "kick", "special"]
+	if action in DIR_ATTACKS and not _has_anim(action):
+		# Noch keine eigene Animation für den Richtungs-Angriff: eine ähnliche nehmen.
+		action = DIR_ATTACKS[action]
+	var is_attack := action in ["weak", "strong", "kick", "special", "luft"] or action in DIR_ATTACKS
 	if anim_player == null:
 		# Figur ohne Animationen (z. B. der Mönch vor Mixamo): bei Angriffen kurz nach vorne stoßen.
 		if is_attack:
@@ -1218,7 +1562,7 @@ func _update_down(delta: float) -> void:
 		down_elapsed += delta
 		var pressed := false
 		if controls_enabled and down_elapsed >= DOWN_QUICK:
-			for a in ["left", "right", "jump", "shield", "weak", "strong", "kick", "special"]:
+			for a in ["left", "right", "up", "down", "jump", "shield", "weak", "strong", "kick", "special"]:
 				if Input.is_action_just_pressed(_action(a)):
 					pressed = true
 		if down_time <= 0.0 or pressed:
@@ -1246,7 +1590,7 @@ func _check_double_taps() -> void:
 		last_tap[dir] = -1.0 if double else now
 		if not double:
 			continue
-		if dir == "shield":
+		if dir == "down":
 			if on_platform:
 				_drop_through()
 		elif roll_cooldown <= 0.0 and attack_timer <= 0.0:
@@ -1807,43 +2151,42 @@ func _update_flurry(delta: float) -> void:
 	_lunge()
 	Audio.sfx("hit_weak" if not last else "swing_strong", 1.0 + 0.08 * (FLURRY_HITS - flurry_left))
 	Target.hit_melee(self, atk.range, false)
-	if opponent == null or not opponent.visible:
-		return
-	var offset := opponent.global_position - global_position
-	var forward := offset.x * facing
-	var reach: Vector2 = atk.range * reach_scale
-	if forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y:
-		var angle: Vector2 = atk.angle
-		if opponent.take_hit(atk, Vector3(angle.x * facing, angle.y, 0).normalized(), power_time > 0.0,
-				outgoing_multiplier()):
-			add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT * 0.5)
-			on_hit_landed(opponent)
-			if last:
-				SpecialFX.impact(self, opponent.global_position + Vector3(0, 1.0, 0), Color(1, 0.8, 0.3))
+	for foe in _enemies():
+		var offset: Vector3 = foe.global_position - global_position
+		var forward := offset.x * facing
+		var reach: Vector2 = atk.range * reach_scale
+		if forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y:
+			var angle: Vector2 = atk.angle
+			if foe.take_hit(atk, Vector3(angle.x * facing, angle.y, 0).normalized(), power_time > 0.0,
+					outgoing_multiplier()):
+				add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT * 0.5)
+				on_hit_landed(foe)
+				if last:
+					SpecialFX.impact(self, foe.global_position + Vector3(0, 1.0, 0), Color(1, 0.8, 0.3))
 
 
 ## Erdbeben: trifft alle, die in Reichweite am Boden (oder knapp darüber) stehen, und schleudert sie hoch.
 func _quake_hit(atk: Dictionary) -> void:
 	Target.hit_melee(self, atk.range, true)
-	if opponent == null or not opponent.visible:
-		return
-	var offset := opponent.global_position - global_position
-	var reach: Vector2 = atk.range * reach_scale
-	if absf(offset.x) > reach.x or absf(offset.y) > reach.y:
-		return
-	var side := 1.0 if offset.x >= 0.0 else -1.0
-	var angle: Vector2 = atk.angle
-	if opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0, outgoing_multiplier()):
-		add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
-		on_hit_landed(opponent)
-		SpecialFX.impact(self, opponent.global_position + Vector3(0, 0.6, 0), color)
+	for foe in _enemies():
+		var offset: Vector3 = foe.global_position - global_position
+		var reach: Vector2 = atk.range * reach_scale
+		if absf(offset.x) > reach.x or absf(offset.y) > reach.y:
+			continue
+		var side := 1.0 if offset.x >= 0.0 else -1.0
+		var angle: Vector2 = atk.angle
+		if foe.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0, outgoing_multiplier()):
+			add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_DEALT)
+			on_hit_landed(foe)
+			SpecialFX.impact(self, foe.global_position + Vector3(0, 0.6, 0), color)
 
 
 ## In der Luft: Abwehren antippen = ausweichen (kurz unverwundbar, einmal pro Sprung),
-## gedrückt halten = schnell fallen, sobald es abwärts geht.
+## Runter halten = schnell fallen, sobald es abwärts geht.
 func _update_air_moves() -> void:
-	if Input.is_action_just_pressed(_action("shield")):
+	if Input.is_action_just_pressed(_action("down")):
 		fast_fall_armed = true
+	if Input.is_action_just_pressed(_action("shield")):
 		if not air_dodge_used and pending_attack == "":
 			air_dodge_used = true
 			launched = false
@@ -1853,16 +2196,16 @@ func _update_air_moves() -> void:
 			velocity.y = maxf(velocity.y, 0.0)
 			_end_flip()
 			Audio.sfx("dash", 1.3, -6.0)
-	if not Input.is_action_pressed(_action("shield")):
+	if not Input.is_action_pressed(_action("down")):
 		fast_fall_armed = false
-	if fast_fall_armed and not fast_falling and air_dodge_time <= 0.0 and velocity.y <= 0.0:
+	if fast_fall_armed and not fast_falling and air_dodge_time <= 0.0 and velocity.y <= 0.0 and pending_attack == "":
 		fast_falling = true
 		Audio.sfx("swing_weak", 0.7, -8.0)
 
 
 ## Smash-Angriff: starken Angriff gedrückt halten, loslassen schlägt zu (je länger, desto stärker).
-func _start_charge() -> void:
-	start_attack("strong")
+func _start_charge(kind := "strong") -> void:
+	start_attack(kind)
 	charging = true
 	charge_time = 0.0
 
@@ -1886,8 +2229,9 @@ func _update_charge(delta: float) -> bool:
 	_stop_charge()
 	if current_anim == "smash_charge":
 		# Losgelassen: direkt in den Schlag (die Ausholbewegung ist schon vorbei).
-		_play("strong", ATTACKS.strong.anim_speed)
-		anim_player.seek(ATTACKS.strong.startup * ATTACKS.strong.anim_speed, true)
+		var kind := pending_attack if pending_attack != "" else "strong"
+		_play(kind, ATTACKS[kind].anim_speed)
+		anim_player.seek(ATTACKS[kind].startup * ATTACKS[kind].anim_speed, true)
 	if charge_time > CHARGE_MAX * 0.5:
 		SpecialFX.popup(self, "SMASH!", color)
 	return false
@@ -1926,7 +2270,7 @@ func _try_grab_ledge() -> void:
 		if not space.intersect_ray(below).is_empty():
 			continue
 		# Hängt der Gegner schon an dieser Kante, ist kein Platz.
-		if opponent and opponent.ledge_side == side and absf(opponent.ledge_x - edge_x) < 0.5:
+		if rivals.any(func(r): return is_instance_valid(r) and r.ledge_side == side and absf(r.ledge_x - edge_x) < 0.5):
 			continue
 		_grab_ledge(side, edge_x, top_hit.position.y)
 		return
@@ -1976,7 +2320,7 @@ func _update_ledge(delta: float) -> void:
 	var toward := "right" if ledge_side > 0 else "left"
 	var away := "left" if ledge_side > 0 else "right"
 	if hitstun > 0.0 or stunned > 0.0 or hang_time > LEDGE_HANG_MAX or Input.is_action_just_pressed(_action(away)) \
-			or Input.is_action_just_pressed(_action("shield")):
+			or Input.is_action_just_pressed(_action("down")):
 		_let_go_ledge()
 		velocity.y = -2.0
 	elif Input.is_action_just_pressed(_action("jump")):
@@ -1985,7 +2329,7 @@ func _update_ledge(delta: float) -> void:
 		jumps_left = max_jumps - 1
 		jumped = true
 		Audio.sfx("jump")
-	elif hang_time > 0.15 and Input.is_action_just_pressed(_action(toward)):
+	elif hang_time > 0.15 and (Input.is_action_just_pressed(_action(toward)) or Input.is_action_just_pressed(_action("up"))):
 		_climb_ledge()
 	elif hang_time > 0.15 and (Input.is_action_just_pressed(_action("weak")) or Input.is_action_just_pressed(_action("strong")) \
 			or Input.is_action_just_pressed(_action("kick"))):
@@ -2094,9 +2438,9 @@ func _update_holding(delta: float) -> void:
 		_throw("vorne")
 	elif Input.is_action_just_pressed(_action(back)):
 		_throw("hinten")
-	elif Input.is_action_just_pressed(_action("jump")):
+	elif Input.is_action_just_pressed(_action("up")):
 		_throw("oben")
-	elif Input.is_action_just_pressed(_action("shield")):
+	elif Input.is_action_just_pressed(_action("down")):
 		_throw("unten")
 	elif Input.is_action_just_pressed(_action("weak")) and pummel_cooldown <= 0.0:
 		pummel_cooldown = 0.3
@@ -2115,7 +2459,7 @@ func _update_held() -> void:
 		held_by = null
 		return
 	velocity = Vector3.ZERO
-	for a in ["left", "right", "jump", "weak", "strong", "kick", "special"]:
+	for a in ["left", "right", "up", "down", "jump", "weak", "strong", "kick", "special"]:
 		if Input.is_action_just_pressed(_action(a)):
 			held_by.grab_hold -= 0.08
 
