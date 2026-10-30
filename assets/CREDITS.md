@@ -8,3 +8,4 @@ Alle Modelle sind CC0 (gemeinfrei) und dürfen frei verwendet werden.
 - `maps/friedhof/`: KayKit Halloween Bits von Kay Lousberg
 - `audio/sfx/` und `audio/music/`: selbst per Programm erzeugt (Synthesizer-Skript), frei verwendbar
 - `audio/voice/`: erzeugt mit der Windows-Sprachausgabe (Microsoft Hedda) und nachbearbeitet
+- `fonts/`: Schriften „Lilita One“ (Juan Montoreano) und „Nunito“ (Vernon Adams u. a.) von Google Fonts, SIL Open Font License (siehe `fonts/OFL_*.txt`)
