@@ -56,7 +56,7 @@ func _physics_process(delta: float) -> void:
 	think_timer -= delta
 	var want: Array = []
 	var pos := me.global_position
-	var to_foe := foe.global_position - pos
+	var to_foe := _goal_pos() - pos
 	var dist := absf(to_foe.x)
 	var toward := "right" if to_foe.x > 0.0 else "left"
 	var to_center := "right" if pos.x < 0.0 else "left"
@@ -243,8 +243,8 @@ func _surface_under(p: Vector3, list: Array) -> int:
 func _plan_route() -> Dictionary:
 	var list := _surfaces()
 	var start := _surface_under(me.global_position, list)
-	var goal := _surface_under(foe.global_position, list)
-	var far: bool = absf(foe.global_position.x - me.global_position.x) > 3.0
+	var goal := _surface_under(_goal_pos(), list)
+	var far: bool = absf(_goal_pos().x - me.global_position.x) > 3.0
 	if roam_time <= 0.0 and far and not list.is_empty() and randf() < 0.025:
 		roam = randi() % list.size()
 		roam_time = 5.0
@@ -367,6 +367,13 @@ func _recovery_goal(pos: Vector3) -> Vector2:
 
 ## Entscheidung im Takt der Reaktionszeit: springen, schlagen, treten, Spezial.
 func _decide(to_foe: Vector3, dist: float, toward: String) -> void:
+	# Final Smash bereit und der Gegner etwa auf gleicher Höhe: abfeuern.
+	if me.final_smash_ready:
+		var real := foe.global_position - me.global_position
+		if foe.visible and absf(real.y) < 2.0 and randf() < 0.5 + level.aggression * 0.5:
+			_turn_to("right" if real.x > 0.0 else "left")
+			_tap("special")
+			return
 	# Gegner deutlich tiefer und man steht auf einer Plattform: hindurchfallen (wie doppelt "runter").
 	if to_foe.y < -1.2 and me.on_platform and route.is_empty():
 		me._drop_through()
@@ -413,6 +420,15 @@ func _decide(to_foe: Vector3, dist: float, toward: String) -> void:
 			_tap("strong", 0.4 + randf() * 0.5)
 			return
 		_tap("weak" if r < 0.5 else "strong" if r < 0.75 else "kick")
+
+
+## Wohin der Computer will: zum Gegner, oder zur Smash-Kugel, wenn sie nicht zu weit weg ist.
+func _goal_pos() -> Vector3:
+	if not me.final_smash_ready:
+		for ball in get_tree().get_nodes_in_group(Target.GROUP):
+			if ball.has_method("hit_by") and ball.global_position.distance_to(me.global_position) < 9.0:
+				return ball.global_position - Vector3(0, 1.0, 0)
+	return foe.global_position
 
 
 ## Kurz in Richtung des Gegners drehen, damit der Schlag nach vorne geht.

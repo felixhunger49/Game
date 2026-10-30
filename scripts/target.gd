@@ -67,7 +67,10 @@ static func hit_melee(player: Node3D, reach: Vector2, both_sides: bool) -> void:
 		var forward: float = offset.x * player.get("facing")
 		var in_range := absf(offset.x) <= reach.x if both_sides else forward > -0.3 and forward <= reach.x
 		if in_range and absf(offset.y) <= reach.y + 0.3:
-			t.pop()
+			if t.has_method("hit_by"):
+				t.hit_by(player)
+			else:
+				t.pop()
 
 
 ## Zerstört alle Ziele in der Nähe eines Geschosses. Gibt true zurück, wenn eins getroffen wurde.
@@ -75,7 +78,11 @@ static func hit_near(node: Node3D, pos: Vector3, radius: float) -> bool:
 	var hit := false
 	for t in node.get_tree().get_nodes_in_group(GROUP):
 		if t.global_position.distance_to(pos) < radius:
-			t.pop()
+			if t.has_method("hit_by"):
+				# Die Smash-Kugel will wissen, wem das Geschoss gehört.
+				t.hit_by(node.get("shooter"))
+			else:
+				t.pop()
 			hit = true
 	return hit
 

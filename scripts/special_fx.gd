@@ -222,6 +222,53 @@ static func laser(player: Node3D, length: float) -> void:
 	shake(player, 0.3, 0.35)
 
 
+## Final Smash, Aufladen: Lichtkugel wächst um die Figur, Funken werden angesaugt, alles bebt leicht.
+static func final_charge(player: Node3D, seconds: float) -> void:
+	var world := player.get_parent()
+	var color: Color = player.get("color")
+	var pos := player.global_position + Vector3(0, 1.0 * player.get("size_scale"), 0)
+	_flash_sphere(world, pos, color.lightened(0.4), 0.2, 1.6, seconds)
+	_ring(world, pos, color, 3.0, 0.3, seconds, true)
+	_ring(world, pos, Color(1, 1, 1), 4.0, 0.5, seconds * 0.8, true)
+	_flash_light(world, pos, color, 8.0, 6.0, seconds)
+	popup(player, "FINAL SMASH!", color)
+	shake(player, 0.15, seconds)
+	Audio.sfx("special_start", 0.7)
+
+
+## Final Smash, der Strahl: riesig, in der Farbe der Figur, quer über die ganze Arena.
+static func final_beam(player: Node3D, length: float) -> void:
+	var world := player.get_parent()
+	var facing: int = player.get("facing")
+	var color: Color = player.get("color")
+	var start: Vector3 = player.global_position + Vector3(0.5 * facing, 1.1 * player.get("size_scale"), 0)
+	var middle := start + Vector3(facing * length / 2.0, 0, 0)
+	for layer in [[1.9, color, 2.6], [1.1, color.lightened(0.5), 2.6], [0.45, Color(1, 1, 1), 3.0]]:
+		var beam := MeshInstance3D.new()
+		var c := CylinderMesh.new()
+		c.top_radius = layer[0]
+		c.bottom_radius = layer[0]
+		c.height = length
+		beam.mesh = c
+		beam.material_override = _glow_material(Color(layer[1], 0.9), layer[2])
+		world.add_child(beam)
+		beam.global_position = middle
+		beam.rotation.z = PI / 2.0
+		beam.scale = Vector3(0.2, 1.0, 0.2)
+		var tween := beam.create_tween()
+		tween.tween_property(beam, "scale", Vector3.ONE, 0.12).set_ease(Tween.EASE_OUT)
+		tween.tween_interval(0.5)
+		tween.tween_property(beam, "scale", Vector3(0.02, 1.0, 0.02), 0.35).set_ease(Tween.EASE_IN)
+		tween.tween_callback(beam.queue_free)
+	_flash_sphere(world, start, Color(1, 1, 1), 0.5, 3.0, 0.4)
+	for i in 6:
+		_sparks(world, start + Vector3(facing * length * (i + 1) / 7.0, 0, 0), color.lightened(0.3), 25, 9.0, 0.6)
+	_flash_light(world, middle, color, 14.0, length, 0.9)
+	Audio.sfx("laser", 0.4, 6.0)
+	Audio.sfx("special_hit")
+	shake(player, 0.9, 0.8)
+
+
 ## Overcharge-Warnung: blaues Knistern um den Kampfroboter, kurz bevor er sich entlädt.
 static func overcharge_warn(player: Node3D, seconds: float) -> void:
 	var blue := Color(0.3, 0.7, 1.0)

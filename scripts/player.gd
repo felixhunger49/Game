@@ -4,6 +4,8 @@ extends CharacterBody3D
 signal fell_off(player)
 ## Ein Treffer, der die Figur aus der Arena schleudern wird (für Zeitlupe und Zoom wie bei Smash Bros.).
 signal ko_hit(player)
+## Der Final Smash beginnt (die Kamera zoomt heran, siehe Fight).
+signal final_smash_started(player)
 ## Nur beim Endboss: seine Lebensleiste ist leer.
 signal boss_defeated
 
@@ -116,6 +118,11 @@ const LUFT_TRIM := [0.40, 1.30]
 ## daher reicht ein Satz für alle (eine Figur kann in ihrem anim_dir eine eigene Datei gleichen Namens haben).
 ## Wert: [von, bis] in Sekunden ([] = ganze Animation).
 const SMASH_ANIM_DIR := "res://assets/smash/"
+## Final Smash: so lange lädt die Figur auf, so lange dauert alles, so stark trifft der Strahl.
+const FINAL_CHARGE := 0.7
+const FINAL_TIME := 1.6
+const FINAL_RANGE := 34.0
+const FINAL_ATTACK := {"damage": 30.0, "base": 14.0, "scale": 0.3, "angle": Vector2(1, 0.45)}
 ## Konter (runter + Spezial): so lange fängt man Treffer ab, dann so lange warten bis zum nächsten Konter.
 const KONTER_TIME := 0.45
 const KONTER_COOLDOWN := 1.6
@@ -248,6 +255,12 @@ var dash_time := 0.0
 var dash_hit_done := false
 var special_air_used := false
 var konter_time := 0.0
+## Smash-Kugel zerschlagen: der nächste Druck auf Spezial löst den Final Smash aus.
+var final_smash_ready := false
+## Läuft der Final Smash: Aufladen, dann der riesige Strahl. Solange ist die Figur unverwundbar.
+var final_time := 0.0
+var final_fired := false
+var final_aura: CPUParticles3D
 var konter_cooldown := 0.0
 var shielding := false
 var shield_hp := SHIELD_MAX
@@ -511,6 +524,8 @@ func _physics_process(delta: float) -> void:
 	elif hitstun > 0.0:
 		# Getroffen: keine Kontrolle, die Figur fliegt weiter.
 		velocity.x = move_toward(velocity.x, 0.0, 8.0 * delta) + wind_speed * delta
+	elif final_time > 0.0:
+		_update_final_smash(delta)
 	elif dash_time > 0.0:
 		pass
 	elif roll_time > 0.0:
@@ -620,6 +635,9 @@ func _handle_input(delta: float) -> void:
 			else:
 				start_attack(kind)
 			return
+	if Input.is_action_just_pressed(_action("special")) and final_smash_ready:
+		start_final_smash()
+		return
 	if Input.is_action_just_pressed(_action("special")):
 		# Spezial je Richtung: hoch = Rettungssprung, runter = Konter, sonst das eigene Spezial der Figur.
 		match _held_dir():
@@ -666,6 +684,71 @@ func start_attack(kind: String) -> void:
 				_shout()
 		"kick", "luft_hinten":
 			Audio.sfx("kick")
+
+
+## Smash-Kugel zerschlagen: leuchtende Aura, bis man den Final Smash auslöst.
+func gain_final_smash() -> void:
+	if final_smash_ready or boss:
+		return
+	final_smash_ready = true
+	SpecialFX.popup(self, "FINAL SMASH!", color)
+	say("spezial")
+	final_aura = SpecialFX._particles(color.lightened(0.3), 50, 0.8, 0.12)
+	final_aura.one_shot = false
+	final_aura.explosiveness = 0.0
+	final_aura.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	final_aura.emission_sphere_radius = 0.8
+	final_aura.direction = Vector3.UP
+	final_aura.spread = 60.0
+	final_aura.initial_velocity_min = 1.0
+	final_aura.initial_velocity_max = 2.5
+	final_aura.gravity = Vector3.ZERO
+	add_child(final_aura)
+	final_aura.position = Vector3(0, 1.0 * size_scale, 0)
+	final_aura.emitting = true
+
+
+## Final Smash: Die Figur lädt kurz auf (Kamera zoomt heran), dann schießt ein riesiger Strahl in Blickrichtung
+## über die ganze Arena. Jeder Gegner darin bekommt viel Schaden und fliegt weit weg.
+func start_final_smash() -> void:
+	final_smash_ready = false
+	if is_instance_valid(final_aura):
+		final_aura.queue_free()
+	final_time = FINAL_TIME
+	final_fired = false
+	pending_attack = ""
+	charging = false
+	attack_timer = FINAL_TIME
+	velocity = Vector3.ZERO
+	_end_flip()
+	_play("special", 0.8)
+	Audio.sfx("special_start")
+	say("spezial")
+	SpecialFX.final_charge(self, FINAL_CHARGE)
+	final_smash_started.emit(self)
+
+
+func _update_final_smash(delta: float) -> void:
+	final_time -= delta
+	velocity = Vector3.ZERO
+	if not final_fired and final_time <= FINAL_TIME - FINAL_CHARGE:
+		final_fired = true
+		SpecialFX.final_beam(self, FINAL_RANGE)
+		for enemy in _enemies():
+			var offset: Vector3 = enemy.global_position - global_position
+			if offset.x * facing > -0.6 and absf(offset.y) < 2.4 * size_scale + 0.6:
+				if enemy.take_hit(FINAL_ATTACK, Vector3(facing, 0.45, 0).normalized(), false, outgoing_multiplier()):
+					on_hit_landed(enemy)
+	if final_time <= 0.0:
+		final_time = 0.0
+		attack_timer = 0.2
+
+
+## Alle Gegner, die gerade im Spiel sind.
+func _enemies() -> Array:
+	if opponent == null or not opponent.visible:
+		return []
+	return [opponent]
 
 
 ## Hoch + Spezial (alle Figuren, kostet keine Energie): Rettungssprung mit Schlag nach oben,
@@ -978,6 +1061,8 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 	if konter_time > 0.0:
 		_counter_strike(atk)
 		return false
+	if final_time > 0.0:
+		return false
 	var multiplier := (POWER_MULTIPLIER if powered else 1.0) * attacker_multiplier
 	if shielding:
 		if shield_hold < PARRY_WINDOW:
@@ -1154,6 +1239,11 @@ func _lose_stock() -> void:
 		SpecialFX.blast(self, blast_zone)
 	stocks -= 1
 	damage = 0.0
+	# Wer rausfliegt, verliert auch einen nicht benutzten Final Smash.
+	final_smash_ready = false
+	final_time = 0.0
+	if is_instance_valid(final_aura):
+		final_aura.queue_free()
 	hitstun = 0.0
 	stunned = 0.0
 	power_time = 0.0

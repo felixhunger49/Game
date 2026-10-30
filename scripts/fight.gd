@@ -10,6 +10,10 @@ const COUNTDOWN_VOICES := ["drei", "zwei", "eins", "kampf"]
 var state := State.SELECT
 var ready_flags := [false, false]
 var item_timer := 0.0
+## Die Smash-Kugel kommt seltener als normale Items (Sekunden bis zur nächsten).
+const SMASH_BALL_INTERVAL := Vector2(25, 40)
+var smash_ball_timer := 20.0
+var smash_ball: SmashBall
 var countdown_time := 0.0
 var countdown_step := -1
 var map_events: MapEvents
@@ -76,6 +80,7 @@ func _ready() -> void:
 		p.set_fighter(Settings.choices[i])
 		p.fell_off.connect(_on_player_fell_off)
 		p.ko_hit.connect(_on_ko_hit)
+		p.final_smash_started.connect(_on_final_smash)
 	if Settings.boss_mode:
 		# Spieler 2 wird zum Riesen-Kampfroboter und ist sofort bereit.
 		var index := Roster.FIGHTERS.map(func(x): return x.name).find("Kampfroboter")
@@ -302,6 +307,7 @@ func _update_items(delta: float) -> void:
 		target_time += delta
 	if not Settings.items_enabled or Settings.target_mode:
 		return
+	_update_smash_ball(delta)
 	item_timer -= delta
 	if item_timer > 0.0:
 		return
@@ -311,6 +317,24 @@ func _update_items(delta: float) -> void:
 	item.setup(Item.TYPES.keys().pick_random(), players)
 	var area := MapLook.area_of(map_node)
 	item.position = Vector3(randf_range(area.position.x + 1.0, area.end.x - 1.0), area.end.y + 4.0, 0.0)
+
+
+## Eine Smash-Kugel auf einmal, und nur wenn gerade niemand einen Final Smash bereit hat.
+func _update_smash_ball(delta: float) -> void:
+	if state != State.FIGHT or is_instance_valid(smash_ball):
+		return
+	for p in players:
+		if p.final_smash_ready or p.final_time > 0.0:
+			return
+	smash_ball_timer -= delta
+	if smash_ball_timer > 0.0:
+		return
+	smash_ball_timer = randf_range(SMASH_BALL_INTERVAL.x, SMASH_BALL_INTERVAL.y)
+	var area := MapLook.area_of(map_node)
+	smash_ball = SmashBall.new()
+	smash_ball.setup(area)
+	add_child(smash_ball)
+	smash_ball.position = Vector3(randf_range(area.position.x + 2.0, area.end.x - 2.0), area.end.y + 1.5, 0.0)
 
 
 func _reset_item_timer() -> void:
@@ -421,6 +445,12 @@ func _add_vignette() -> void:
 
 
 ## Ein Treffer schleudert eine Figur gleich aus der Arena: Zeitlupe und Zoom auf sie, wie bei Smash Bros.
+## Final Smash: die Kamera fährt während des Aufladens an die Figur heran.
+func _on_final_smash(player: CharacterBody3D) -> void:
+	ko_focus = player
+	ko_focus_time = player.FINAL_CHARGE
+
+
 func _on_ko_hit(player: CharacterBody3D) -> void:
 	if state != State.FIGHT:
 		return
