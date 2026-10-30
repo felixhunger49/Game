@@ -501,13 +501,14 @@ func _moench() -> void:
 	var fins := []
 	for i in 16:
 		var fin := _solid(_cyl(0.13, 0.55, 0.0), gold.lerp(Color(1, 0.4, 0.05), i / 16.0), 0.6)
+		_dragon_skin(fin, "flosse")
 		fins.append([fin, 0.06 + i * 0.05])
 	var legs := []
 	for spot in [[0.17, 1.0], [0.17, -1.0], [0.55, 1.0], [0.55, -1.0]]:
 		legs.append([_dragon_leg(red, gold), spot[0], spot[1]])
 	var tuft := []
 	for i in 6:
-		tuft.append(_solid(_cyl(0.16, 1.0, 0.0), Color(1, 0.5, 0.08).lerp(gold, i / 6.0), 0.8))
+		tuft.append(_dragon_skin(_solid(_cyl(0.16, 1.0, 0.0), Color(1, 0.5, 0.08).lerp(gold, i / 6.0), 0.8), "flosse"))
 	# Die leuchtende Perle, die der Drache jagt.
 	var pearl := _glow(_ball(0.35), Color(1, 0.95, 0.7), 5.0)
 	var pearl_light := OmniLight3D.new()
@@ -602,6 +603,8 @@ func _dragon_head(red: Color, gold: Color) -> Array:
 	]
 	for p in parts:
 		var m := _solid(p[0], p[1], 0.4)
+		if p[1] == red:
+			_dragon_skin(m, "schuppen")
 		m.reparent(root, false)
 		m.position = p[2]
 		m.rotation.z = p[3]
@@ -628,7 +631,7 @@ func _dragon_head(red: Color, gold: Color) -> Array:
 	# Mähne: Flammenzacken hinten am Kopf.
 	for i in 7:
 		var a := lerpf(-1.3, 1.3, i / 6.0)
-		var flame := _solid(_cyl(0.16, 1.0, 0.0), Color(1, 0.45, 0.05).lerp(gold, absf(a) / 1.3), 0.8)
+		var flame := _dragon_skin(_solid(_cyl(0.16, 1.0, 0.0), Color(1, 0.45, 0.05).lerp(gold, absf(a) / 1.3), 0.8), "flosse")
 		flame.reparent(root, false)
 		flame.position = Vector3(-0.85, 0.15 + cos(a) * 0.3, sin(a) * 0.38)
 		flame.rotation = Vector3(-a * 0.5, 0, PI / 2.0 - cos(a) * 0.3)
@@ -647,11 +650,37 @@ func _dragon_head(red: Color, gold: Color) -> Array:
 	return [root, jaw]
 
 
+## Gemalte Drachenhaut (Flux-Textur mit Normal-Map) auf ein Teil legen; ohne Textur bleibt die einfache Farbe.
+## Die Farbe des Teils färbt die Textur leicht mit (z. B. Flossen von Gold nach Orange).
+func _dragon_skin(part: MeshInstance3D, kind: String) -> MeshInstance3D:
+	var path := DRAGON_TEX + kind + ".png"
+	if not ResourceLoader.exists(path):
+		return part
+	var old: StandardMaterial3D = part.material_override
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = load(path)
+	mat.albedo_color = Color.WHITE.lerp(old.albedo_color, 0.5)
+	if ResourceLoader.exists(DRAGON_TEX + kind + "_normal.png"):
+		mat.normal_enabled = true
+		mat.normal_texture = load(DRAGON_TEX + kind + "_normal.png")
+		mat.normal_scale = 1.5
+	mat.uv1_triplanar = kind == "schuppen"
+	mat.uv1_scale = Vector3.ONE * (0.4 if kind == "schuppen" else 1.0)
+	mat.emission_enabled = true
+	mat.emission_texture = mat.albedo_texture
+	mat.emission = Color.WHITE
+	mat.emission_energy_multiplier = 0.15
+	mat.roughness = 0.45
+	mat.metallic = 0.2
+	part.material_override = mat
+	return part
+
+
 ## Ein Drachenbein (zeigt nach unten) mit drei goldenen Krallen.
 func _dragon_leg(red: Color, gold: Color) -> Node3D:
 	var leg := Node3D.new()
 	add_child(leg)
-	var thigh := _solid(_cyl(0.12, 0.7, 0.08), red, 0.3)
+	var thigh := _dragon_skin(_solid(_cyl(0.12, 0.7, 0.08), red, 0.3), "schuppen")
 	thigh.reparent(leg, false)
 	thigh.position.y = -0.35
 	for i in 3:

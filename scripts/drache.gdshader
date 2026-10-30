@@ -14,7 +14,7 @@ uniform sampler2D schuppen_tex : source_color, filter_linear_mipmap, repeat_enab
 uniform sampler2D schuppen_n : hint_normal, filter_linear_mipmap, repeat_enable;
 uniform sampler2D bauch_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D bauch_n : hint_normal, filter_linear_mipmap, repeat_enable;
-uniform vec2 kacheln = vec2(12.0, 4.0);
+uniform vec2 kacheln = vec2(5.0, 2.0);
 
 void fragment() {
 	float um = UV.y;
@@ -34,13 +34,15 @@ void fragment() {
 	float saum = 1.0 - smoothstep(0.0, 0.025, abs(abs(um - 0.5) - 0.2));
 	farbe = mix(farbe, vec3(1.0, 0.85, 0.35), saum);
 	if (texturen) {
-		vec2 uv = UV * kacheln;
+		// Bild senkrecht = entlang des Körpers, damit die Schuppenbögen zum Schwanz zeigen.
+		vec2 uv = vec2(um * kacheln.y, UV.x * kacheln.x);
+		vec2 buv = vec2((um - 0.5) * 2.5 + 0.5, UV.x * kacheln.x * 1.5);
 		vec3 s_farbe = texture(schuppen_tex, uv).rgb;
-		vec3 b_farbe = texture(bauch_tex, vec2(UV.x * kacheln.x * 2.0, (um - 0.5) * 3.0 + 0.5)).rgb;
+		vec3 b_farbe = texture(bauch_tex, buv).rgb;
 		farbe = mix(s_farbe, b_farbe, b);
 		farbe = mix(farbe, vec3(1.0, 0.85, 0.35), saum * 0.6);
 		vec3 n1 = texture(schuppen_n, uv).rgb;
-		vec3 n2 = texture(bauch_n, vec2(UV.x * kacheln.x * 2.0, (um - 0.5) * 3.0 + 0.5)).rgb;
+		vec3 n2 = texture(bauch_n, buv).rgb;
 		NORMAL_MAP = mix(n1, n2, b);
 		NORMAL_MAP_DEPTH = 1.5;
 	}
