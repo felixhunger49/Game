@@ -44,19 +44,21 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 | Aktion | Spieler 1 | Spieler 2 |
 |---|---|---|
 | Laufen | A / D | Pfeil links / rechts |
-| Springen (2× in der Luft möglich) | W | Pfeil hoch |
-| Abwehren (gedrückt halten) | S | Pfeil runter |
+| Hoch / Runter (für Richtungs-Angriffe) | W / S | Pfeil hoch / runter |
+| Springen (2× in der Luft möglich) | Leertaste | Num 0 (oder Strg rechts) |
+| Abwehren (gedrückt halten) | Umschalt links | Umschalt rechts (oder Num ,) |
 | Schwacher Angriff | F | J (oder Num 1) |
 | Starker Angriff | G | K (oder Num 2) |
 | Tritt | H | L (oder Num 3) |
 | Spezialattacke | T | I (oder Num 5) |
-| Ausweichrolle | 2× schnell links oder rechts, oder S halten + A/D | 2× schnell Pfeil links oder rechts, oder Pfeil runter halten + links/rechts |
+| Richtungs-Angriffe | W oder S halten + F/G; in der Luft: F mit W, S oder zurück (A/D) | genauso mit Pfeilen und J/K |
+| Ausweichrolle | 2× schnell links oder rechts, oder Umschalt halten + A/D | 2× schnell Pfeil links oder rechts, oder Abwehren halten + links/rechts |
 | Smash-Angriff aufladen | G gedrückt halten, loslassen | K gedrückt halten, loslassen |
-| Greifen | S halten + F | Pfeil runter halten + J |
+| Greifen | Umschalt links halten + F | Abwehren halten + J |
 | Werfen (im Griff) | A/D vor/zurück, W hoch, S runter, F zuschlagen | Pfeile, J zuschlagen |
-| Ausweichen in der Luft | S in der Luft | Pfeil runter in der Luft |
+| Ausweichen in der Luft | Umschalt links in der Luft | Abwehren in der Luft |
 | Schnell fallen | S in der Luft gedrückt halten | Pfeil runter in der Luft gedrückt halten |
-| An der Kante | automatisch beim Fallen; W hochspringen, zur Bühne hochklettern, Angriff = hochklettern mit Tritt, S oder weg = loslassen | genauso mit den Pfeilen |
+| An der Kante | automatisch beim Fallen; Leertaste hochspringen, W oder zur Bühne hochklettern, Angriff = hochklettern mit Tritt, S oder weg = loslassen | genauso mit den Pfeilen |
 | Durch eine Plattform fallen | 2× schnell S (auf einer Plattform) | 2× schnell Pfeil runter |
 | Nach dem Kampf nochmal | R | R |
 | Zurück ins Menü | Esc | Esc |
@@ -76,9 +78,11 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 
 **Smash-Angriff:** Den starken Angriff gedrückt halten: Die Figur bleibt in der Ausholbewegung stehen, zittert und sprüht Funken. Je länger (bis 1 Sekunde), desto stärker, voll aufgeladen gibt es 60 % mehr Schaden und Rückstoß. Kurz antippen ist ein normaler starker Schlag.
 
-**Greifen und Werfen:** Abwehren halten und schwach angreifen packt den Gegner, auch wenn er gerade abwehrt. Im Griff: schwacher Angriff schlägt zu, vor/zurück wirft nach vorne oder hinter sich, Springen wirft nach oben, Abwehren nach unten. Wer gepackt ist, kommt durch schnelles Tastendrücken früher frei. Daneben gegriffen: kurz ohne Schild.
+**Greifen und Werfen:** Abwehren halten und schwach angreifen packt den Gegner, auch wenn er gerade abwehrt. Im Griff: schwacher Angriff schlägt zu, vor/zurück wirft nach vorne oder hinter sich, hoch wirft nach oben, runter nach unten. Wer gepackt ist, kommt durch schnelles Tastendrücken früher frei. Daneben gegriffen: kurz ohne Schild.
 
-**In der Luft:** Abwehren antippen = ausweichen (kurz unverwundbar, einmal pro Sprung). Gedrückt halten = schnell fallen.
+**In der Luft:** Abwehren antippen = ausweichen (kurz unverwundbar, einmal pro Sprung). Runter halten = schnell fallen. In der Luft dreht man sich nicht um (wie bei Smash), so gibt es auch einen Angriff nach hinten.
+
+**Richtungs-Angriffe:** Wie bei Smash hängt der Angriff von der gehaltenen Richtung ab. Am Boden: hoch + schwach = Schlag nach oben, runter + schwach = tiefer Schlag, hoch + stark = großer Hieb nach oben, runter + stark = Feger, der vorne und hinten trifft (beide lassen sich wie der Smash-Angriff aufladen). In der Luft mit dem schwachen oder starken Angriff: ohne Richtung oder vorwärts = Tritt nach vorne, zurück = Drehtritt nach hinten, hoch = Uppercut, runter = Schlag nach unten (schleudert den Gegner in die Tiefe, steht er am Boden, prallt er ab).
 
 **Kante:** Wer neben der Bühne herunterfällt, hält sich automatisch an der Kante fest und ist kurz unverwundbar (erst wieder, nachdem man gelandet ist). Nach 2,5 Sekunden lässt man los.
 

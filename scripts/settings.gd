@@ -59,9 +59,9 @@ const ITEM_RATES := ["Selten", "Normal", "Oft"]
 const ITEM_INTERVALS := [Vector2(12, 18), Vector2(6, 10), Vector2(3, 5)]
 
 ## Aktionen, die man in den Optionen neu belegen kann (ohne "p1_"/"p2_").
-const BINDABLE := ["left", "right", "jump", "shield", "weak", "strong", "kick", "special"]
+const BINDABLE := ["left", "right", "up", "down", "jump", "shield", "weak", "strong", "kick", "special"]
 const ACTION_NAMES := {
-	"left": "Links", "right": "Rechts", "jump": "Springen", "shield": "Abwehren",
+	"left": "Links", "right": "Rechts", "up": "Hoch", "down": "Runter", "jump": "Springen", "shield": "Abwehren",
 	"weak": "Schwacher Angriff", "strong": "Starker Angriff", "kick": "Tritt", "special": "Spezialattacke",
 }
 
@@ -94,6 +94,8 @@ var sfx_volume := 8
 const GRAPHICS := ["Niedrig", "Hoch"]
 var graphics := 1
 
+## Version der Standardbelegung. Erhöhen, wenn sich die Tasten so ändern, dass alte Belegungen nicht mehr passen.
+const CONTROLS_VERSION := 2
 ## Standardbelegung aus project.godot, damit man sie wiederherstellen kann.
 var _default_events := {}
 
@@ -126,7 +128,9 @@ func _ready() -> void:
 	music_volume = cfg.get_value("audio", "music_volume", music_volume)
 	sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 	graphics = clampi(cfg.get_value("video", "graphics", graphics), 0, GRAPHICS.size() - 1)
-	if cfg.has_section("controls"):
+	# Ältere Spielstände haben noch W = Springen und S = Abwehren (vor den Richtungs-Angriffen):
+	# deren Tastenbelegung passt nicht mehr, dann gilt die neue Standardbelegung.
+	if cfg.has_section("controls") and cfg.get_value("game", "controls_version", 1) == CONTROLS_VERSION:
 		for action in cfg.get_section_keys("controls"):
 			if action in _default_events:
 				_set_events(action, cfg.get_value("controls", action))
@@ -151,6 +155,7 @@ func save() -> void:
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
 	cfg.set_value("video", "graphics", graphics)
+	cfg.set_value("game", "controls_version", CONTROLS_VERSION)
 	for action in _default_events:
 		cfg.set_value("controls", action, InputMap.action_get_events(action))
 	cfg.save(SAVE_PATH)
@@ -256,8 +261,8 @@ func event_text(e: InputEvent) -> String:
 			KEY_UP: return "Pfeil hoch"
 			KEY_DOWN: return "Pfeil runter"
 			KEY_SPACE: return "Leertaste"
-			KEY_SHIFT: return "Umschalt"
-			KEY_CTRL: return "Strg"
+			KEY_SHIFT: return "Umschalt" + _side_text(e)
+			KEY_CTRL: return "Strg" + _side_text(e)
 			KEY_ALT: return "Alt"
 			KEY_ENTER: return "Enter"
 			KEY_KP_ENTER: return "Ziffernblock Enter"
@@ -284,9 +289,17 @@ func _same_input(a: InputEvent, b: InputEvent) -> bool:
 	if a is InputEventKey and b is InputEventKey:
 		var ka: Key = a.physical_keycode if a.physical_keycode != KEY_NONE else a.keycode
 		var kb: Key = b.physical_keycode if b.physical_keycode != KEY_NONE else b.keycode
-		return ka == kb
+		return ka == kb and (a.location == KEY_LOCATION_UNSPECIFIED or b.location == KEY_LOCATION_UNSPECIFIED \
+			or a.location == b.location)
 	if a is InputEventJoypadButton and b is InputEventJoypadButton:
 		return a.button_index == b.button_index and a.device == b.device
 	if a is InputEventJoypadMotion and b is InputEventJoypadMotion:
 		return a.axis == b.axis and signf(a.axis_value) == signf(b.axis_value) and a.device == b.device
 	return false
+
+
+func _side_text(e: InputEventKey) -> String:
+	match e.location:
+		KEY_LOCATION_LEFT: return " links"
+		KEY_LOCATION_RIGHT: return " rechts"
+	return ""

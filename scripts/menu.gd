@@ -92,10 +92,10 @@ func _process(delta: float) -> void:
 		return
 
 	var rows := _rows()
-	if _pressed(["p1_jump", "p2_jump", "ui_up"]):
+	if _pressed(["p1_up", "p2_up", "ui_up"]):
 		var up := wrapi(row - 1, 0, rows.size())
 		_select(up, _nearest_col(up))
-	elif _pressed(["p1_shield", "p2_shield", "ui_down"]):
+	elif _pressed(["p1_down", "p2_down", "ui_down"]):
 		var down := wrapi(row + 1, 0, rows.size())
 		_select(down, _nearest_col(down))
 	elif _pressed(["p1_left", "p2_left", "ui_left"]):

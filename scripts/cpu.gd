@@ -384,9 +384,22 @@ func _decide(to_foe: Vector3, dist: float, toward: String) -> void:
 		_turn_to(toward)
 		me.start_grab()
 		return
+	# Richtungs-Angriffe: Gegner über einem = nach oben schlagen, unter einem (in der Luft) = nach unten.
+	if dist < 1.4 and to_foe.y > 1.0 and to_foe.y < 2.6 and randf() < level.aggression:
+		_turn_to(toward)
+		_tap("up", 0.12)
+		_tap("strong" if me.is_on_floor() and randf() < 0.4 else "weak")
+		return
+	if not me.is_on_floor() and dist < 1.2 and to_foe.y < -0.6 and to_foe.y > -2.2 and randf() < level.aggression:
+		_tap("down", 0.12)
+		_tap("weak")
+		return
 	if dist < 1.9 and absf(to_foe.y) < 1.4 and randf() < level.aggression:
 		_turn_to(toward)
 		var r := randf()
+		if me.is_on_floor() and r < 0.75 and randf() < 0.3:
+			# Manchmal tief schlagen (schwach oder stark).
+			_tap("down", 0.12)
 		if r >= 0.5 and r < 0.75 and me.is_on_floor() and (foe.stunned > 0.0 or randf() < 0.3 * level.aggression):
 			# Smash-Angriff: starken Angriff etwas aufladen.
 			_tap("strong", 0.4 + randf() * 0.5)

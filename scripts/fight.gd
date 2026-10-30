@@ -381,7 +381,8 @@ func _controls_hint() -> String:
 	var lines := []
 	for p in [1, 2]:
 		var key := func(a: String) -> String: return Settings.key_text("p%d_%s" % [p, a])
-		var parts := ["%s/%s laufen" % [key.call("left"), key.call("right")]]
+		var parts := ["%s/%s laufen" % [key.call("left"), key.call("right")],
+			"%s/%s + Angriff: nach oben/unten" % [key.call("up"), key.call("down")]]
 		for a in short:
 			parts.append("%s %s" % [key.call(a), short[a]])
 		parts.append("%s+%s greifen" % [key.call("shield"), key.call("weak")])

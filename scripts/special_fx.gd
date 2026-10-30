@@ -73,7 +73,9 @@ static func whirl(player: Node3D) -> void:
 	tornado.position.y = 0.2
 	player.add_child(tornado)
 	tornado.emitting = true
-	player.get_tree().create_timer(0.55).timeout.connect(func(): tornado.emitting = false)
+	player.get_tree().create_timer(0.55).timeout.connect(func():
+		if is_instance_valid(tornado):
+			tornado.emitting = false)
 	player.get_tree().create_timer(1.4).timeout.connect(tornado.queue_free)
 
 
@@ -125,7 +127,9 @@ static func dash_trail(player: Node3D, seconds: float) -> void:
 	trail.position.y = 0.9
 	player.add_child(trail)
 	trail.emitting = true
-	player.get_tree().create_timer(seconds).timeout.connect(func(): trail.emitting = false)
+	player.get_tree().create_timer(seconds).timeout.connect(func():
+		if is_instance_valid(trail):
+			trail.emitting = false)
 	player.get_tree().create_timer(seconds + 0.6).timeout.connect(trail.queue_free)
 
 

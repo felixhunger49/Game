@@ -35,10 +35,27 @@ const ATTACKS := {
 	"wirbel": {"damage": 11.0, "base": 6.0, "scale": 0.18, "range": Vector2(2.2, 1.5), "startup": 0.15,
 		"cooldown": 1.1, "angle": Vector2(1, 0.8), "anim_speed": 1.5},
 	"aufwaerts": {"damage": 9.0, "base": 6.0, "scale": 0.15, "range": Vector2(1.4, 2.8), "startup": 0.1,
-		"cooldown": 0.9, "angle": Vector2(0.2, 1), "anim_speed": 1.6},
-	# Alle: in der Luft schlagen = Uppercut nach oben (Animation vom Himmelshieb des Helden).
+		"cooldown": 0.9, "angle": Vector2(0.2, 1), "anim_speed": 1.6, "zone": "oben"},
+	# Alle: in der Luft hoch + schlagen = Uppercut nach oben (Animation vom Himmelshieb des Helden).
 	"luft": {"damage": 6.0, "base": 4.5, "scale": 0.12, "range": Vector2(1.4, 2.2), "startup": 0.08,
-		"cooldown": 0.55, "angle": Vector2(0.25, 1), "anim_speed": 1.5},
+		"cooldown": 0.55, "angle": Vector2(0.25, 1), "anim_speed": 1.5, "zone": "oben"},
+	# Richtungs-Angriffe wie bei Smash: Richtung (hoch/runter, in der Luft auch nach hinten) halten und angreifen.
+	# "zone": wo der Schlag trifft (oben = über einem, unten = unter einem, hinten, beide = vorne und hinten).
+	"weak_hoch": {"damage": 5.0, "base": 3.5, "scale": 0.08, "range": Vector2(1.3, 2.3), "startup": 0.12,
+		"cooldown": 0.3, "angle": Vector2(0.15, 1), "anim_speed": 1.8, "zone": "oben"},
+	"weak_tief": {"damage": 4.5, "base": 3.0, "scale": 0.07, "range": Vector2(1.8, 0.8), "startup": 0.1,
+		"cooldown": 0.28, "angle": Vector2(1, 0.6), "anim_speed": 2.2},
+	"strong_hoch": {"damage": 14.0, "base": 7.0, "scale": 0.22, "range": Vector2(1.6, 2.8), "startup": 0.35,
+		"cooldown": 0.8, "angle": Vector2(0.1, 1), "anim_speed": 1.3, "zone": "oben"},
+	"strong_tief": {"damage": 12.0, "base": 6.5, "scale": 0.2, "range": Vector2(2.2, 0.9), "startup": 0.25,
+		"cooldown": 0.8, "angle": Vector2(1, 0.3), "anim_speed": 1.4, "zone": "beide"},
+	"luft_vor": {"damage": 7.0, "base": 4.5, "scale": 0.13, "range": Vector2(1.6, 1.3), "startup": 0.15,
+		"cooldown": 0.5, "angle": Vector2(1, 0.45), "anim_speed": 1.5},
+	"luft_hinten": {"damage": 9.0, "base": 5.5, "scale": 0.16, "range": Vector2(1.6, 1.3), "startup": 0.2,
+		"cooldown": 0.55, "angle": Vector2(1, 0.35), "anim_speed": 1.6, "zone": "hinten"},
+	# Nach unten in der Luft: schlägt den Gegner nach unten (am Boden prallt er ab und fliegt hoch).
+	"luft_tief": {"damage": 8.0, "base": 4.0, "scale": 0.14, "range": Vector2(1.2, 2.2), "startup": 0.28,
+		"cooldown": 0.6, "angle": Vector2(0.1, -1), "anim_speed": 1.8, "zone": "unten"},
 	# Held: ein riesiges goldenes Lichtschwert fällt auf den Gegner (siehe JusticeSword).
 	"justice": {"damage": 14.0, "base": 8.0, "scale": 0.2, "startup": 0.3, "cooldown": 1.1,
 		"angle": Vector2(0.35, 1), "anim_speed": 1.4},
@@ -96,6 +113,12 @@ const LUFT_TRIM := [0.40, 1.30]
 ## daher reicht ein Satz für alle (eine Figur kann in ihrem anim_dir eine eigene Datei gleichen Namens haben).
 ## Wert: [von, bis] in Sekunden ([] = ganze Animation).
 const SMASH_ANIM_DIR := "res://assets/smash/"
+## Richtungs-Angriffe: eigene Animation aus assets/smash (oder dem Figurenordner), sonst die hier genannte.
+const DIR_ATTACKS := {"weak_hoch": "luft", "weak_tief": "kick", "strong_hoch": "luft", "strong_tief": "kick",
+	"luft_vor": "weak", "luft_hinten": "kick", "luft_tief": "strong"}
+## Zuschnitt der Richtungs-Animationen aus assets/smash (Mixamo) in Sekunden.
+const DIR_TRIM := {"weak_hoch": [0.15, 1.0], "weak_tief": [0.0, 1.0], "strong_hoch": [0.35, 1.35],
+	"strong_tief": [0.3, 1.35], "luft_vor": [0.1, 0.85], "luft_hinten": [0.5, 1.5], "luft_tief": [1.0, 2.2]}
 const SMASH_ANIMS := {"ledge_hang": [], "ledge_climb": [], "grab": [0.0, 0.9], "grab_hold": [],
 	"throw": [0.3, 1.4], "smash_charge": [0.0, 1.2],
 	"hit_front": [0.0, 0.9], "hit_back": [0.0, 1.0], "launch_front": [0.0, 0.6], "launch_back": [0.0, 0.8],
@@ -241,7 +264,7 @@ var was_rising := false
 var cloth_materials: Array[ShaderMaterial] = []
 var fall_wind := 0.0
 ## Zeitpunkt des letzten Tastendrucks je Richtung, um doppeltes Tippen zu erkennen.
-var last_tap := {"left": -1.0, "right": -1.0, "shield": -1.0}
+var last_tap := {"left": -1.0, "right": -1.0, "down": -1.0}
 var roll_time := 0.0
 var roll_dir := 1
 var roll_cooldown := 0.0
@@ -499,7 +522,7 @@ func _physics_process(delta: float) -> void:
 			# Aus dem Schild zur Seite rollen.
 			_start_roll(1 if Input.is_action_just_pressed(_action("right")) else -1)
 
-	# In der Luft: Abwehren = ausweichen, gedrückt halten = schnell fallen.
+	# In der Luft: Abwehren = ausweichen, Runter halten = schnell fallen.
 	if can_act and not is_on_floor() and roll_time <= 0.0 and dash_time <= 0.0:
 		_update_air_moves()
 	if fast_falling and hitstun == 0.0:
@@ -551,7 +574,8 @@ func _handle_input(delta: float) -> void:
 	# Wind schiebt in der Luft stärker als am Boden.
 	var wind := wind_speed * (0.6 if is_on_floor() else 1.0)
 	velocity.x = move_toward(velocity.x, direction * top_speed + wind, accel * delta)
-	if direction != 0.0:
+	# Wie bei Smash dreht man sich nur am Boden (und beim Absprung) um: so geht in der Luft auch ein Angriff nach hinten.
+	if direction != 0.0 and (is_on_floor() or Input.is_action_just_pressed(_action("jump"))):
 		facing = int(sign(direction))
 
 	if Input.is_action_just_pressed(_action("jump")) and jumps_left > 0:
@@ -572,16 +596,40 @@ func _handle_input(delta: float) -> void:
 		return
 	for kind in ["weak", "strong", "kick"]:
 		if Input.is_action_just_pressed(_action(kind)):
+			var dir := _held_dir()
 			if kind != "kick" and not is_on_floor():
-				start_attack("luft")
-				velocity.y = maxf(velocity.y, 5.0)
+				var air := _air_attack(dir)
+				start_attack(air)
+				velocity.y = maxf(velocity.y, 5.0 if air == "luft" else 1.5)
 			elif kind == "strong":
-				_start_charge()
+				_start_charge("strong" + ("_" + dir if dir != "" else ""))
+			elif kind == "weak" and dir != "":
+				start_attack("weak_" + dir)
 			else:
 				start_attack(kind)
 			return
 	if Input.is_action_just_pressed(_action("special")):
 		start_special()
+
+
+## Richtung, die gerade gehalten wird: "hoch", "tief" oder "" (keine).
+func _held_dir() -> String:
+	if InputMap.has_action(_action("up")) and Input.is_action_pressed(_action("up")):
+		return "hoch"
+	if InputMap.has_action(_action("down")) and Input.is_action_pressed(_action("down")):
+		return "tief"
+	return ""
+
+
+## Luftangriff nach Richtung: hoch = Uppercut, runter = nach unten, zurück = nach hinten, sonst nach vorne.
+func _air_attack(dir: String) -> String:
+	if dir == "hoch":
+		return "luft"
+	if dir == "tief":
+		return "luft_tief"
+	if Input.get_axis(_action("left"), _action("right")) * facing < -0.5:
+		return "luft_hinten"
+	return "luft_vor"
 
 
 ## Holt zum Angriff aus. Der Treffer kommt nach der Ausholzeit (startup).
@@ -594,12 +642,13 @@ func start_attack(kind: String) -> void:
 	_end_flip()
 	_play(kind, atk.anim_speed)
 	match kind:
-		"weak":
+		"weak", "weak_hoch", "weak_tief", "luft_vor":
 			Audio.sfx("swing_weak")
-		"strong":
+		"strong", "strong_hoch", "strong_tief", "luft_tief":
 			Audio.sfx("swing_strong")
-			_shout()
-		"kick":
+			if kind.begins_with("strong"):
+				_shout()
+		"kick", "luft_hinten":
 			Audio.sfx("kick")
 
 
@@ -717,7 +766,7 @@ func _update_pending_attack(delta: float) -> void:
 	pending_time -= delta
 	if pending_time > 0.0:
 		return
-	if pending_attack == "strong" and charging and _update_charge(delta):
+	if pending_attack.begins_with("strong") and charging and _update_charge(delta):
 		return
 	var kind := pending_attack
 	pending_attack = ""
@@ -727,7 +776,7 @@ func _update_pending_attack(delta: float) -> void:
 			# Daneben gegriffen: kurz ungeschützt.
 			grab_lag = 0.4
 		return
-	if kind == "strong" and charge_time > 0.0:
+	if kind.begins_with("strong") and charge_time > 0.0:
 		# Aufgeladener Smash-Angriff: mehr Schaden und Rückstoß.
 		var bonus := 1.0 + CHARGE_BONUS * charge_time / CHARGE_MAX
 		charge_time = 0.0
@@ -806,18 +855,28 @@ func _try_hit(atk: Dictionary, both_sides: bool) -> bool:
 	var forward := offset.x * facing
 	var reach: Vector2 = atk.range * reach_scale
 	var in_range := false
+	var zone: String = atk.get("zone", "")
+	if zone == "beide":
+		both_sides = true
 	if both_sides:
 		in_range = absf(offset.x) <= reach.x and absf(offset.y) <= reach.y
-	elif atk == ATTACKS.aufwaerts or atk == ATTACKS.luft:
+	elif zone == "oben":
 		in_range = absf(offset.x) <= reach.x and offset.y > -1.6 and offset.y <= reach.y
+	elif zone == "unten":
+		in_range = absf(offset.x) <= reach.x and offset.y < 0.8 and offset.y >= -reach.y
+	elif zone == "hinten":
+		in_range = forward < 0.3 and forward >= -reach.x and absf(offset.y) <= reach.y
 	else:
 		in_range = forward > -0.3 and forward <= reach.x and absf(offset.y) <= reach.y
 	if not in_range:
 		return false
-	var side := facing
+	var side := -facing if zone == "hinten" else facing
 	if both_sides:
 		side = 1 if offset.x >= 0.0 else -1
 	var angle: Vector2 = atk.angle
+	if angle.y < 0.0 and opponent.is_on_floor():
+		# Nach unten geschlagen, aber der Gegner steht: er prallt vom Boden ab.
+		angle = Vector2(0.6, 0.5)
 	var landed: bool = opponent.take_hit(atk, Vector3(angle.x * side, angle.y, 0).normalized(), power_time > 0.0,
 		outgoing_multiplier())
 	if landed:
@@ -1158,7 +1217,7 @@ func _attack_anim_running() -> bool:
 		return false
 	if anim_player.current_animation != Roster.anim_name(fighter, current_anim):
 		return false
-	if current_anim == "luft":
+	if current_anim == "luft" or current_anim.begins_with("luft_"):
 		return not is_on_floor()
 	return is_on_floor() and absf(velocity.x) < 0.5
 
@@ -1171,11 +1230,11 @@ func _load_anim_files() -> void:
 		return
 	var lib := AnimationLibrary.new()
 	for action in ["idle", "run", "jump", "fall", "weak", "strong", "kick", "special", "shield",
-			"hit", "stunned", "dodge", "cheer", "luft"] + SMASH_ANIMS.keys():
+			"hit", "stunned", "dodge", "cheer", "luft"] + SMASH_ANIMS.keys() + DIR_ATTACKS.keys():
 		var path: String = dir + fighter.get("anim_files", {}).get(action, action + ".fbx")
 		if action == "luft" and not ResourceLoader.exists(path):
 			path = LUFT_ANIM
-		if action in SMASH_ANIMS and not ResourceLoader.exists(path):
+		if (action in SMASH_ANIMS or action in DIR_ATTACKS) and not ResourceLoader.exists(path):
 			path = SMASH_ANIM_DIR + action + ".fbx"
 		if not ResourceLoader.exists(path):
 			continue
@@ -1183,8 +1242,9 @@ func _load_anim_files() -> void:
 		var source: AnimationPlayer = scene.find_child("AnimationPlayer", true, false)
 		if source and not source.get_animation_list().is_empty():
 			var anim: Animation = source.get_animation(source.get_animation_list()[0]).duplicate()
-			_strip_root_motion(anim)
-			var trim: Array = fighter.get("anim_trim", {}).get(action, LUFT_TRIM if action == "luft" else SMASH_ANIMS.get(action, []))
+			_strip_root_motion(anim, not action.begins_with("luft_"))
+			var trim: Array = fighter.get("anim_trim", {}).get(action,
+				LUFT_TRIM if action == "luft" else SMASH_ANIMS.get(action, DIR_TRIM.get(action, [])))
 			if trim.size() == 2:
 				anim = _trim_animation(anim, trim[0], trim[1])
 			lib.add_animation(action, anim)
@@ -1194,14 +1254,15 @@ func _load_anim_files() -> void:
 	anim_player.add_animation_library(Roster.ANIM_LIB, lib)
 
 
-func _strip_root_motion(anim: Animation) -> void:
+## keep_height false: auch das Hoch und Runter der Hüfte entfernen (Luftangriffe, die im Original springen).
+func _strip_root_motion(anim: Animation, keep_height := true) -> void:
 	for t in anim.get_track_count():
 		if anim.track_get_type(t) != Animation.TYPE_POSITION_3D or not str(anim.track_get_path(t)).ends_with("Hips"):
 			continue
 		var start: Vector3 = anim.track_get_key_value(t, 0)
 		for k in anim.track_get_key_count(t):
 			var p: Vector3 = anim.track_get_key_value(t, k)
-			anim.track_set_key_value(t, k, Vector3(start.x, p.y, start.z))
+			anim.track_set_key_value(t, k, Vector3(start.x, p.y if keep_height else start.y, start.z))
 
 
 ## Schneidet eine Animation auf den Bereich von `from` bis `to` Sekunden zu
@@ -1246,7 +1307,10 @@ func _play_movement() -> void:
 
 
 func _play(action: String, speed_scale := 1.0) -> void:
-	var is_attack := action in ["weak", "strong", "kick", "special"]
+	if action in DIR_ATTACKS and not _has_anim(action):
+		# Noch keine eigene Animation für den Richtungs-Angriff: eine ähnliche nehmen.
+		action = DIR_ATTACKS[action]
+	var is_attack := action in ["weak", "strong", "kick", "special", "luft"] or action in DIR_ATTACKS
 	if anim_player == null:
 		# Figur ohne Animationen (z. B. der Mönch vor Mixamo): bei Angriffen kurz nach vorne stoßen.
 		if is_attack:
@@ -1309,7 +1373,7 @@ func _update_down(delta: float) -> void:
 		down_elapsed += delta
 		var pressed := false
 		if controls_enabled and down_elapsed >= DOWN_QUICK:
-			for a in ["left", "right", "jump", "shield", "weak", "strong", "kick", "special"]:
+			for a in ["left", "right", "up", "down", "jump", "shield", "weak", "strong", "kick", "special"]:
 				if Input.is_action_just_pressed(_action(a)):
 					pressed = true
 		if down_time <= 0.0 or pressed:
@@ -1337,7 +1401,7 @@ func _check_double_taps() -> void:
 		last_tap[dir] = -1.0 if double else now
 		if not double:
 			continue
-		if dir == "shield":
+		if dir == "down":
 			if on_platform:
 				_drop_through()
 		elif roll_cooldown <= 0.0 and attack_timer <= 0.0:
@@ -1931,10 +1995,11 @@ func _quake_hit(atk: Dictionary) -> void:
 
 
 ## In der Luft: Abwehren antippen = ausweichen (kurz unverwundbar, einmal pro Sprung),
-## gedrückt halten = schnell fallen, sobald es abwärts geht.
+## Runter halten = schnell fallen, sobald es abwärts geht.
 func _update_air_moves() -> void:
-	if Input.is_action_just_pressed(_action("shield")):
+	if Input.is_action_just_pressed(_action("down")):
 		fast_fall_armed = true
+	if Input.is_action_just_pressed(_action("shield")):
 		if not air_dodge_used and pending_attack == "":
 			air_dodge_used = true
 			launched = false
@@ -1944,16 +2009,16 @@ func _update_air_moves() -> void:
 			velocity.y = maxf(velocity.y, 0.0)
 			_end_flip()
 			Audio.sfx("dash", 1.3, -6.0)
-	if not Input.is_action_pressed(_action("shield")):
+	if not Input.is_action_pressed(_action("down")):
 		fast_fall_armed = false
-	if fast_fall_armed and not fast_falling and air_dodge_time <= 0.0 and velocity.y <= 0.0:
+	if fast_fall_armed and not fast_falling and air_dodge_time <= 0.0 and velocity.y <= 0.0 and pending_attack == "":
 		fast_falling = true
 		Audio.sfx("swing_weak", 0.7, -8.0)
 
 
 ## Smash-Angriff: starken Angriff gedrückt halten, loslassen schlägt zu (je länger, desto stärker).
-func _start_charge() -> void:
-	start_attack("strong")
+func _start_charge(kind := "strong") -> void:
+	start_attack(kind)
 	charging = true
 	charge_time = 0.0
 
@@ -1977,8 +2042,9 @@ func _update_charge(delta: float) -> bool:
 	_stop_charge()
 	if current_anim == "smash_charge":
 		# Losgelassen: direkt in den Schlag (die Ausholbewegung ist schon vorbei).
-		_play("strong", ATTACKS.strong.anim_speed)
-		anim_player.seek(ATTACKS.strong.startup * ATTACKS.strong.anim_speed, true)
+		var kind := pending_attack if pending_attack != "" else "strong"
+		_play(kind, ATTACKS[kind].anim_speed)
+		anim_player.seek(ATTACKS[kind].startup * ATTACKS[kind].anim_speed, true)
 	if charge_time > CHARGE_MAX * 0.5:
 		SpecialFX.popup(self, "SMASH!", color)
 	return false
@@ -2067,7 +2133,7 @@ func _update_ledge(delta: float) -> void:
 	var toward := "right" if ledge_side > 0 else "left"
 	var away := "left" if ledge_side > 0 else "right"
 	if hitstun > 0.0 or stunned > 0.0 or hang_time > LEDGE_HANG_MAX or Input.is_action_just_pressed(_action(away)) \
-			or Input.is_action_just_pressed(_action("shield")):
+			or Input.is_action_just_pressed(_action("down")):
 		_let_go_ledge()
 		velocity.y = -2.0
 	elif Input.is_action_just_pressed(_action("jump")):
@@ -2076,7 +2142,7 @@ func _update_ledge(delta: float) -> void:
 		jumps_left = max_jumps - 1
 		jumped = true
 		Audio.sfx("jump")
-	elif hang_time > 0.15 and Input.is_action_just_pressed(_action(toward)):
+	elif hang_time > 0.15 and (Input.is_action_just_pressed(_action(toward)) or Input.is_action_just_pressed(_action("up"))):
 		_climb_ledge()
 	elif hang_time > 0.15 and (Input.is_action_just_pressed(_action("weak")) or Input.is_action_just_pressed(_action("strong")) \
 			or Input.is_action_just_pressed(_action("kick"))):
@@ -2185,9 +2251,9 @@ func _update_holding(delta: float) -> void:
 		_throw("vorne")
 	elif Input.is_action_just_pressed(_action(back)):
 		_throw("hinten")
-	elif Input.is_action_just_pressed(_action("jump")):
+	elif Input.is_action_just_pressed(_action("up")):
 		_throw("oben")
-	elif Input.is_action_just_pressed(_action("shield")):
+	elif Input.is_action_just_pressed(_action("down")):
 		_throw("unten")
 	elif Input.is_action_just_pressed(_action("weak")) and pummel_cooldown <= 0.0:
 		pummel_cooldown = 0.3
@@ -2206,7 +2272,7 @@ func _update_held() -> void:
 		held_by = null
 		return
 	velocity = Vector3.ZERO
-	for a in ["left", "right", "jump", "weak", "strong", "kick", "special"]:
+	for a in ["left", "right", "up", "down", "jump", "weak", "strong", "kick", "special"]:
 		if Input.is_action_just_pressed(_action(a)):
 			held_by.grab_hold -= 0.08
 
