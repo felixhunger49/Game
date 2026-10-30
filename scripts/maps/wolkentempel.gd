@@ -27,10 +27,10 @@ func _ready() -> void:
 		else MapLook.mat(Color(0.8, 0.78, 0.76), 0.4)
 	var marble_dark: Material = MapFX.textured(marble_tex, MapFX.tex("marmor_n"), Color(0.42, 0.42, 0.52), 0.3, 0.5) if marble_tex \
 		else MapLook.mat(Color(0.45, 0.45, 0.55), 0.5)
-	var gold := MapLook.mat(Color(1.0, 0.78, 0.3), 0.3, 0.8)
+	var gold := MapFX.surface("gold", Color(1.0, 0.78, 0.3), 0.3, 0.8)
 	var cloud := MapLook.mat(Color(0.93, 0.92, 0.96), 1.0)
 	var cloud_pink := MapLook.mat(Color(1.0, 0.86, 0.9), 1.0)
-	var rock := MapLook.mat(Color(0.55, 0.5, 0.52), 0.95)
+	var rock := MapFX.surface("burgstein", Color(0.55, 0.5, 0.52), 0.95)
 	var crystal := MapLook.mat(Color(0.45, 0.75, 1.0, 0.85), 0.1, 0.2, 2.2)
 	$Spawn1.position = Vector3(-4.0, 0.2, 0)
 	$Spawn2.position = Vector3(4.0, 0.2, 0)

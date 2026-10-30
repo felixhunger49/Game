@@ -17,7 +17,7 @@ func _ready() -> void:
 	var basalt_tex := MapFX.tex("basalt")
 	var basalt: Material = MapFX.textured(basalt_tex, MapFX.tex("basalt_n"), Color(0.75, 0.68, 0.66), 0.4) if basalt_tex \
 		else MapLook.mat(Color(0.2, 0.16, 0.15))
-	var basalt_dark := MapLook.mat(Color(0.12, 0.1, 0.1))
+	var basalt_dark := MapFX.surface("fels_dunkel", Color(0.12, 0.1, 0.1))
 	var lava := MapFX.lava_material(MapFX.tex("lava"), 3.0)
 	var lava_lake := MapFX.lava_material(MapFX.tex("lava"), 1.8)
 	$Spawn1.position = Vector3(-3.5, 0.2, 0)
@@ -44,7 +44,7 @@ func _ready() -> void:
 		MapLook.cylinder(plat, 0.1, 1.4, pos + Vector3(0, -1.0, 0), basalt, width * 0.35, Vector3.ZERO, 6)
 		MapLook.light(plat, pos + Vector3(0, -0.8, 0.8), Color(1, 0.45, 0.1), 1.2, 4.0)
 	var peak := Vector3(0, 7.4, 0)
-	var obsidian := MapLook.mat(Color(0.07, 0.06, 0.1), 0.15, 0.5)
+	var obsidian := MapFX.surface("fels_dunkel", Color(0.07, 0.06, 0.1), 0.15, 0.5)
 	MapLook.platform(col, Vector3(2.4, 0.3, 2.0), peak)
 	MapLook.box(plat, Vector3(2.5, 0.4, 2.1), peak + Vector3(0, -0.05, 0), obsidian)
 	MapLook.cylinder(plat, 0.05, 1.6, peak + Vector3(0, -1.0, 0), obsidian, 1.1, Vector3(180, 0, 0), 6)
@@ -97,7 +97,7 @@ func _dragon_skull(parent: Node3D, pos: Vector3, size: float, turn: float) -> vo
 	root.rotation_degrees.y = turn
 	root.scale = Vector3.ONE * size
 	parent.add_child(root)
-	var obsidian := MapLook.mat(Color(0.07, 0.06, 0.08), 0.2, 0.4)
+	var obsidian := MapFX.surface("fels_dunkel", Color(0.07, 0.06, 0.08), 0.2, 0.4)
 	var bone := MapLook.mat(Color(0.18, 0.16, 0.15), 0.6)
 	var eye := MapLook.mat(Color(1.0, 0.45, 0.05), 0.5, 0.0, 6.0)
 	MapLook.sphere(root, 1.0, Vector3(0, 1.0, 0), obsidian, Vector3(1.1, 0.85, 1.0))           # Schädel
@@ -143,7 +143,7 @@ func _cave(col: Node3D, look: Node3D, plat: Node3D, basalt: Material, dark: Mate
 			Vector3(0, 0, rng.randf_range(-25, 25)), 5)
 	# Drachennest mit drei glühenden Eiern.
 	var nest := Vector3(-2.5, CAVE_Y, -1.3)
-	MapLook.cylinder(look, 1.1, 0.35, nest + Vector3(0, 0.17, 0), MapLook.mat(Color(0.25, 0.18, 0.12)), 0.9, Vector3.ZERO, 14)
+	MapLook.cylinder(look, 1.1, 0.35, nest + Vector3(0, 0.17, 0), MapFX.surface("rinde", Color(0.25, 0.18, 0.12)), 0.9, Vector3.ZERO, 14)
 	for e in [[-0.35, 0.0, 15.0], [0.3, 0.1, -10.0], [0.0, -0.3, 5.0]]:
 		MapLook.sphere(look, 0.28, nest + Vector3(e[0], 0.6, e[1]), MapLook.mat(Color(0.9, 0.35, 0.1), 0.3, 0.2, 1.4),
 			Vector3(0.85, 1.15, 0.85)).rotation_degrees.z = e[2]

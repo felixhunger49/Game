@@ -22,14 +22,14 @@ func _ready() -> void:
 	var stone_tex := MapFX.tex("moosstein")
 	var stone: Material = MapFX.textured(stone_tex, MapFX.tex("moosstein_n"), Color.WHITE, 0.3) if stone_tex \
 		else MapLook.mat(Color(0.5, 0.52, 0.45))
-	var stone_dark := MapLook.mat(Color(0.32, 0.34, 0.3))
-	var moss := MapLook.mat(Color(0.28, 0.5, 0.18), 1.0)
-	var leaf := MapLook.mat(Color(0.18, 0.55, 0.2), 1.0)
-	var leaf_light := MapLook.mat(Color(0.35, 0.7, 0.25), 1.0)
-	var vine := MapLook.mat(Color(0.2, 0.42, 0.15), 1.0)
-	var trunk := MapLook.mat(Color(0.35, 0.25, 0.18), 1.0)
+	var stone_dark := MapFX.surface("fels_dunkel", Color(0.32, 0.34, 0.3))
+	var moss := MapFX.surface("moos", Color(0.28, 0.5, 0.18), 1.0)
+	var leaf := MapFX.surface("blaetter", Color(0.18, 0.55, 0.2), 1.0)
+	var leaf_light := MapFX.surface("blaetter", Color(0.35, 0.7, 0.25), 1.0)
+	var vine := MapFX.surface("blaetter", Color(0.2, 0.42, 0.15), 1.0)
+	var trunk := MapFX.surface("rinde", Color(0.35, 0.25, 0.18), 1.0)
 	var water := MapLook.mat(Color(0.55, 0.85, 1.0, 0.7), 0.1, 0.0, 0.6)
-	var gold := MapLook.mat(Color(0.95, 0.75, 0.25), 0.3, 0.8)
+	var gold := MapFX.surface("gold", Color(0.95, 0.75, 0.25), 0.3, 0.8)
 	$Spawn1.position = Vector3(-6.0, 0.2, 0)
 	$Spawn2.position = Vector3(5.0, 0.2, 0)
 	MapLook.stage_area(self, Rect2(-CAVE_HALF, CAVE_Y, CAVE_HALF * 2.0, 7.6 - CAVE_Y), HALF)
@@ -75,7 +75,7 @@ func _ready() -> void:
 		var width: float = b[2]
 		MapLook.platform(col, Vector3(width, 0.3, 1.8), pos)
 		MapLook.cylinder(plat, 0.22, width + 0.4, pos + Vector3(0, -0.05, 0), trunk, 0.16, Vector3(0, 0, 90), 8)
-		MapLook.box(plat, Vector3(width, 0.08, 1.6), pos + Vector3(0, 0.12, 0), MapLook.mat(Color(0.4, 0.3, 0.2), 1.0))
+		MapLook.box(plat, Vector3(width, 0.08, 1.6), pos + Vector3(0, 0.12, 0), MapFX.surface("holz", Color(0.4, 0.3, 0.2), 1.0))
 		MapLook.sphere(plat, 0.5, pos + Vector3(width * 0.45, 0.25, -0.4), leaf_light, Vector3(1.4, 0.6, 1.0))
 		MapLook.cylinder(plat, 0.04, 1.3, pos + Vector3(-width * 0.3, -0.7, 0.6), vine, 0.02, Vector3.ZERO, 5)
 	# Blätterkrone über dem obersten Ast.
@@ -122,7 +122,7 @@ func _ready() -> void:
 	MapLook.box(bg, Vector3(3.0, 16.0, 0.3), Vector3(19.0, 4.0, -24.0), water)
 	MapLook.particles(bg, Vector3(19.0, -3.8, -23.5), Vector3(2.0, 0.3, 0.5), Color(1, 1, 1, 0.8), 60,
 		Vector3(0, 3.0, 1.0), 0.15, 1.2, Vector3(0, -6.0, 0))
-	MapLook.box(bg, Vector3(120, 0.4, 60), Vector3(0, -0.3, -30), MapLook.mat(Color(0.2, 0.4, 0.16)))
+	MapLook.box(bg, Vector3(120, 0.4, 60), Vector3(0, -0.3, -30), MapFX.surface("gras", Color(0.2, 0.4, 0.16)))
 
 	# Urwaldbäume mit großen Blätterkronen.
 	for t in [[-15.5, -4.5, 1.3], [15.0, -5.0, 1.2], [-21.0, -12.0, 1.6], [22.0, -12.0, 1.7], [6.0, -16.0, 1.5], [-7.0, -18.0, 1.4]]:

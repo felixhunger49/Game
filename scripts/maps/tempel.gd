@@ -21,16 +21,14 @@ func _ready() -> void:
 	var stone_tex := MapFX.tex("steinplatten")
 	var stone: Material = MapFX.textured(stone_tex, MapFX.tex("steinplatten_n"), Color.WHITE, 0.35) if stone_tex \
 		else MapLook.mat(Color(0.72, 0.72, 0.7))
-	var stone_dark := MapLook.mat(Color(0.45, 0.45, 0.44))
-	var red := MapLook.mat(Color(0.78, 0.12, 0.08), 0.6)
-	var black := MapLook.mat(Color(0.1, 0.08, 0.08), 0.5)
-	var wood := MapLook.mat(Color(0.45, 0.28, 0.16), 0.8)
-	var roof := MapLook.mat(Color(0.2, 0.22, 0.28), 0.6, 0.2)
+	var stone_dark := MapFX.surface("fels_dunkel", Color(0.45, 0.45, 0.44))
+	var red := MapFX.surface("holz", Color(0.78, 0.12, 0.08), 0.6)
+	var black := MapFX.surface("holz", Color(0.1, 0.08, 0.08), 0.5)
+	var wood := MapFX.surface("holz", Color(0.45, 0.28, 0.16), 0.8)
+	var roof := MapFX.surface("dachziegel", Color(0.2, 0.22, 0.28), 0.6, 0.2)
 	var paper := MapLook.mat(Color(1.0, 0.92, 0.75), 0.9, 0.0, 0.8)
-	var blossom := MapLook.mat(Color(1.0, 0.72, 0.82), 1.0)
-	var blossom_light := MapLook.mat(Color(1.0, 0.85, 0.9), 1.0)
 	var bark := MapLook.mat(Color(0.3, 0.2, 0.17), 1.0)
-	var gold := MapLook.mat(Color(0.95, 0.72, 0.3), 0.3, 0.8)
+	var gold := MapFX.surface("gold", Color(0.95, 0.72, 0.3), 0.3, 0.8)
 	$Spawn1.position = Vector3(-4.0, 0.2, 0)
 	$Spawn2.position = Vector3(3.5, 0.2, 0)
 	MapLook.stage_area(self, Rect2(-14.0, TUNNEL_Y, 28.5, 7.4 - TUNNEL_Y), HALF)
@@ -82,7 +80,7 @@ func _ready() -> void:
 		MapLook.box(look, Vector3(0.18, 3.4, 0.18), Vector3(terrace + 0.6 + side * 1.0, 2.7, -1.4), wood)
 	MapLook.box(look, Vector3(2.4, 0.18, 0.2), Vector3(terrace + 0.6, 4.4, -1.4), wood)
 	MapLook.cylinder(gong_root, 0.8, 0.1, Vector3(0, 0, 0), gold, -1.0, Vector3(90, 0, 0), 32)
-	MapLook.cylinder(gong_root, 0.3, 0.12, Vector3(0, 0, 0.02), MapLook.mat(Color(0.8, 0.55, 0.2), 0.3, 0.9), -1.0,
+	MapLook.cylinder(gong_root, 0.3, 0.12, Vector3(0, 0, 0.02), MapFX.surface("gold", Color(0.8, 0.55, 0.2), 0.3, 0.9), -1.0,
 		Vector3(90, 0, 0), 24)
 
 	# Steinlaternen.
@@ -118,10 +116,10 @@ func _ready() -> void:
 	var spring := BouncePad.create(plat, Vector3(1.0, 0.4, 2.0), Vector3(-12.8, -0.6, 0), 17.0)
 	spring.visual = Node3D.new()
 	spring.add_child(spring.visual)
-	var bamboo := MapLook.mat(Color(0.55, 0.7, 0.3), 0.7)
+	var bamboo := MapFX.surface("bambus", Color(0.55, 0.7, 0.3), 0.7)
 	for k in 4:
 		MapLook.cylinder(spring.visual, 0.08, 1.0, Vector3(-0.3 + k * 0.2, 0.05, 0.2), bamboo, -1.0, Vector3(90, 0, 0), 8)
-	MapLook.box(spring.visual, Vector3(0.9, 0.08, 0.5), Vector3(0, 0.15, 0.2), MapLook.mat(Color(0.75, 0.15, 0.1), 0.6))
+	MapLook.box(spring.visual, Vector3(0.9, 0.08, 0.5), Vector3(0, 0.15, 0.2), MapFX.surface("holz", Color(0.75, 0.15, 0.1), 0.6))
 
 	# Torii über dem Treppenschacht: der Querbalken ist eine Plattform, darüber eine Glocke unter einem kleinen Dach.
 	var torii := Vector3(0, 3.3, 0)
@@ -158,15 +156,12 @@ func _ready() -> void:
 	MapLook.solid(col, Vector3(3.4, 1.4, 3.0), Vector3(12.7, -1.6, 0))
 	MapLook.box(look, Vector3(3.6, 1.5, 3.2), Vector3(12.8, -1.6, 0), stone_dark, Vector3(0, 0, -3))
 	MapLook.sphere(look, 1.5, Vector3(13.0, -2.5, 0.2), stone_dark, Vector3(1.1, 0.7, 1.0))
-	MapLook.cylinder(look, 0.35, 5.2, Vector3(13.5, 1.7, -0.8), bark, 0.2, Vector3(0, 0, 4), 10)
+	# Gemalter Kirschbaum hinter den Ästen (gleiches Bild wie im Hintergrund).
+	MapLook.sprite(look, "res://assets/maps/tempel/baum_gross.png", Vector3(13.4, -0.95, -1.4), 7.6)
 	for b in [[12.9, 1.6, 2.6, 30], [11.7, 4.4, 2.4, 55]]:
 		var pos := Vector3(b[0], b[1], 0)
 		MapLook.platform(col, Vector3(b[2], 0.3, 1.8), pos)
 		MapLook.cylinder(plat, 0.14, b[2] + 0.6, pos + Vector3(0.3, -0.1, -0.2), bark, 0.08, Vector3(0, 0, b[3] + 30), 8)
-		MapLook.sphere(plat, 1.0, pos + Vector3(0, 0.9, -0.9), blossom, Vector3(1.4, 0.7, 0.9))
-		MapLook.sphere(plat, 0.7, pos + Vector3(-0.8, 0.7, -0.5), blossom_light, Vector3(1.2, 0.7, 0.9))
-	MapLook.sphere(look, 1.9, Vector3(13.0, 6.6, -1.2), blossom, Vector3(1.3, 0.8, 1.0))
-	MapLook.sphere(look, 1.3, Vector3(14.4, 6.0, -0.9), blossom_light, Vector3(1.2, 0.8, 1.0))
 
 	# Kirschbäume: gemalt (Flux) und ausgeschnitten (BiRefNet), damit Blüten und Rinde Struktur haben.
 	# [x, z, Höhe, Bild, gespiegelt]
@@ -174,7 +169,7 @@ func _ready() -> void:
 			[-17.0, -9.0, 7.5, "baum_doppel", false], [18.5, -10.0, 7.5, "baum_gross", true],
 			[-6.5, -12.0, 5.5, "baum_mittel", false], [7.5, -12.5, 5.0, "baum_mittel", true]]:
 		MapLook.sprite(bg, "res://assets/maps/tempel/%s.png" % t[3], Vector3(t[0], -0.15, t[1]), t[2], t[4])
-	MapLook.box(bg, Vector3(80, 0.4, 40), Vector3(0, -0.2, -22), MapLook.mat(Color(0.5, 0.6, 0.38)))
+	MapLook.box(bg, Vector3(80, 0.4, 40), Vector3(0, -0.2, -22), MapFX.surface("gras", Color(0.5, 0.6, 0.38)))
 
 	# Fallende Kirschblüten, warmes Nachmittagslicht, ein paar Vögel.
 	MapLook.particles(self, Vector3(0, 11.0, -1.0), Vector3(18, 1, 4), Color(1.0, 0.75, 0.85, 1.0), 120,

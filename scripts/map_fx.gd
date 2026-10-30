@@ -192,8 +192,45 @@ static func textured(albedo: Texture2D, normal: Texture2D = null, tint := Color.
 
 ## Lädt eine Map-Textur aus assets/maps/texturen, falls vorhanden.
 static func tex(name: String) -> Texture2D:
-	var path := "res://assets/maps/texturen/%s.png" % name
-	return load(path) if ResourceLoader.exists(path) else null
+	for ext in ["png", "jpg"]:
+		var path := "res://assets/maps/texturen/%s.%s" % [name, ext]
+		if ResourceLoader.exists(path):
+			return load(path)
+	return null
+
+
+## Durchschnittsfarbe jeder Textur (vom Aufbereitungs-Skript gemessen). Damit trifft eine Fläche
+## genau ihre gewünschte Farbe, behält aber Maserung, Fugen und Struktur der Textur.
+const TEX_MEAN := {
+	"bambus": Color(0.149, 0.235, 0.101),
+	"beton": Color(0.163, 0.183, 0.205),
+	"blaetter": Color(0.145, 0.295, 0.093),
+	"burgstein": Color(0.548, 0.569, 0.590),
+	"dachziegel": Color(0.173, 0.199, 0.244),
+	"fels_dunkel": Color(0.113, 0.124, 0.139),
+	"gold": Color(0.803, 0.686, 0.329),
+	"gras": Color(0.260, 0.430, 0.205),
+	"holz": Color(0.578, 0.453, 0.341),
+	"moos": Color(0.111, 0.284, 0.084),
+	"papier": Color(0.946, 0.935, 0.919),
+	"rinde": Color(0.200, 0.178, 0.152),
+	"seil": Color(0.632, 0.518, 0.398),
+	"stoff": Color(0.789, 0.750, 0.663),
+	"sand": Color(0.948, 0.681, 0.234),
+	"sandstein": Color(0.897, 0.683, 0.325),
+	"rost": Color(0.35, 0.25, 0.2),
+}
+
+
+## Fläche mit Textur in der gewünschten Farbe. Fehlt die Textur, gibt es die glatte Farbe wie bisher.
+static func surface(name: String, color: Color, roughness := 0.9, metallic := 0.0, scale := 0.4) -> Material:
+	var albedo := tex(name)
+	if albedo == null or not TEX_MEAN.has(name):
+		return MapLook.mat(color, roughness, metallic)
+	var mean: Color = TEX_MEAN[name]
+	var tint := Color(minf(color.r / maxf(mean.r, 0.02), 4.0), minf(color.g / maxf(mean.g, 0.02), 4.0),
+		minf(color.b / maxf(mean.b, 0.02), 4.0))
+	return textured(albedo, tex(name + "_n"), tint, scale, roughness, metallic)
 
 
 # --- Vordergrund ----------------------------------------------------------------------

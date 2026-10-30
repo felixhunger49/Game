@@ -13,12 +13,12 @@ const DUNGEON_HALF := 13.0
 func _ready() -> void:
 	var col := Node3D.new()
 	add_child(col)
-	var stone := MapLook.mat(Color(0.36, 0.34, 0.34))
-	var stone_dark := MapLook.mat(Color(0.24, 0.22, 0.22))
-	var stone_light := MapLook.mat(Color(0.5, 0.48, 0.46))
-	var wood := MapLook.mat(Color(0.45, 0.3, 0.18))
-	var red := MapLook.mat(Color(0.75, 0.12, 0.1))
-	var roof := MapLook.mat(Color(0.32, 0.18, 0.2), 0.7)
+	var stone := MapFX.surface("burgstein", Color(0.36, 0.34, 0.34))
+	var stone_dark := MapFX.surface("burgstein", Color(0.24, 0.22, 0.22))
+	var stone_light := MapFX.surface("burgstein", Color(0.5, 0.48, 0.46))
+	var wood := MapFX.surface("holz", Color(0.45, 0.3, 0.18))
+	var red := MapFX.surface("stoff", Color(0.75, 0.12, 0.1))
+	var roof := MapFX.surface("dachziegel", Color(0.32, 0.18, 0.2), 0.7)
 	$Spawn1.position = Vector3(-3.0, 0.2, 0)
 	$Spawn2.position = Vector3(3.0, 0.2, 0)
 	MapLook.stage_area(self, Rect2(-15.2, DUNGEON_Y, 30.4, 8.4 - DUNGEON_Y), WALL_X)
@@ -104,7 +104,7 @@ func _ready() -> void:
 	# Vordergrund: Holzbalken in den oberen Ecken.
 	var fg := MapFX.foreground(self)
 	for side in [-1, 1]:
-		MapLook.box(fg, Vector3(1.2, 0.18, 0.2), Vector3(side * 2.02, 1.17, -3.0), MapLook.mat(Color(0.2, 0.13, 0.08)), Vector3(0, 0, side * 25.0))
+		MapLook.box(fg, Vector3(1.2, 0.18, 0.2), Vector3(side * 2.02, 1.17, -3.0), MapFX.surface("holz", Color(0.2, 0.13, 0.08)), Vector3(0, 0, side * 25.0))
 	MapLook.light(self, Vector3(0, 4.2, 0.6), Color(1, 0.75, 0.45), 0.8, 4.0)
 	MapLook.light(self, Vector3(0, 6.0, 4.0), Color(1, 0.8, 0.6), 0.6, 16.0)
 
@@ -117,7 +117,7 @@ func _dungeon(col: Node3D, stone: Material, dark: Material, wood: Material) -> v
 	var h := -1.4 - DUNGEON_Y
 	MapLook.box(self, Vector3(WALL_X * 2.0, h, 0.4), Vector3(0, DUNGEON_Y + h / 2.0, -2.0), MapLook.mat(Color(0.16, 0.14, 0.14)))
 	MapLook.box(self, Vector3(DUNGEON_HALF * 2.0 - 1.0, 2.0, 3.6), Vector3(0, DUNGEON_Y - 2.6, 0), dark)
-	var iron := MapLook.mat(Color(0.2, 0.2, 0.22), 0.4, 0.7)
+	var iron := MapFX.surface("rost", Color(0.2, 0.2, 0.22), 0.4, 0.7)
 	# Gitterzellen an der Rückwand.
 	for x in [-9.0, -4.5, 4.5, 9.0]:
 		MapLook.box(self, Vector3(2.2, 2.4, 0.1), Vector3(x, DUNGEON_Y + 1.2, -1.75), MapLook.mat(Color(0.06, 0.05, 0.05)))
