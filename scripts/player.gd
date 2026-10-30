@@ -1130,6 +1130,10 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 	down_time = 0.0
 	getup_time = 0.0
 	launched = knockback > 11.0
+	if knockback > 13.0:
+		# Harter Schlag: das Bild stockt kurz und wackelt, je härter, desto länger.
+		SpecialFX.hit_stop(self, clampf(0.03 + knockback * 0.004, 0.09, 0.16))
+		SpecialFX.shake(self, clampf(knockback * 0.015, 0.2, 0.5), 0.35)
 	_play_hit(direction, knockback)
 	if knockback > 13.0 and not boss and _flies_out():
 		ko_hit.emit(self)

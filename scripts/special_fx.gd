@@ -351,13 +351,25 @@ static func popup(player: Node3D, text: String, color: Color) -> void:
 static var _ko_until := 0
 
 
+## Bis wann (Echtzeit in ms) die zuletzt gestartete Zeitlupe läuft. Der Zeitgeber einer älteren
+## Zeitlupe beendet sie dann nicht zu früh.
+static var _slow_until := 0
+
+
 ## Kurze Zeitlupe für alles (in Echtzeit-Sekunden).
 static func slow_motion(node: Node, scale: float, seconds: float) -> void:
-	if Time.get_ticks_msec() < _ko_until:
+	var now := Time.get_ticks_msec()
+	var until := now + int(seconds * 1000.0)
+	if now < _ko_until:
+		return
+	if now < _slow_until and Engine.time_scale <= scale and until <= _slow_until:
+		# Ein mindestens so starker, längerer Treffer-Stopp läuft schon.
 		return
 	Engine.time_scale = scale
+	_slow_until = until
 	node.get_tree().create_timer(seconds, true, false, true).timeout.connect(func():
-		if Time.get_ticks_msec() >= _ko_until:
+		var later := Time.get_ticks_msec()
+		if later >= _ko_until and later >= _slow_until - 5:
 			Engine.time_scale = 1.0)
 
 
@@ -441,18 +453,33 @@ static func hit_stop(node: Node, seconds: float) -> void:
 	slow_motion(node, 0.05, seconds)
 
 
+## Kamerawackeln: mehrere Erschütterungen stören sich nicht, die stärkste zählt. Die Stärke ist in Metern
+## bei normalem Abstand und wächst mit dem Zoom mit, damit das Wackeln immer gleich kräftig aussieht.
+## Die Kamera im Kampf wendet es mit apply_shake an (Fight._update_camera).
+static var _shake_strength := 0.0
+static var _shake_left := 0.0
+static var _shake_length := 1.0
+static var _shake_phase := 0.0
+
 static func shake(node: Node, strength: float, seconds: float) -> void:
-	var cam := node.get_viewport().get_camera_3d()
-	if cam == null:
+	var now := _shake_strength * (_shake_left / _shake_length)
+	if strength >= now:
+		_shake_strength = strength
+		_shake_left = seconds
+		_shake_length = maxf(seconds, 0.01)
+
+
+static func apply_shake(cam: Camera3D, real_delta: float) -> void:
+	_shake_left = maxf(_shake_left - real_delta, 0.0)
+	var amount := _shake_strength * pow(_shake_left / _shake_length, 1.5) * clampf(cam.position.z / 14.0, 0.6, 1.4)
+	if amount < 0.002:
+		cam.h_offset = 0.0
+		cam.v_offset = 0.0
 		return
-	var tween := cam.create_tween()
-	var steps := int(seconds / 0.03)
-	for i in steps:
-		var fade := 1.0 - float(i) / steps
-		tween.tween_property(cam, "h_offset", randf_range(-1, 1) * strength * fade, 0.03)
-		tween.parallel().tween_property(cam, "v_offset", randf_range(-1, 1) * strength * fade, 0.03)
-	tween.tween_property(cam, "h_offset", 0.0, 0.03)
-	tween.parallel().tween_property(cam, "v_offset", 0.0, 0.03)
+	# Weiches Rütteln aus zwei Sinuswellen statt Zufallssprüngen (wirkt kräftig, aber nicht zappelig).
+	_shake_phase += real_delta * 45.0
+	cam.h_offset = amount * (sin(_shake_phase * 1.0) * 0.7 + sin(_shake_phase * 2.3 + 1.0) * 0.3)
+	cam.v_offset = amount * (sin(_shake_phase * 1.3 + 2.0) * 0.7 + sin(_shake_phase * 2.9) * 0.3)
 
 
 # --- Bausteine -------------------------------------------------------------------

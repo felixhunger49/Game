@@ -47,6 +47,18 @@ var campaign_finished := false
 const KO_FOCUS_SECONDS := 0.6
 var ko_focus_time := 0.0
 var ko_focus: CharacterBody3D
+## Kamera: Rand um die Kämpfer in Metern, kleinster und größter Abstand,
+## wie schnell sie folgt und zoomt, und wie weit sie vorausschaut.
+const CAM_PAD := Vector2(2.4, 1.5)
+const CAM_MIN_DIST := 10.5
+const CAM_MAX_DIST := 34.0
+const CAM_FOLLOW := 4.0
+const CAM_ZOOM_OUT := 5.0
+const CAM_ZOOM_IN := 1.5
+const CAM_LEAD := Vector2(2.0, 1.0)
+var cam_lead := Vector2.ZERO
+## Bereich, den alle Kämpfer gerade einnehmen (Füße bis Kopf), für die Kamera.
+var cam_box := Rect2()
 
 @onready var players: Array = [$Player1, $Player2]
 @onready var labels: Array = [$HUD/P1Label, $HUD/P2Label]
@@ -518,6 +530,8 @@ func _on_ko_hit(player: CharacterBody3D) -> void:
 
 
 func _update_camera(delta: float) -> void:
+	# Wackeln läuft auch während Final Smash und Zeitlupe (in Echtzeit).
+	SpecialFX.apply_shake(camera, delta / maxf(Engine.time_scale, 0.01))
 	var visible_players := players.filter(func(p): return p.visible)
 	if visible_players.is_empty():
 		return
@@ -528,27 +542,75 @@ func _update_camera(delta: float) -> void:
 		# Während der Zeitlupe läuft delta langsamer, die Kamera soll aber in Echtzeit heranfahren.
 		var real_delta := delta / maxf(Engine.time_scale, 0.01)
 		ko_focus_time -= real_delta
-		var zoom_target := ko_focus.position + Vector3(0, 1.0, 7.5)
+		var zoom_target := ko_focus.position + Vector3(0, 1.0 + 7.5 * _cam_rise(), 7.5)
 		camera.position = camera.position.lerp(zoom_target, minf(8.0 * real_delta, 1.0))
 		return
-	var min_pos: Vector3 = visible_players[0].position
-	var max_pos: Vector3 = min_pos
-	for p in visible_players:
-		min_pos = min_pos.min(p.position)
-		max_pos = max_pos.max(p.position)
-	var mid := (min_pos + max_pos) / 2.0
-	var spread := maxf(max_pos.x - min_pos.x, (max_pos.y - min_pos.y) * 1.6)
-	# Wie weit die Kamera wandern und herauszoomen darf, hängt von der Größe der Bühne ab.
-	var area := MapLook.area_of(map_node)
-	var side := maxf(area.size.x / 2.0 - 1.5, 6.0)
-	var center_x := area.get_center().x
-	var target := Vector3(
-		clampf(mid.x * 0.6 + center_x * 0.4, center_x - side, center_x + side),
-		clampf(mid.y * 0.5 + 2.2, area.position.y + 1.8, area.end.y + 2.0),
-		clampf(9.0 + spread * 0.9, 14.0, 26.0 + maxf(area.size.x - 15.0, 0.0) * 0.45))
 	if state == State.SELECT:
-		target = Vector3(clampf(mid.x, -8.0, 8.0), mid.y + 1.5, 8.5 + maxf(spread - 5.0, 0.0) * 0.8)
-	camera.position = camera.position.lerp(target, 3.0 * delta)
+		var min_pos: Vector3 = visible_players[0].position
+		var max_pos: Vector3 = min_pos
+		for p in visible_players:
+			min_pos = min_pos.min(p.position)
+			max_pos = max_pos.max(p.position)
+		var mid := (min_pos + max_pos) / 2.0
+		var spread := maxf(max_pos.x - min_pos.x, (max_pos.y - min_pos.y) * 1.6)
+		var select_target := Vector3(clampf(mid.x, -8.0, 8.0), mid.y + 1.5, 8.5 + maxf(spread - 5.0, 0.0) * 0.8)
+		camera.position = camera.position.lerp(select_target, 3.0 * delta)
+		return
+	var target := _camera_target(visible_players, delta)
+	# Mittelpunkt und Abstand getrennt glätten: Herauszoomen geht schnell (niemand fällt aus dem Bild),
+	# Heranzoomen gemächlich (kein Pumpen bei jedem Sprung).
+	var dist := camera.position.z
+	var zoom_rate := CAM_ZOOM_OUT if target.z > dist else CAM_ZOOM_IN
+	dist = lerpf(dist, target.z, 1.0 - exp(-zoom_rate * delta))
+	var rise := _cam_rise()
+	var look := Vector2(camera.position.x, camera.position.y - camera.position.z * rise)
+	look = look.lerp(Vector2(target.x, target.y), 1.0 - exp(-CAM_FOLLOW * delta))
+	# Fliegt jemand schneller weg, als die Kamera gleitet: sofort so weit herauszoomen, dass er knapp im Bild bleibt.
+	dist = clampf(maxf(dist, _fit_distance(look, cam_box, Vector2(0.6, 0.4))), CAM_MIN_DIST, CAM_MAX_DIST)
+	camera.position = Vector3(look.x, look.y + dist * rise, dist)
+
+
+## Wie viel höher (pro Meter Abstand) die Kamera über dem Punkt sitzt, auf den sie in der Kampfebene schaut.
+## Die Kamera in fight.tscn ist leicht nach oben geneigt, der Wert ist also negativ.
+func _cam_rise() -> float:
+	var forward := -camera.global_transform.basis.z
+	return -forward.y / maxf(-forward.z, 0.01)
+
+
+## Wohin die Kamera will: x und y sind der Punkt in der Kampfebene, auf den sie schaut, z ist der Abstand.
+## Der Abstand wird aus dem Bildwinkel berechnet, sodass alle Kämpfer samt Rand ins Bild passen.
+func _camera_target(visible_players: Array, delta: float) -> Vector3:
+	var area := MapLook.area_of(map_node)
+	# Wer weit aus der Arena fliegt, zieht die Kamera nur bis kurz hinter den Bühnenrand mit.
+	var bounds := area.grow_individual(5.0, 5.0, 5.0, 6.0)
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	var motion := Vector2.ZERO
+	for p in visible_players:
+		var x := clampf(p.position.x, bounds.position.x, bounds.end.x)
+		var y := clampf(p.position.y, bounds.position.y, bounds.end.y)
+		lo = lo.min(Vector2(x, y))
+		hi = hi.max(Vector2(x, y + 1.9 * p.size_scale))
+		motion += Vector2(p.velocity.x, p.velocity.y)
+	# Vorausschau: ein Stück in die Richtung schauen, in die sich die Kämpfer bewegen.
+	motion /= visible_players.size()
+	var lead_goal := Vector2(clampf(motion.x * 0.16, -CAM_LEAD.x, CAM_LEAD.x), clampf(motion.y * 0.07, -CAM_LEAD.y, CAM_LEAD.y))
+	cam_lead = cam_lead.lerp(lead_goal, 1.0 - exp(-2.5 * delta))
+	var center := (lo + hi) / 2.0 + cam_lead
+	# Nicht weit über die Bühne hinaus ins Leere schauen.
+	center.x = clampf(center.x, area.position.x + 1.0, area.end.x - 1.0)
+	center.y = clampf(center.y, area.position.y + 1.0, area.end.y + 1.0)
+	cam_box = Rect2(lo, hi - lo)
+	return Vector3(center.x, center.y, clampf(_fit_distance(center, cam_box, CAM_PAD), CAM_MIN_DIST, CAM_MAX_DIST))
+
+
+## Abstand, aus dem die Kamera beim Blick auf `look` den Bereich `box` samt Rand `pad` ganz im Bild hat.
+func _fit_distance(look: Vector2, box: Rect2, pad: Vector2) -> float:
+	var half := Vector2(maxf(box.end.x - look.x, look.x - box.position.x),
+		maxf(box.end.y - look.y, look.y - box.position.y)) + pad
+	var aspect := camera.get_viewport().get_visible_rect().size.aspect()
+	var tan_half := tan(deg_to_rad(camera.fov) / 2.0)
+	return maxf(half.x / (tan_half * aspect), half.y / (tan_half - absf(_cam_rise()) * 0.25))
 
 
 func _on_player_fell_off(player: CharacterBody3D) -> void:

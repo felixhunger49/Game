@@ -162,9 +162,14 @@ func _cam(pos: Vector3, distance: float, seconds: float) -> void:
 
 
 ## Kamera so, dass die ganze Bühne zu sehen ist.
+## Die Kamera ist leicht nach oben geneigt: damit der Boden nicht unten aus dem Bild rutscht,
+## sitzt sie so tief, dass die Bildmitte auf der Mitte der Bühne liegt.
 func _cam_stage(seconds: float, extra := 0.0) -> void:
 	var c := area.get_center()
-	_cam(Vector3(c.x, c.y + 1.0, 0), clampf(9.0 + area.size.x * 0.4, 13.0, 19.0) + extra, seconds)
+	var distance := clampf(9.0 + area.size.x * 0.4, 13.0, 19.0) + extra
+	var forward := -camera.global_transform.basis.z if camera else Vector3(0, 0, -1)
+	var rise := -forward.y / maxf(-forward.z, 0.01)
+	_cam(Vector3(c.x, c.y + 0.4 + distance * rise, 0), distance, seconds)
 
 
 func _chest(p: Node3D) -> Vector3:
