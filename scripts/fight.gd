@@ -98,7 +98,9 @@ func _ready() -> void:
 		ready_flags[1] = true
 	bottom_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	bottom_label.add_theme_font_size_override("font_size", 15)
+	bottom_label.add_theme_constant_override("outline_size", 6)
 	bottom_label.text = _controls_hint()
+	center_label.add_theme_font_override("font", UiStyle.TITLE_FONT)
 	_create_select_ui()
 	_reset_item_timer()
 	_create_energy_bars()
@@ -469,48 +471,71 @@ R: nochmal   Esc: Menü"
 func _create_select_ui() -> void:
 	center_label.text = ""
 	var hud: Node = center_label.get_parent()
-	var title := _select_label(34, Color(1, 0.85, 0.3))
-	title.text = "Wählt eure Kämpfer!"
+	var title := UiStyle.label("WÄHLT EURE KÄMPFER!", 46, UiStyle.GOLD, true, 16)
 	if Settings.campaign:
-		title.text = "Kampagne – Kampf %d / %d: %s" % [Settings.campaign_stage + 1, Settings.CAMPAIGN.size(), Settings.current_map().name]
+		title.text = "KAMPF %d / %d · %s" % [Settings.campaign_stage + 1, Settings.CAMPAIGN.size(), Settings.current_map().name.to_upper()]
+	title.add_theme_color_override("font_outline_color", Color(0.22, 0.07, 0.0))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.position = Vector2(0, 10)
-	title.size = Vector2(1280, 48)
+	title.position = Vector2(0, 2)
+	title.size = Vector2(1280, 60)
 	hud.add_child(title)
-	var help := _select_label(18, Color(1, 1, 1, 0.9))
-	help.text = "Laufen-Tasten: Kämpfer wechseln     Schwacher Angriff: bereit"
-	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help.position = Vector2(0, 54)
+	var help := HBoxContainer.new()
+	help.alignment = BoxContainer.ALIGNMENT_CENTER
+	help.add_theme_constant_override("separation", 28)
+	help.position = Vector2(0, 62)
 	help.size = Vector2(1280, 28)
+	for h in [["Laufen", "Kämpfer wechseln"], ["Schwacher Angriff", "Bereit"], ["Esc", "Menü"]]:
+		help.add_child(UiStyle.key_hint(h[0], h[1]))
 	hud.add_child(help)
+	# Dunkler Streifen unten, damit die Tastenliste gut lesbar ist.
+	var bottom_shade := TextureRect.new()
+	bottom_shade.texture = UiStyle.gradient(PackedColorArray([Color(0, 0, 0, 0), Color(0, 0, 0, 0.7)]), PackedFloat32Array([0.0, 0.45]), true)
+	bottom_shade.stretch_mode = TextureRect.STRETCH_SCALE
+	bottom_shade.position = Vector2(0, 610)
+	bottom_shade.size = Vector2(1280, 110)
+	hud.add_child(bottom_shade)
+	hud.move_child(bottom_shade, 0)
 	select_cards.append({"node": title})
 	select_cards.append({"node": help})
-	var cards: Array[Dictionary] = []
+	select_cards.append({"node": bottom_shade})
 	for i in players.size():
 		if Settings.target_mode and i == 1:
 			continue
 		var panel := PanelContainer.new()
-		var style := StyleBoxFlat.new()
-		style.bg_color = Color(0.05, 0.05, 0.1, 0.78)
-		style.border_color = players[i].color
-		style.set_border_width_all(3)
-		style.set_corner_radius_all(14)
-		style.set_content_margin_all(14)
-		panel.add_theme_stylebox_override("panel", style)
-		panel.position = Vector2(24 if i == 0 else 1280 - 24 - 430, 92)
-		panel.custom_minimum_size = Vector2(430, 0)
-		panel.size = Vector2(430, 0)
+		panel.position = Vector2(24 if i == 0 else 1280 - 24 - 440, 100)
+		panel.custom_minimum_size = Vector2(440, 0)
+		panel.size = Vector2(440, 0)
 		var box := VBoxContainer.new()
-		box.add_theme_constant_override("separation", 4)
+		box.add_theme_constant_override("separation", 6)
 		panel.add_child(box)
-		var who := _select_label(18, players[i].color)
-		var fighter_name := _select_label(32, Color.WHITE)
-		var special := _select_label(17, Color(1, 0.9, 0.6), true)
-		var passive := _select_label(17, Color(0.75, 0.9, 1), true)
-		for l in [who, fighter_name, special, passive]:
-			box.add_child(l)
+		# Kopfzeile: farbiges P1/P2-Schild, Spielername und rechts das "BEREIT!"-Zeichen.
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 10)
+		box.add_child(head)
+		var badge := PanelContainer.new()
+		var badge_style := StyleBoxFlat.new()
+		badge_style.bg_color = players[i].color
+		badge_style.skew = Vector2(0.25, 0)
+		badge_style.set_corner_radius_all(4)
+		badge_style.content_margin_left = 12
+		badge_style.content_margin_right = 12
+		badge.add_theme_stylebox_override("panel", badge_style)
+		badge.add_child(UiStyle.label("P%d" % (i + 1), 24, UiStyle.INK, true, 0))
+		head.add_child(badge)
+		var who := UiStyle.label("", 19, players[i].color, false, 5)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(who)
+		var ready_label := UiStyle.label("BEREIT!", 26, Color(0.45, 1, 0.45), true, 8)
+		ready_label.rotation = deg_to_rad(-4)
+		head.add_child(ready_label)
+		var fighter_name := UiStyle.label("", 42, Color.WHITE, true, 12)
+		box.add_child(fighter_name)
+		var special := _select_tag(box, "SPEZIAL", Color(1, 0.62, 0.2))
+		var passive := _select_tag(box, "PASSIV", Color(0.35, 0.7, 1))
 		hud.add_child(panel)
-		var card := {"node": panel, "who": who, "name": fighter_name, "special": special, "passive": passive, "player": i}
+		var card := {"node": panel, "who": who, "name": fighter_name, "special": special, "passive": passive,
+			"ready": ready_label, "player": i}
 		select_cards.append(card)
 	# Dunkle Wand direkt hinter den Figuren: die Map bleibt zu ahnen, lenkt aber nicht ab.
 	select_shade = MeshInstance3D.new()
@@ -553,15 +578,37 @@ func _create_select_ui() -> void:
 
 
 func _select_label(font_size: int, color: Color, wrap := false) -> Label:
-	var label := Label.new()
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
-	label.add_theme_constant_override("outline_size", 8)
+	var label := UiStyle.label("", font_size, color)
 	if wrap:
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.custom_minimum_size = Vector2(400, 0)
 	return label
+
+
+## Zeile auf der Spielerkarte: farbiges Schildchen ("SPEZIAL") und daneben der umbrechende Text.
+func _select_tag(box: VBoxContainer, tag: String, color: Color) -> Label:
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 10)
+	box.add_child(line)
+	var pill := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.set_corner_radius_all(5)
+	style.content_margin_left = 7
+	style.content_margin_right = 7
+	pill.add_theme_stylebox_override("panel", style)
+	pill.custom_minimum_size = Vector2(84, 0)
+	pill.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var tag_label := UiStyle.label(tag, 14, UiStyle.INK, false, 0)
+	tag_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pill.add_child(tag_label)
+	line.add_child(pill)
+	var text := UiStyle.label("", 17, Color(1, 1, 1, 0.95), false, 4)
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.custom_minimum_size = Vector2(310, 0)
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(text)
+	return text
 
 
 func _update_select_card(i: int) -> void:
@@ -569,12 +616,19 @@ func _update_select_card(i: int) -> void:
 		if card.get("player", -1) != i:
 			continue
 		var f: Dictionary = players[i].fighter
-		card.who.text = _player_name(i) + ("   ✔ Bereit!" if ready_flags[i] else "")
-		card.name.text = "◀  %s  ▶" % f.get("name", "") if not ready_flags[i] or (Settings.solo and i == 1) else f.get("name", "")
-		card.special.text = "Spezial – " + Roster.SPECIALS.get(f.get("special", ""), "")
-		card.passive.text = "Passiv – " + Roster.PASSIVES.get(f.get("passive", ""), "")
+		var is_ready: bool = ready_flags[i]
+		card.who.text = _player_name(i)
+		card.ready.visible = is_ready and not (Settings.solo and i == 1)
+		card.name.text = "◀  %s  ▶" % f.get("name", "") if not is_ready or (Settings.solo and i == 1) else f.get("name", "")
+		card.special.text = Roster.SPECIALS.get(f.get("special", ""), "")
+		card.passive.text = Roster.PASSIVES.get(f.get("passive", ""), "")
+		var style := UiStyle.card(players[i].color)
+		style.set_border_width_all(5 if is_ready else 3)
+		if is_ready:
+			style.bg_color = Color(players[i].color.darkened(0.7), 0.9)
+		card.node.add_theme_stylebox_override("panel", style)
 		# Die Karte wächst mit dem Text, aber nie über den Bildschirm hinaus.
-		card.node.size = Vector2(430, 0)
+		card.node.size = Vector2(440, 0)
 
 
 func _remove_select_ui() -> void:
