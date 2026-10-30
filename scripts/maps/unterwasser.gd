@@ -11,6 +11,10 @@ const ENGINE_Y := -4.8
 const HATCHES := [[-8.0, 1.0], [0.0, 1.3], [8.0, 1.0]]
 
 
+const U := "res://assets/maps/unterwasser/"
+const SEA_TINT := Color(0.85, 0.95, 1.0)
+
+
 func _ready() -> void:
 	var col: Node3D = $Collision
 	var look: Node3D = $StageLook
@@ -72,8 +76,12 @@ func _ready() -> void:
 	MapLook.cylinder(bg, 16.2, 0.3, Vector3(0, -0.9, -9.0), steel, -1.0, Vector3.ZERO, 48)
 
 	# Korallen und Seetang innen am Rand.
+	var coral_i := 0
 	for c in [[-10.8, coral_pink], [-5.8, coral_orange], [5.4, coral_purple], [10.6, coral_pink], [-2.6, coral_purple]]:
 		var x: float = c[0]
+		coral_i += 1
+		if MapLook.sprite(look, U + "koralle_%d.png" % (1 + coral_i % 3), Vector3(x, -0.05, -1.7), 1.3, x > 0.0, SEA_TINT):
+			continue
 		MapLook.cylinder(look, 0.12, 0.8, Vector3(x, 0.4, -1.7), c[1], 0.2, Vector3(0, 0, 10), 6)
 		MapLook.cylinder(look, 0.1, 0.6, Vector3(x + 0.2, 0.45, -1.6), c[1], 0.16, Vector3(0, 0, -25), 6)
 		MapLook.sphere(look, 0.28, Vector3(x - 0.15, 0.2, -1.5), c[1], Vector3(1.2, 0.7, 1.0))
@@ -87,8 +95,12 @@ func _ready() -> void:
 		var x: float = b[0]
 		var rock := MovingPlatform.create(plat, Vector3(2.6, 0.3, 2.2), Vector3(x, 1.8, 0), Vector3(x, 3.6, 0), 6.0, b[1])
 		MapLook.box(rock, Vector3(2.7, 0.45, 2.2), Vector3(0, -0.07, 0), floor_mat)
-		MapLook.sphere(rock, 0.6, Vector3(-0.8, -0.45, 0.4), coral_pink, Vector3(1.4, 0.7, 1.0))
-		MapLook.sphere(rock, 0.5, Vector3(0.9, -0.4, 0.3), coral_orange, Vector3(1.3, 0.6, 1.0))
+		var hang := MapLook.sprite(rock, U + "koralle_%d.png" % (1 if x < 0 else 2), Vector3(0, -1.4, 0.0), 1.1, x > 0.0, SEA_TINT)
+		if hang:
+			hang.rotation_degrees.z = 180.0
+		else:
+			MapLook.sphere(rock, 0.6, Vector3(-0.8, -0.45, 0.4), coral_pink, Vector3(1.4, 0.7, 1.0))
+			MapLook.sphere(rock, 0.5, Vector3(0.9, -0.4, 0.3), coral_orange, Vector3(1.3, 0.6, 1.0))
 		MapLook.cylinder(rock, 0.1, 0.6, Vector3(0.4, 0.3, -0.8), coral_purple, 0.16, Vector3(0, 0, -15), 6)
 		MapLook.particles(rock, Vector3(0, -0.5, 0), Vector3(0.8, 0.1, 0.5), Color(0.85, 0.95, 1.0, 0.6), 12,
 			Vector3(0, -1.0, 0), 0.06, 1.5)
@@ -104,7 +116,11 @@ func _ready() -> void:
 		var pos := Vector3(side * 7.6, 4.0, 0)
 		MapLook.platform(col, Vector3(2.0, 0.3, 1.8), pos)
 		MapLook.box(plat, Vector3(2.0, 0.4, 1.8), pos + Vector3(0, -0.05, 0), floor_mat)
-		MapLook.sphere(plat, 0.55, pos + Vector3(side * 0.2, -0.5, 0.0), coral_purple if side < 0 else coral_pink, Vector3(1.2, 1.0, 1.0))
+		var under := MapLook.sprite(plat, U + "koralle_3.png", pos + Vector3(0, -1.25, 0.0), 1.0, side > 0, SEA_TINT)
+		if under:
+			under.rotation_degrees.z = 180.0
+		else:
+			MapLook.sphere(plat, 0.55, pos + Vector3(side * 0.2, -0.5, 0.0), coral_purple if side < 0 else coral_pink, Vector3(1.2, 1.0, 1.0))
 		MapLook.box(plat, Vector3(0.25, 4.0, 0.25), Vector3(side * 8.2, 2.0, -0.8), steel)
 
 	# Blasenröhren außen: aufsteigendes Wasser trägt einen sanft hinauf bis zum Glasröhren-Gang.
@@ -138,7 +154,8 @@ func _ready() -> void:
 	# Draußen: Meeresgrund, Riffe, ein Wrack, Fischschwärme.
 	MapLook.box(bg, Vector3(140, 0.4, 70), Vector3(0, -1.5, -40), seabed)
 	for r in [[-20.0, -16.0, coral_pink], [19.0, -14.0, coral_purple], [-9.0, -24.0, coral_orange], [10.0, -26.0, coral_pink]]:
-		MapLook.sphere(bg, 2.5, Vector3(r[0], -0.5, r[1]), r[2], Vector3(1.6, 0.9, 1.2))
+		if not MapLook.sprite(bg, U + "koralle_4.png", Vector3(r[0], -1.4, r[1]), 4.0, r[0] > 0.0, Color(0.7, 0.85, 0.95)):
+			MapLook.sphere(bg, 2.5, Vector3(r[0], -0.5, r[1]), r[2], Vector3(1.6, 0.9, 1.2))
 		MapLook.cylinder(bg, 0.3, 4.0, Vector3(r[0] + 1.5, 1.5, r[1]), kelp, 0.1, Vector3(0, 0, 8), 6)
 	MapLook.box(bg, Vector3(14.0, 3.5, 4.0), Vector3(24.0, 0.5, -32.0), wreck, Vector3(0, -30, 18))
 	MapLook.cylinder(bg, 0.3, 9.0, Vector3(23.0, 5.0, -32.0), wreck, -1.0, Vector3(0, 0, 25), 6)
@@ -158,7 +175,8 @@ func _ready() -> void:
 	# Vordergrund: Korallen in den unteren Ecken.
 	var fg := MapFX.foreground(self)
 	for side in [-1, 1]:
-		MapLook.sphere(fg, 0.45, Vector3(side * 2.05, -1.32, -3.0), coral_pink if side < 0 else coral_purple, Vector3(1.5, 0.7, 0.5))
+		if not MapLook.sprite(fg, U + "koralle_%d.png" % (1 if side < 0 else 3), Vector3(side * 1.95, -1.65, -3.0), 0.75, side < 0, SEA_TINT):
+			MapLook.sphere(fg, 0.45, Vector3(side * 2.05, -1.32, -3.0), coral_pink if side < 0 else coral_purple, Vector3(1.5, 0.7, 0.5))
 		MapLook.cylinder(fg, 0.06, 0.6, Vector3(side * 1.65, -1.2, -3.0), kelp, 0.03, Vector3(0, 0, side * 10.0), 5)
 	MapLook.backdrop(bg, "res://assets/maps/unterwasser/hintergrund.png", -60.0, 180.0, 10.0)
 

@@ -13,6 +13,9 @@ const HOLE_X1 := 6.4
 const HOLE_X2 := 8.2
 
 
+const D := "res://assets/maps/dschungel/"
+
+
 func _ready() -> void:
 	var col: Node3D = $Collision
 	var look: Node3D = $StageLook
@@ -76,12 +79,14 @@ func _ready() -> void:
 		MapLook.platform(col, Vector3(width, 0.3, 1.8), pos)
 		MapLook.cylinder(plat, 0.22, width + 0.4, pos + Vector3(0, -0.05, 0), trunk, 0.16, Vector3(0, 0, 90), 8)
 		MapLook.box(plat, Vector3(width, 0.08, 1.6), pos + Vector3(0, 0.12, 0), MapFX.surface("holz", Color(0.4, 0.3, 0.2), 1.0))
-		MapLook.sphere(plat, 0.5, pos + Vector3(width * 0.45, 0.25, -0.4), leaf_light, Vector3(1.4, 0.6, 1.0))
+		if not MapLook.sprite(plat, D + "busch_%d.png" % (1 + int(b[1]) % 2), pos + Vector3(width * 0.4, 0.05, -0.75), 1.0, b[0] > -9.0):
+			MapLook.sphere(plat, 0.5, pos + Vector3(width * 0.45, 0.25, -0.4), leaf_light, Vector3(1.4, 0.6, 1.0))
 		MapLook.cylinder(plat, 0.04, 1.3, pos + Vector3(-width * 0.3, -0.7, 0.6), vine, 0.02, Vector3.ZERO, 5)
 	# Blätterkrone über dem obersten Ast.
-	MapLook.sphere(plat, 2.6, Vector3(-9.8, 9.4, -1.4), leaf, Vector3(1.6, 0.6, 1.0))
-	MapLook.sphere(plat, 1.8, Vector3(-7.6, 8.9, -1.0), leaf_light, Vector3(1.4, 0.5, 1.0))
-	MapLook.sphere(plat, 1.4, Vector3(-12.4, 8.6, -0.9), leaf_light, Vector3(1.4, 0.5, 1.0))
+	if not MapLook.sprite(plat, D + "krone.png", Vector3(-9.8, 6.6, -1.6), 5.5):
+		MapLook.sphere(plat, 2.6, Vector3(-9.8, 9.4, -1.4), leaf, Vector3(1.6, 0.6, 1.0))
+		MapLook.sphere(plat, 1.8, Vector3(-7.6, 8.9, -1.0), leaf_light, Vector3(1.4, 0.5, 1.0))
+		MapLook.sphere(plat, 1.4, Vector3(-12.4, 8.6, -0.9), leaf_light, Vector3(1.4, 0.5, 1.0))
 
 	# Felsvorsprung rechts am Wasserfall, hoch oben.
 	var ledge := Vector3(9.2, 3.4, 0)
@@ -125,15 +130,21 @@ func _ready() -> void:
 	MapLook.box(bg, Vector3(120, 0.4, 60), Vector3(0, -0.3, -30), MapFX.surface("gras", Color(0.2, 0.4, 0.16)))
 
 	# Urwaldbäume mit großen Blätterkronen.
+	var tree_i := 0
 	for t in [[-15.5, -4.5, 1.3], [15.0, -5.0, 1.2], [-21.0, -12.0, 1.6], [22.0, -12.0, 1.7], [6.0, -16.0, 1.5], [-7.0, -18.0, 1.4]]:
 		var base := Vector3(t[0], 0.0, t[1])
 		var s: float = t[2]
+		tree_i += 1
+		if MapLook.sprite(bg, D + "baum_%d.png" % (1 + tree_i % 3), base + Vector3(0, -0.15, 0), 8.5 * s, t[0] > 0.0,
+				Color(0.92, 0.97, 0.92)):
+			continue
 		MapLook.cylinder(bg, 0.35 * s, 7.0 * s, base + Vector3(0, 3.5 * s, 0), trunk, 0.25 * s, Vector3.ZERO, 8)
 		MapLook.sphere(bg, 2.2 * s, base + Vector3(0, 7.2 * s, 0), leaf, Vector3(1.4, 0.7, 1.2))
 		MapLook.sphere(bg, 1.6 * s, base + Vector3(1.6 * s, 6.6 * s, 0.4), leaf_light, Vector3(1.3, 0.7, 1.1))
 		MapLook.sphere(bg, 1.5 * s, base + Vector3(-1.6 * s, 6.4 * s, 0.3), leaf_light, Vector3(1.3, 0.7, 1.1))
 	for x in [-6.8, 10.4]:
-		MapLook.sphere(look, 0.9, Vector3(x, 0.4, -1.6), leaf, Vector3(1.4, 0.7, 0.9))
+		if not MapLook.sprite(look, D + "busch_%d.png" % (1 if x < 0 else 2), Vector3(x, -0.05, -1.7), 1.6, x > 0.0):
+			MapLook.sphere(look, 0.9, Vector3(x, 0.4, -1.6), leaf, Vector3(1.4, 0.7, 0.9))
 
 	# Papageien, Glühwürmchen, Sonnenstrahlen und Dunst.
 	fx.flock(Vector3(0, 11.0, -6.0), 3, Color(0.95, 0.2, 0.15), Vector3(10, 0.8, 4), 0.4, 0.35)
@@ -149,6 +160,8 @@ func _ready() -> void:
 	# Vordergrund: große Blätter in den unteren Ecken.
 	var fg := MapFX.foreground(self)
 	for side in [-1, 1]:
+		if MapLook.sprite(fg, D + "busch_%d.png" % (1 if side < 0 else 2), Vector3(side * 1.95, -1.65, -3.0), 0.8, side < 0):
+			continue
 		MapLook.sphere(fg, 0.5, Vector3(side * 2.05, -1.32, -3.0), leaf, Vector3(1.6, 0.5, 0.4))
 		MapLook.sphere(fg, 0.35, Vector3(side * 1.6, -1.4, -3.0), leaf_light, Vector3(1.6, 0.5, 0.4))
 	MapLook.backdrop(bg, "res://assets/maps/dschungel/hintergrund.png", -60.0, 180.0, 10.0)
