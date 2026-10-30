@@ -22,6 +22,11 @@ const SCENES := {
 	"Kampfroboter": ["Raketensturm", "_roboter"],
 	"Magierin": ["Zeitstopp", "_magierin"],
 }
+## Modelle und Materialien für Phönix (Held) und Geisterwölfe (Jägerin).
+const EAGLE_MODEL := "res://assets/final_smash/adler.fbx"
+const WOLF_MODEL := "res://assets/final_smash/wolf.glb"
+const FIRE_SHADER := preload("res://scripts/feuer.gdshader")
+const GHOST_SHADER := preload("res://scripts/geist.gdshader")
 ## Kleine Treffer während der Szene (nur Schaden, kein Wegfliegen).
 const TICK := 2.5
 ## Der Abschlussschlag: sehr stark, damit man ab etwa 60 % aus der Arena fliegt.
@@ -543,35 +548,20 @@ func _held() -> void:
 	var fire := Color(1, 0.55, 0.15)
 	var gold := Color(1, 0.9, 0.5)
 	_tint(Color(0.2, 0.06, 0, 0.5), 0.3)
+	# Der Phönix: Adler-Modell (Quaternius, CC0) mit Flügelschlag und Feuer-Material.
 	var bird := Node3D.new()
 	add_child(bird)
-	var body := _solid(_ball(0.7), gold, 1.4)
-	body.reparent(bird, false)
-	body.scale = Vector3(1.6, 0.8, 0.8)
-	var head := _solid(_ball(0.38), Color(1, 1, 0.85), 1.4)
-	head.reparent(bird, false)
-	head.position = Vector3(1.1, 0.35, 0)
-	var beak := _solid(_cyl(0.18, 0.6, 0.0), Color(1, 0.7, 0.2), 1.4)
-	beak.reparent(bird, false)
-	beak.position = Vector3(1.55, 0.3, 0)
-	beak.rotation.z = -PI / 2.0
-	var wings := []
-	for side in [-1, 1]:
-		var wing := Node3D.new()
-		bird.add_child(wing)
-		var plume := _solid(_box(Vector3(1.6, 0.12, 3.2)), fire, 1.4)
-		plume.reparent(wing, false)
-		plume.position.z = side * 1.6
-		var tip := _solid(_box(Vector3(1.0, 0.1, 1.6)), Color(1, 0.3, 0.1), 1.4)
-		tip.reparent(wing, false)
-		tip.position = Vector3(-0.5, 0, side * 3.6)
-		wing.rotation.x = 0.0
-		wings.append([wing, side])
-	var tail := _solid(_box(Vector3(2.4, 0.1, 1.0)), fire, 1.4)
-	tail.reparent(bird, false)
-	tail.position = Vector3(-1.8, 0, 0)
+	var eagle := _model(EAGLE_MODEL, "EagleArmature|Flying", FIRE_SHADER, 1.4)
+	eagle.reparent(bird, false)
+	eagle.scale = Vector3.ONE * 0.6
+	eagle.rotation.y = -PI / 2.0
+	var aura := OmniLight3D.new()
+	aura.light_color = fire
+	aura.light_energy = 3.0
+	aura.omni_range = 6.0
+	bird.add_child(aura)
 	var dir := float(player.facing)
-	bird.scale = Vector3(dir, 1, 1) * 1.4
+	bird.scale = Vector3(dir, 1, 1)
 	bird.global_position = _chest(player)
 	player.model_root.visible = false
 	SpecialFX._flash_sphere(world, _chest(player), fire, 0.3, 2.5, 0.3)
@@ -585,8 +575,6 @@ func _held() -> void:
 	for s in steps:
 		var t := float(s + 1) / steps
 		bird.global_position = Vector3(lerpf(from_x, to_x, t), y + sin(t * PI * 2.0) * 0.5, 0.3)
-		for w in wings:
-			w[0].rotation.x = w[1] * sin(s * 0.9) * 0.6
 		SpecialFX._sparks(world, bird.global_position - Vector3(dir * 1.5, 0, 0), fire, 6, 2.0, 0.4)
 		for e in _enemies_near(bird.global_position, 2.0, 2.5):
 			_catch(e)
@@ -607,7 +595,7 @@ func _held() -> void:
 		v.create_tween().tween_property(v, "global_position", top + Vector3(0, -1.2, 0), 0.45)
 	Audio.sfx("wind", 1.2)
 	await _wait(0.5)
-	bird.scale = Vector3(-dir, 1, 1) * 1.4
+	bird.scale = Vector3(-dir, 1, 1)
 	bird.rotation.z = -dir * 0.9
 	var dive := Vector3(area.get_center().x, area.position.y + 0.8, 0.3)
 	bird.create_tween().tween_property(bird, "global_position", dive, 0.3).set_ease(Tween.EASE_IN)
@@ -723,7 +711,7 @@ func _jaegerin() -> void:
 		var t := float(s + 1) / steps
 		for w in wolves:
 			var x: float = lerpf(w[1], end_x + dir * 13.0, t)
-			var hop := absf(sin(t * PI * 6.0 + w[1])) * 0.8
+			var hop := absf(sin(t * PI * 6.0 + w[1])) * 0.25
 			w[0].global_position = Vector3(x, w[2] + hop, 0.2)
 			w[0].scale = Vector3(dir, 1, 1) * 1.5
 			for e in _enemies_near(w[0].global_position + Vector3(0, 0.5, 0), 1.3, 1.6):
@@ -756,27 +744,37 @@ func _jaegerin() -> void:
 
 ## Ein Geisterwolf aus leuchtenden Kästen (Körper, Kopf, Schnauze, Ohren, Schwanz, Beine).
 func _wolf(c: Color, energy_scale: float) -> Node3D:
+	# Wolf-Modell (Quaternius, CC0) im Galopp, mit Geister-Material. Schaut nach +x.
 	var wolf := Node3D.new()
 	add_child(wolf)
-	var parts := [
-		[Vector3(1.4, 0.55, 0.5), Vector3(0, 0.75, 0)],
-		[Vector3(0.55, 0.5, 0.45), Vector3(0.85, 1.05, 0)],
-		[Vector3(0.4, 0.22, 0.3), Vector3(1.2, 0.95, 0)],
-		[Vector3(0.12, 0.25, 0.1), Vector3(0.8, 1.4, 0.12)],
-		[Vector3(0.12, 0.25, 0.1), Vector3(0.8, 1.4, -0.12)],
-		[Vector3(0.7, 0.14, 0.14), Vector3(-0.95, 0.95, 0)],
-		[Vector3(0.14, 0.55, 0.14), Vector3(0.5, 0.28, 0.15)],
-		[Vector3(0.14, 0.55, 0.14), Vector3(-0.5, 0.28, -0.15)],
-	]
-	for part in parts:
-		# Fest statt additiv, sonst werden die überlappenden Teile weiß.
-		var m := _solid(_box(part[0]), Color(c, 0.8), 1.2 * minf(energy_scale, 1.3))
-		m.reparent(wolf, false)
-		m.position = part[1]
-	var eye := _glow(_box(Vector3(0.1, 0.06, 0.5)), Color(1, 1, 1), 4.0)
-	eye.reparent(wolf, false)
-	eye.position = Vector3(1.0, 1.15, 0)
+	var model := _model(WOLF_MODEL, "Gallop", GHOST_SHADER, 1.1 * minf(energy_scale, 1.5), c)
+	model.reparent(wolf, false)
+	model.scale = Vector3.ONE * 0.5
+	model.rotation.y = PI / 2.0
 	return wolf
+
+
+## Ein Modell mit Animation laden und alle Flächen mit einem eigenen Shader färben.
+func _model(path: String, anim: String, shader: Shader, strength: float, tint := Color.WHITE) -> Node3D:
+	var node: Node3D = load(path).instantiate()
+	add_child(node)
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	if shader == GHOST_SHADER:
+		mat.set_shader_parameter("farbe", tint)
+		mat.set_shader_parameter("staerke", strength)
+	else:
+		mat.set_shader_parameter("leuchten", strength)
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		mi.material_override = mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var players := node.find_children("*", "AnimationPlayer", true, false)
+	if not players.is_empty():
+		var ap: AnimationPlayer = players[0]
+		if ap.has_animation(anim):
+			ap.get_animation(anim).loop_mode = Animation.LOOP_LINEAR
+			ap.play(anim)
+	return node
 
 
 ## Piratin: riesige Krakenarme brechen aus der Tiefe, packen die Gegner, schlagen sie auf die Bühne und schleudern sie weg.
