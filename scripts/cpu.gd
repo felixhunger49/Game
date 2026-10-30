@@ -52,6 +52,10 @@ func _physics_process(delta: float) -> void:
 	if me == null or not me.controls_enabled or not me.visible:
 		_hold([])
 		return
+	# Mit mehr als zwei Kämpfern: immer den nächsten Gegner angehen.
+	var nearest: CharacterBody3D = me.opponent
+	if nearest:
+		foe = nearest
 	shield_time = maxf(shield_time - delta, 0.0)
 	think_timer -= delta
 	var want: Array = []

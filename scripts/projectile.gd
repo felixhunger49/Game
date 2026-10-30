@@ -66,7 +66,7 @@ func _physics_process(delta: float) -> void:
 	if Target.hit_near(self, global_position, HIT_RADIUS + 0.3):
 		queue_free()
 		return
-	var target: CharacterBody3D = shooter.opponent if shooter else null
+	var target: CharacterBody3D = shooter.nearest_enemy_to(global_position) if shooter else null
 	if target and target.visible:
 		var chest := target.global_position + Vector3(0, 0.9, 0)
 		if chest.distance_to(global_position) < HIT_RADIUS:

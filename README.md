@@ -15,7 +15,38 @@ Wie bei Super Smash Bros. sind Figuren und Arenen 3D-Modelle, gekämpft wird abe
 
 - Es gibt keine Lebenspunkte: Jeder Treffer erhöht den Schaden (in %). Je höher der Schaden, desto weiter fliegt man beim nächsten Treffer.
 - Wer aus der Arena fällt oder geschleudert wird, verliert ein Leben und startet mit 0 % neu.
-- Wer keine Leben mehr hat, hat verloren. Wie viele Leben es gibt, stellst du in den Optionen ein (Standard: 3).
+- Wer keine Leben mehr hat, ist raus. Wie viele Leben es gibt, stellst du in den Optionen ein (Standard: 3).
+
+## Bis zu 4 Kämpfer und Team-Modus
+
+In den Optionen unter **Kämpfer** stellt man 2, 3 oder 4 Kämpfer ein (gilt für den Kampf, nicht für die Kampagne).
+
+- Spieler 3 und 4 spielen mit Controller 1 und 2: Stick oder Steuerkreuz laufen, A springen, B Spezial, X schwach,
+  Y stark, RB abwehren, LB Tritt (unter „Steuerung anpassen“ änderbar, auch auf Tastatur-Tasten).
+- Ist kein Controller für Spieler 3 oder 4 angeschlossen, übernimmt der Computer und nimmt einen zufälligen Kämpfer.
+- Oben stehen dann vier Anzeigen nebeneinander (Spieler 1, 3, 4, 2). Wer alle Leben verliert, ist raus; der Letzte gewinnt.
+- **Team-Modus** (Optionen): Team Rot (Spieler 1 und 3) gegen Team Blau (Spieler 2 und 4). Das eigene Team kann man nicht
+  treffen. Es gewinnt das Team, von dem zuletzt noch jemand Leben hat.
+
+## Smash-Kugel und Final Smash
+
+Ab und zu schwebt eine bunte Smash-Kugel durch die Arena (nur wenn Items an sind). Wer sie mit 4 Treffern zerschlägt, leuchtet
+und kann mit der Spezialtaste einmal seinen Final Smash auslösen: eine kleine Filmszene, das Bild wird dunkler, die Kamera
+fährt heran und der Name erscheint. Jede Figur hat ihren eigenen:
+
+| Kämpfer | Final Smash |
+|---|---|
+| Barbar | Kriegsgott: wächst riesig, stampft nach vorne und zerschmettert alles mit einem Axthieb |
+| Schurke | Schattenklingen: verschwindet im Dunkeln und zerschneidet die Gegner |
+| Held | Phönixflug: wird zum brennenden Phönix, fegt durch die Arena und stürzt explodierend herab |
+| Paladin | Heiliger Hammer: Lichtsäulen und ein riesiger Hammer aus Licht |
+| Brummbart | Steinriese: ein Golem steigt hinter der Bühne auf und schlägt mit der Faust zu |
+| Hexe | Hexenkessel: ein Kessel zieht die Gegner in einen Strudel und explodiert |
+| Jägerin | Geisterwolf-Rudel: Geisterwölfe jagen über die Bühne, der Leitwolf springt zum Schluss |
+| Piratin | Krake: Krakenarme brechen aus der Tiefe und schleudern die Gegner weg |
+| Mönch | Goldener Drache: ein Drache schlängelt sich durch die Arena und reißt die Gegner mit |
+| Kampfroboter | Raketensturm: fliegt hoch, erfasst alle Gegner und feuert einen Raketenschwarm |
+| Magierin | Zeitstopp: eine Riesenuhr hält die Zeit an, Kristallspeere umzingeln die Gegner |
 
 ## Menü
 
@@ -52,6 +83,7 @@ Standardbelegung (im Menü unter „Steuerung anpassen“ änderbar):
 | Tritt | H | L (oder Num 3) |
 | Spezialattacke | T | I (oder Num 5) |
 | Rettungssprung / Konter | W + T / S + T | Pfeil hoch + I / Pfeil runter + I |
+| Final Smash (nach Smash-Kugel) | T | I |
 | Richtungs-Angriffe | W oder S halten + F/G; in der Luft: F mit W, S oder zurück (A/D) | genauso mit Pfeilen und J/K |
 | Ausweichrolle | 2× schnell links oder rechts, oder Umschalt halten + A/D | 2× schnell Pfeil links oder rechts, oder Abwehren halten + links/rechts |
 | Smash-Angriff aufladen | G gedrückt halten, loslassen | K gedrückt halten, loslassen |

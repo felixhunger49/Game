@@ -42,8 +42,8 @@ func _physics_process(delta: float) -> void:
 	if arrows.is_empty() and hit_count >= 0:
 		_spawn_arrows()
 		marker.queue_free()
-	var target: CharacterBody3D = shooter.opponent
 	for arrow in arrows.duplicate():
+		var target: CharacterBody3D = shooter.nearest_enemy_to(arrow.global_position)
 		arrow.global_position.y -= FALL_SPEED * delta
 		if Target.hit_near(self, arrow.global_position, HIT_RADIUS + 0.4):
 			arrows.erase(arrow)

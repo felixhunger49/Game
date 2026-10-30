@@ -56,21 +56,22 @@ func _physics_process(delta: float) -> void:
 	velocity.y -= GRAVITY * delta
 	global_position += velocity * delta
 	ball.rotation.z -= direction * 10.0 * delta
-	var target: CharacterBody3D = shooter.opponent if shooter else null
+	var target: CharacterBody3D = shooter.nearest_enemy_to(global_position) if shooter else null
 	var hit_target: bool = target != null and target.visible \
 		and (target.global_position + Vector3(0, 0.9, 0)).distance_to(global_position) < 1.0
 	if hit_target or global_position.y < 0.2 or age > LIFETIME or Target.hit_near(self, global_position, 0.8):
 		_explode(target)
 
 
-func _explode(target: CharacterBody3D) -> void:
+func _explode(_target: CharacterBody3D) -> void:
 	var world := get_parent()
 	SpecialFX.impact(shooter, global_position, Color(1, 0.55, 0.2))
 	SpecialFX._sparks(world, global_position, Color(1, 0.5, 0.1), 60, 9.0, 0.6)
 	Audio.sfx("explosion", 1.1)
 	Target.hit_near(self, global_position, EXPLOSION_RADIUS)
-	if target and target.visible:
-		var offset := target.global_position + Vector3(0, 0.9, 0) - global_position
+	# Die Explosion trifft alle Gegner in der Nähe.
+	for target in shooter._enemies():
+		var offset: Vector3 = target.global_position + Vector3(0, 0.9, 0) - global_position
 		if offset.length() < EXPLOSION_RADIUS:
 			var side := 1.0 if offset.x >= 0.0 else -1.0
 			var angle: Vector2 = attack.angle

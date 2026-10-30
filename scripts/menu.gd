@@ -151,7 +151,7 @@ func _input(event: InputEvent) -> void:
 func _rows() -> Array:
 	match page:
 		Page.OPTIONS:
-			return [["items"], ["rate"], ["stocks"], ["map_effects"], ["special_charge"], ["graphics"],
+			return [["fighters"], ["teams"], ["items"], ["rate"], ["stocks"], ["map_effects"], ["special_charge"], ["graphics"],
 				["music"], ["sfx"], ["back"]]
 		Page.CONTROLS:
 			var list := [["player"]]
@@ -189,7 +189,7 @@ func _gap_before(entry: String) -> bool:
 
 
 func _is_selector(entry: String) -> bool:
-	return entry in ["map", "mode", "cpu", "items", "rate", "stocks", "map_effects", "special_charge",
+	return entry in ["map", "mode", "cpu", "fighters", "teams", "items", "rate", "stocks", "map_effects", "special_charge",
 		"graphics", "music", "sfx", "player"] or entry.begins_with("key:")
 
 
@@ -214,6 +214,8 @@ func _selector_name(entry: String) -> String:
 		"map": return "MAP"
 		"mode": return "MODUS"
 		"cpu": return "COMPUTER"
+		"fighters": return "Kämpfer"
+		"teams": return "Team-Modus"
 		"items": return "Items"
 		"rate": return "Item-Häufigkeit"
 		"stocks": return "Leben"
@@ -232,7 +234,9 @@ func _selector_value(entry: String) -> String:
 		return "Taste drücken …" if waiting_action == action else Settings.key_text(action)
 	match entry:
 		"map": return Settings.current_map().name
-		"mode": return "Solo gegen Computer" if Settings.solo else "Zwei Spieler"
+		"mode": return "Solo gegen Computer" if Settings.solo else ("Zwei Spieler" if Settings.fighters == 2 else "%d Kämpfer" % Settings.fighters)
+		"fighters": return "%d im Kampf" % Settings.fighters
+		"teams": return "Rot gegen Blau" if Settings.teams else "Aus (jeder gegen jeden)"
 		"cpu": return CpuPlayer.LEVELS[Settings.cpu_level].name
 		"items": return "An" if Settings.items_enabled else "Aus"
 		"rate": return Settings.ITEM_RATES[Settings.item_rate]
@@ -260,7 +264,7 @@ func _info(entry: String) -> Dictionary:
 	if entry.begins_with("key:"):
 		return {"title": "Taste ändern", "text": "F drücken, dann die neue Taste oder den Controller-Knopf.\nIst sie schon belegt, tauschen die beiden Aktionen. Esc bricht ab."}
 	match entry:
-		"play": return {"title": "Kampf", "text": "Zwei Spieler kämpfen auf der gewählten Map. Je mehr Schaden, desto weiter fliegt man. Wer alle Leben verliert, hat verloren."}
+		"play": return {"title": "Kampf", "text": "2 bis 4 Kämpfer auf der gewählten Map (Anzahl und Team-Modus in den Optionen). Je mehr Schaden, desto weiter fliegt man. Wer alle Leben verliert, ist raus."}
 		"campaign", "campaign_new": return {"title": "Kampagne", "text": _campaign_info(entry == "campaign_new")}
 		"targets": return {"title": "Ziele zerstören", "text": "Zerschlage alle Ziele der Map so schnell du kannst. Deine Bestzeit wird für jeden Kämpfer gespeichert."}
 		"boss": return {"title": "Endboss", "text": "Allein gegen den Riesen-Kampfroboter mit Raketen und Laser. Schaffst du es, seine Lebensleiste zu leeren?"}
@@ -270,8 +274,10 @@ func _info(entry: String) -> Dictionary:
 				"text": map.effect + ("" if Settings.map_effects else "\n(Map-Effekte sind ausgeschaltet)")}
 		"mode": return {"title": "Modus", "text": "Zwei Spieler an einer Tastatur oder mit Controllern – oder allein gegen den Computer in der Kampagne."}
 		"options": return {"title": "Optionen", "text": "Items, Leben, Map-Effekte, Grafik und Lautstärke einstellen."}
-		"controls": return {"title": "Steuerung", "text": "Tasten und Controller-Knöpfe für beide Spieler ändern."}
+		"controls": return {"title": "Steuerung", "text": "Tasten und Controller-Knöpfe für alle Spieler ändern."}
 		"quit": return {"title": "Beenden", "text": "Spiel schließen. Bis bald!"}
+		"fighters": return {"title": "Kämpfer", "text": "2 bis 4 Kämpfer im Mehrspieler-Kampf. Spieler 3 und 4 spielen mit Controller 1 und 2 (A springen, B Spezial, X/Y Angriffe, Schultertasten Abwehr und Tritt). Ohne Controller übernimmt der Computer."}
+		"teams": return {"title": "Team-Modus", "text": "Team Rot (Spieler 1 und 3) gegen Team Blau (Spieler 2 und 4). Das eigene Team kann man nicht treffen. Es gewinnt das Team, das zuletzt noch Leben hat."}
 		"items": return {"title": "Items", "text": "Während des Kampfes fallen Gegenstände in die Arena, die man aufheben und benutzen kann."}
 		"rate": return {"title": "Item-Häufigkeit", "text": "Wie oft neue Items erscheinen."}
 		"stocks": return {"title": "Leben", "text": "So viele Leben hat jeder Spieler. Wer aus der Arena fliegt, verliert eins."}
@@ -281,7 +287,7 @@ func _info(entry: String) -> Dictionary:
 		"music": return {"title": "Musik", "text": "Lautstärke der Musik von 0 bis 10."}
 		"sfx": return {"title": "Geräusche & Stimmen", "text": "Lautstärke der Treffer, Rufe und Menü-Geräusche von 0 bis 10."}
 		"player": return {"title": "Spieler wählen", "text": "Mit A/D umschalten, wessen Tasten unten angezeigt werden."}
-		"reset": return {"title": "Standard", "text": "Alle Tasten beider Spieler wieder wie am Anfang."}
+		"reset": return {"title": "Standard", "text": "Alle Tasten aller Spieler wieder wie am Anfang."}
 		"back": return {"title": "Zurück", "text": "Zurück zum Hauptmenü. Alles ist schon gespeichert."}
 	return {"title": "", "text": ""}
 
@@ -342,6 +348,10 @@ func _change(entry: String, step: int) -> void:
 			Settings.item_rate = clampi(Settings.item_rate + step, 0, Settings.ITEM_RATES.size() - 1)
 		"stocks":
 			Settings.stocks = clampi(Settings.stocks + step, 1, 9)
+		"fighters":
+			Settings.fighters = clampi(Settings.fighters + step, 2, Settings.MAX_FIGHTERS)
+		"teams":
+			Settings.teams = not Settings.teams
 		"map_effects":
 			Settings.map_effects = not Settings.map_effects
 		"special_charge":
@@ -355,7 +365,7 @@ func _change(entry: String, step: int) -> void:
 			Settings.sfx_volume = clampi(Settings.sfx_volume + step, 0, 10)
 			Audio.apply_volume()
 		"player":
-			controls_player = 2 if controls_player == 1 else 1
+			controls_player = wrapi(controls_player + step, 1, Settings.MAX_FIGHTERS + 1)
 		_:
 			return
 	Audio.sfx("menu_move")
