@@ -1391,6 +1391,15 @@ func _setup_weapons(model: Node3D) -> void:
 		bow.transform = _hold_transform(skeleton, "mixamorig_LeftHand", opts, 0.8 / fighter.get("scale", 0.8) * opts.get("groesse", 1.0))
 		slot.add_child(bow)
 
+	# Hände, die etwas halten, zur Faust schließen (die Animationen haben oft offene oder zeigende Hände).
+	var holding_hands: Array = attach_from.keys()
+	if fighter.has("bow_hand"):
+		holding_hands.append("mixamorig_LeftHand")
+	if not holding_hands.is_empty():
+		var fist := FistModifier.new()
+		skeleton.add_child(fist)
+		fist.setup(skeleton, holding_hands)
+
 	var attach: Dictionary = fighter.get("attach", {})
 	if attach.is_empty():
 		return
