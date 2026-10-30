@@ -27,6 +27,10 @@ const EAGLE_MODEL := "res://assets/final_smash/adler.fbx"
 const WOLF_MODEL := "res://assets/final_smash/wolf.glb"
 const FIRE_SHADER := preload("res://scripts/feuer.gdshader")
 const GHOST_SHADER := preload("res://scripts/geist.gdshader")
+const DRAGON_SHADER := preload("res://scripts/drache.gdshader")
+const GLOW_SHADER := preload("res://scripts/glut.gdshader")
+## Lage eines Wolfsauges im Wolf-Modell (x = seitlich, z = nach vorne zur Schnauze).
+const WOLF_EYE := Vector3(0.17, 2.32, 2.25)
 ## Kleine Treffer während der Szene (nur Schaden, kein Wegfliegen).
 const TICK := 2.5
 ## Der Abschlussschlag: sehr stark, damit man ab etwa 60 % aus der Arena fliegt.
@@ -448,53 +452,237 @@ func _hexe() -> void:
 
 ## Mönch: beschwört einen goldenen Geisterdrachen, der sich durch die Arena schlängelt und die Gegner mitreißt.
 func _moench() -> void:
-	var gold := Color(1, 0.62, 0.08)
+	var red := Color(0.78, 0.07, 0.04)
+	var gold := Color(1, 0.72, 0.15)
 	_tint(Color(0.12, 0.08, 0, 0.5), 0.3)
 	player._play("special", 0.9)
-	_cam_stage(0.6)
-	# Der Drache: eine Kette leuchtender Kugeln (Kopf vorne groß), die einer Schlangenlinie folgt.
-	var segments := []
-	for i in 18:
-		var size := 1.2 - i * 0.045
-		var seg := _solid(_ball(size), gold.lerp(Color(0.9, 0.3, 0.05), i / 18.0) if i > 0 else Color(1, 0.8, 0.3), 1.1)
-		segments.append(seg)
-	var eyes := _glow(_box(Vector3(0.5, 0.12, 0.1)), Color(1, 0.2, 0.1), 4.0)
-	var horn := _glow(_cyl(0.12, 1.2, 0.0), Color(1, 1, 0.9), 3.0)
-	var x0 := area.position.x - 6.0 if player.facing > 0 else area.end.x + 6.0
+	_cam_stage(0.6, 0.5)
 	var dir := float(player.facing)
+	var x0 := area.position.x - 4.0 if dir > 0 else area.end.x + 4.0
+	var x1 := area.end.x + 4.0 if dir > 0 else area.position.x - 4.0
+	var floor_y := area.position.y
+	# Flugbahn: Wellen nach oben und unten und dabei vor und zurück (schraubt sich vor der Bühne durch die Luft).
+	var big := 1.5
 	var path := func(t: float) -> Vector3:
-		var x: float = x0 + dir * t * (area.size.x + 12.0)
-		var y: float = area.position.y + 2.5 + sin(t * TAU * 1.5) * 2.2
-		return Vector3(x, y, 0.3)
+		var w := t * TAU * 1.6
+		return Vector3(lerpf(x0, x1, t), floor_y + 3.6 + sin(w) * 2.2, 1.3 + cos(w) * 0.9)
+	var span := 0.3
+	# Der lange Körper ist ein Schlauch, der jedes Bild neu entlang der Bahn gebaut wird.
+	var body := MeshInstance3D.new()
+	body.top_level = true
+	add_child(body)
+	var body_mat := ShaderMaterial.new()
+	body_mat.shader = DRAGON_SHADER
+	var gold_mat := StandardMaterial3D.new()
+	gold_mat.albedo_color = gold
+	gold_mat.emission_enabled = true
+	gold_mat.emission = gold
+	gold_mat.emission_energy_multiplier = 0.6
+	gold_mat.metallic = 0.6
+	gold_mat.roughness = 0.35
+	var head := _dragon_head(red, gold)
+	var head_root: Node3D = head[0]
+	var jaw: Node3D = head[1]
+	# Rückenflossen, vier Krallenbeine, Schwanzquaste.
+	var fins := []
+	for i in 16:
+		var fin := _solid(_cyl(0.13, 0.55, 0.0), gold.lerp(Color(1, 0.4, 0.05), i / 16.0), 0.6)
+		fins.append([fin, 0.06 + i * 0.05])
+	var legs := []
+	for spot in [[0.17, 1.0], [0.17, -1.0], [0.55, 1.0], [0.55, -1.0]]:
+		legs.append([_dragon_leg(red, gold), spot[0], spot[1]])
+	var tuft := []
+	for i in 6:
+		tuft.append(_solid(_cyl(0.16, 1.0, 0.0), Color(1, 0.5, 0.08).lerp(gold, i / 6.0), 0.8))
+	# Die leuchtende Perle, die der Drache jagt.
+	var pearl := _glow(_ball(0.35), Color(1, 0.95, 0.7), 5.0)
+	var pearl_light := OmniLight3D.new()
+	pearl_light.light_color = gold
+	pearl_light.light_energy = 3.0
+	pearl_light.omni_range = 6.0
+	pearl.add_child(pearl_light)
+	var whiskers := MeshInstance3D.new()
+	whiskers.top_level = true
+	add_child(whiskers)
 	Audio.sfx("wind", 0.6)
 	Audio.sfx("thunder", 0.8, -4.0)
-	var steps := 60
+	var rings := 44
+	var steps := 90
 	for s in steps:
-		var t := float(s) / steps
-		for i in segments.size():
-			var ti := maxf(t - i * 0.018, 0.0)
-			segments[i].global_position = path.call(ti)
-		var head: Vector3 = segments[0].global_position
-		eyes.global_position = head + Vector3(dir * 0.5, 0.25, 0.6)
-		horn.global_position = head + Vector3(-dir * 0.3, 0.8, 0)
-		horn.rotation.z = -dir * 0.6
-		for e in _enemies_near(head, 1.6, 1.8):
+		var t := lerpf(0.0, 1.0 + span, float(s) / steps)
+		var pts := []
+		var radii := []
+		for i in rings:
+			var u := float(i) / (rings - 1)
+			pts.append(path.call(t - u * span))
+			radii.append(big * lerpf(0.34, 0.52, smoothstep(0.0, 0.15, u)) * (1.0 - smoothstep(0.45, 1.0, u) * 0.86))
+		var frames := _tube_frames(pts)
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		_tube(st, pts, radii, frames, 14)
+		st.set_material(body_mat)
+		body.mesh = st.commit()
+		# Kopf vorne auf den Körper setzen, Maul auf und zu.
+		var f0: Basis = frames[0]
+		var head_pos: Vector3 = pts[0] + f0.x * 0.25 * big
+		head_root.global_transform = Transform3D(f0 * big * 1.15, head_pos)
+		jaw.rotation.z = -0.3 - 0.25 * absf(sin(s * 0.25))
+		for f in fins:
+			var k := int(f[1] * (rings - 1))
+			var fb: Basis = frames[k]
+			f[0].global_transform = Transform3D(fb * Basis(Vector3.BACK, 0.7) * big, pts[k] + fb.y * (radii[k] + 0.12 * big))
+		for l in legs:
+			var k := int(l[1] * (rings - 1))
+			var lb: Basis = frames[k]
+			var paddle := sin(s * 0.35 + l[1] * 9.0 + l[2]) * 0.6 + 0.3
+			l[0].global_transform = Transform3D(lb * Basis(Vector3.BACK, paddle) * big, pts[k] - lb.y * radii[k] * 0.4 + lb.z * l[2] * radii[k] * 0.8)
+		var tb: Basis = frames[rings - 1]
+		for i in tuft.size():
+			var spread := Basis(Vector3.RIGHT, (i - 2.5) * 0.35) * Basis(Vector3.BACK, PI / 2.0 + sin(s * 0.4 + i) * 0.2)
+			tuft[i].global_transform = Transform3D(tb * spread * big, pts[rings - 1] - tb.x * 0.45 * big)
+		# Barthaare: zwei lange dünne Schläuche, die nach hinten wehen.
+		var wst := SurfaceTool.new()
+		wst.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for side in [-1.0, 1.0]:
+			var wp := []
+			var wr := []
+			var start: Vector3 = head_root.global_transform * Vector3(1.25, -0.05, side * 0.3)
+			for j in 9:
+				var wave := sin(s * 0.3 + j * 0.8) * 0.12 * j / 8.0
+				wp.append(start + (-f0.x * 0.35 * j + f0.z * side * 0.1 * j + f0.y * (wave - 0.06 * j)) * big)
+				wr.append(lerpf(0.045, 0.012, j / 8.0) * big)
+			_tube(wst, wp, wr, _tube_frames(wp), 6)
+		wst.set_material(gold_mat)
+		whiskers.mesh = wst.commit()
+		pearl.global_position = path.call(t + 0.05)
+		for e in _enemies_near(head_pos, 2.2, 2.6):
 			_catch(e)
 		for v in victims:
-			v.global_position = head - Vector3(0, 1.0, 0) + Vector3(-dir * 0.4, 0, 0)
+			v.global_position = head_pos + f0.x * 1.2 - Vector3(0, 1.4, 0)
 		if s % 4 == 0:
-			_tick_all(gold, 2.5)
-			SpecialFX._sparks(world, head, gold, 8, 3.0, 0.4)
+			_tick_all(gold, 2.0)
+			SpecialFX._sparks(world, pearl.global_position, gold, 8, 3.0, 0.4)
 		await _wait(0.03)
-	for seg in segments:
-		_fade_out(seg, 0.3)
-	_fade_out(eyes, 0.3)
-	_fade_out(horn, 0.3)
+	for n in [body, whiskers, head_root, pearl]:
+		_fade_out(n, 0.3)
+	for n in fins + legs:
+		n[0].queue_free()
+	for n in tuft:
+		n.queue_free()
 	Audio.sfx("special_hit")
 	for v in victims:
 		_boom(_chest(v), gold, 1.4)
 	_launch_all(Vector2(dir * 0.7, 0.75), false)
 	await _wait(0.5)
+
+
+## Kopf des chinesischen Drachen (schaut nach +x): Schnauze, Unterkiefer (zum Öffnen), Augen, Hörner, Mähne, Kinnbart.
+func _dragon_head(red: Color, gold: Color) -> Array:
+	var root := Node3D.new()
+	add_child(root)
+	var parts := [
+		[_box(Vector3(1.0, 0.72, 0.8)), red, Vector3(0, 0.12, 0), 0.0],
+		[_box(Vector3(1.0, 0.42, 0.62)), red, Vector3(0.85, 0.0, 0), 0.0],
+		[_box(Vector3(0.95, 0.09, 0.3)), gold, Vector3(0.8, 0.24, 0), 0.0],
+		[_box(Vector3(0.5, 0.1, 0.9)), gold, Vector3(0.45, 0.5, 0), -0.25],
+	]
+	for p in parts:
+		var m := _solid(p[0], p[1], 0.4)
+		m.reparent(root, false)
+		m.position = p[2]
+		m.rotation.z = p[3]
+	for side in [-1.0, 1.0]:
+		var nose := _solid(_ball(0.14), red.darkened(0.4))
+		nose.reparent(root, false)
+		nose.position = Vector3(1.33, 0.12, side * 0.17)
+		var eye := _glow(_ball(0.13), Color(1, 0.85, 0.2), 5.0)
+		eye.reparent(root, false)
+		eye.position = Vector3(0.4, 0.36, side * 0.36)
+		var horn := _solid(_cyl(0.09, 1.4, 0.02), Color(1, 0.9, 0.6), 0.5)
+		horn.reparent(root, false)
+		horn.position = Vector3(-0.8, 0.85, side * 0.3)
+		horn.rotation = Vector3(-side * 0.25, 0, 1.0)
+		var branch := _solid(_cyl(0.06, 0.5, 0.0), Color(1, 0.9, 0.6), 0.5)
+		branch.reparent(horn, false)
+		branch.position = Vector3(0.12, 0.05, 0)
+		branch.rotation.z = -0.9
+		for i in 3:
+			var tooth := _solid(_cyl(0.05, 0.18, 0.0), Color.WHITE)
+			tooth.reparent(root, false)
+			tooth.position = Vector3(1.0 + i * 0.13, -0.27, side * 0.24)
+			tooth.rotation.z = PI
+	# Mähne: Flammenzacken hinten am Kopf.
+	for i in 7:
+		var a := lerpf(-1.3, 1.3, i / 6.0)
+		var flame := _solid(_cyl(0.16, 1.0, 0.0), Color(1, 0.45, 0.05).lerp(gold, absf(a) / 1.3), 0.8)
+		flame.reparent(root, false)
+		flame.position = Vector3(-0.85, 0.15 + cos(a) * 0.3, sin(a) * 0.38)
+		flame.rotation = Vector3(-a * 0.5, 0, PI / 2.0 - cos(a) * 0.3)
+	# Unterkiefer mit Kinnbart.
+	var jaw := Node3D.new()
+	root.add_child(jaw)
+	jaw.position = Vector3(0.35, -0.2, 0)
+	var chin := _solid(_box(Vector3(1.05, 0.16, 0.52)), gold, 0.4)
+	chin.reparent(jaw, false)
+	chin.position = Vector3(0.5, -0.04, 0)
+	for i in 3:
+		var beard := _solid(_cyl(0.07, 0.6, 0.0), gold.lightened(0.2), 0.6)
+		beard.reparent(jaw, false)
+		beard.position = Vector3(0.2 + i * 0.12, -0.35, (i - 1) * 0.12)
+		beard.rotation.z = PI - 0.5
+	return [root, jaw]
+
+
+## Ein Drachenbein (zeigt nach unten) mit drei goldenen Krallen.
+func _dragon_leg(red: Color, gold: Color) -> Node3D:
+	var leg := Node3D.new()
+	add_child(leg)
+	var thigh := _solid(_cyl(0.12, 0.7, 0.08), red, 0.3)
+	thigh.reparent(leg, false)
+	thigh.position.y = -0.35
+	for i in 3:
+		var claw := _solid(_cyl(0.05, 0.25, 0.0), gold, 0.5)
+		claw.reparent(leg, false)
+		claw.position = Vector3(0.1, -0.72, (i - 1) * 0.08)
+		claw.rotation.z = -PI / 2.0 - 0.4
+	return leg
+
+
+## Für jeden Punkt eines Schlauchs: Richtung (x), oben (y) und Seite (z).
+func _tube_frames(pts: Array) -> Array:
+	var frames := []
+	for i in pts.size():
+		var a: Vector3 = pts[maxi(i - 1, 0)]
+		var b: Vector3 = pts[mini(i + 1, pts.size() - 1)]
+		var fwd := (a - b).normalized()
+		if fwd.length() < 0.5:
+			fwd = Vector3.RIGHT
+		var up := (Vector3.UP - fwd * fwd.dot(Vector3.UP)).normalized()
+		frames.append(Basis(fwd, up, fwd.cross(up)))
+	return frames
+
+
+## Einen runden Schlauch durch die Punkte bauen (UV: x entlang, y einmal herum, 0.5 = unten).
+func _tube(st: SurfaceTool, pts: Array, radii: Array, frames: Array, sides: int) -> void:
+	var first := 0
+	for i in pts.size():
+		var f: Basis = frames[i]
+		for k in sides + 1:
+			var a := float(k) / sides * TAU
+			var n := f.y * cos(a) + f.z * sin(a)
+			st.set_normal(n)
+			st.set_uv(Vector2(float(i) / (pts.size() - 1), float(k) / sides))
+			st.add_vertex(pts[i] + n * radii[i])
+	for i in pts.size() - 1:
+		for k in sides:
+			var a := first + i * (sides + 1) + k
+			var b := a + sides + 1
+			st.add_index(a)
+			st.add_index(b)
+			st.add_index(a + 1)
+			st.add_index(a + 1)
+			st.add_index(b)
+			st.add_index(b + 1)
 
 
 ## Barbar: wächst zum Kriegsgott, stampft nach vorne und zerschmettert alles mit einem gewaltigen Axthieb.
@@ -553,8 +741,15 @@ func _held() -> void:
 	add_child(bird)
 	var eagle := _model(EAGLE_MODEL, "EagleArmature|Flying", FIRE_SHADER, 1.4)
 	eagle.reparent(bird, false)
-	eagle.scale = Vector3.ONE * 0.6
+	eagle.scale = Vector3.ONE * 0.55
 	eagle.rotation.y = -PI / 2.0
+	# Feuerschein: dasselbe Modell etwas größer, nur der leuchtende Rand ist sichtbar.
+	var halo := _model(EAGLE_MODEL, "EagleArmature|Flying", GLOW_SHADER, 2.2)
+	halo.reparent(bird, false)
+	halo.scale = Vector3.ONE * 0.55 * 1.1
+	halo.rotation.y = -PI / 2.0
+	# Etwas gekippt, damit man beide Flügel sieht.
+	bird.rotation.x = -1.0
 	var aura := OmniLight3D.new()
 	aura.light_color = fire
 	aura.light_energy = 3.0
@@ -566,7 +761,7 @@ func _held() -> void:
 	player.model_root.visible = false
 	SpecialFX._flash_sphere(world, _chest(player), fire, 0.3, 2.5, 0.3)
 	Audio.sfx("fireball", 0.6)
-	_cam(_chest(player), 11.0, 0.3)
+	_cam(_chest(player), 14.0, 0.3)
 	# Flug quer über die Bühne (die Kamera fliegt mit).
 	var y := player.global_position.y + 1.2
 	var from_x := player.global_position.x
@@ -574,8 +769,9 @@ func _held() -> void:
 	var steps := 30
 	for s in steps:
 		var t := float(s + 1) / steps
-		bird.global_position = Vector3(lerpf(from_x, to_x, t), y + sin(t * PI * 2.0) * 0.5, 0.3)
+		bird.global_position = Vector3(lerpf(from_x, to_x, t), y + sin(t * PI * 2.0) * 0.5, 1.2)
 		SpecialFX._sparks(world, bird.global_position - Vector3(dir * 1.5, 0, 0), fire, 6, 2.0, 0.4)
+		_flame(bird.global_position - Vector3(dir * 1.2, 0, 0), fire, gold)
 		for e in _enemies_near(bird.global_position, 2.0, 2.5):
 			_catch(e)
 		for v in victims:
@@ -584,20 +780,22 @@ func _held() -> void:
 			_tick_all(fire, 2.5)
 			Audio.sfx("whirl", 1.3, -6.0)
 		if s % 3 == 0:
-			_cam(bird.global_position, 11.0, 0.09)
-			SpecialFX._flash_sphere(world, bird.global_position - Vector3(dir * 2.5, 0, 0), fire, 0.6, 1.4, 0.35)
+			_cam(bird.global_position + Vector3(dir * 1.5, 0.8, 0), 16.0, 0.09)
 		await _wait(0.03)
-	_cam(Vector3(area.get_center().x, area.end.y * 0.6 + 2.0, 0), 20.0, 0.4)
-	# Aufsteigen, umdrehen und herabstürzen.
-	var top := Vector3(to_x - dir * 2.0, area.end.y + 5.0, 0.3)
+	# Aufsteigen, umdrehen und herabstürzen (der Phönix wächst dabei).
+	var top := Vector3(to_x - dir * 2.0, area.end.y + 5.0, 1.2)
+	_cam(Vector3(lerpf(top.x, area.get_center().x, 0.4), top.y - 3.0, 0), 17.0, 0.4)
 	bird.create_tween().tween_property(bird, "global_position", top, 0.45).set_ease(Tween.EASE_OUT)
+	bird.create_tween().tween_property(bird, "scale", Vector3(dir, 1, 1) * 1.6, 0.45)
 	for v in victims:
 		v.create_tween().tween_property(v, "global_position", top + Vector3(0, -1.2, 0), 0.45)
 	Audio.sfx("wind", 1.2)
 	await _wait(0.5)
-	bird.scale = Vector3(-dir, 1, 1)
+	bird.scale = Vector3(-dir, 1, 1) * 1.6
 	bird.rotation.z = -dir * 0.9
-	var dive := Vector3(area.get_center().x, area.position.y + 0.8, 0.3)
+	for i in 8:
+		_after(i * 0.035, func(): if is_instance_valid(bird): _flame(bird.global_position, fire, gold))
+	var dive := Vector3(area.get_center().x, area.position.y + 0.8, 1.2)
 	bird.create_tween().tween_property(bird, "global_position", dive, 0.3).set_ease(Tween.EASE_IN)
 	for v in victims:
 		v.create_tween().tween_property(v, "global_position", dive - Vector3(0, 0.4, 0), 0.3).set_ease(Tween.EASE_IN)
@@ -717,6 +915,9 @@ func _jaegerin() -> void:
 			for e in _enemies_near(w[0].global_position + Vector3(0, 0.5, 0), 1.3, 1.6):
 				_catch(e)
 				_tick(e, spirit, 1.5)
+		if s % 4 == 0:
+			for w in wolves:
+				SpecialFX._sparks(world, w[0].global_position + Vector3(-dir * 1.2, 0.6, 0), spirit, 5, 1.5, 0.5)
 		if s % 6 == 0:
 			Audio.sfx("dash", randf_range(1.2, 1.5), -6.0)
 		if s % 3 == 0:
@@ -734,12 +935,31 @@ func _jaegerin() -> void:
 	Audio.sfx("ghost_warn", 0.7)
 	alpha.create_tween().tween_property(alpha, "global_position", target + Vector3(0, -0.5, 0.4), 0.35).set_ease(Tween.EASE_IN)
 	await _wait(0.35)
-	_boom(target, spirit, 2.0)
+	# Aufprall in Geisterblau: Druckwellen, Funken und Licht statt einer weißen Explosionskugel.
+	for i in 3:
+		SpecialFX._ring(world, target + Vector3(0, -0.4 + i * 0.5, 0), spirit, 0.3, 3.5 + i * 1.5, 0.4 + i * 0.1, true)
+	SpecialFX._sparks(world, target, spirit.lightened(0.4), 60, 9.0, 0.7)
+	SpecialFX._flash_light(world, target, spirit, 10.0, 8.0, 0.5)
+	SpecialFX.shake(player, 0.5, 0.3)
+	Audio.sfx("explosion", 0.8, -2.0)
 	for e in _enemies_near(target, 3.0, 3.0):
 		_catch(e)
 	_launch_all(Vector2(dir * 0.6, 0.8), false)
 	_fade_out(alpha, 0.4)
 	await _wait(0.5)
+
+
+## Eine Flamme der Feuerspur: leuchtende Kugel, die aufsteigt, rot wird und verlischt.
+func _flame(pos: Vector3, fire: Color, gold: Color) -> void:
+	var f := _solid(_ball(0.35), gold, 1.4)
+	f.global_position = pos + Vector3(randf_range(-0.2, 0.2), randf_range(-0.3, 0.3), 0)
+	var mat: StandardMaterial3D = f.material_override
+	var t := f.create_tween().set_parallel()
+	t.tween_property(f, "scale", Vector3.ONE * 0.1, 0.45).set_ease(Tween.EASE_IN)
+	t.tween_property(f, "global_position:y", f.global_position.y + 0.8, 0.45)
+	t.tween_property(mat, "emission", fire.darkened(0.3), 0.45)
+	t.tween_property(mat, "albedo_color", fire.darkened(0.4), 0.45)
+	t.chain().tween_callback(f.queue_free)
 
 
 ## Ein Geisterwolf aus leuchtenden Kästen (Körper, Kopf, Schnauze, Ohren, Schwanz, Beine).
@@ -751,6 +971,21 @@ func _wolf(c: Color, energy_scale: float) -> Node3D:
 	model.reparent(wolf, false)
 	model.scale = Vector3.ONE * 0.5
 	model.rotation.y = PI / 2.0
+	# Leuchtende Augen, die am Kopf-Knochen mitlaufen.
+	var skeletons := model.find_children("*", "Skeleton3D", true, false)
+	if not skeletons.is_empty():
+		var sk: Skeleton3D = skeletons[0]
+		var bone := sk.find_bone("Head")
+		var head := BoneAttachment3D.new()
+		head.bone_name = "Head"
+		sk.add_child(head)
+		# Augenlage ist im Modell gemessen; in den Knochen-Raum umrechnen (der Knochen ist stark skaliert).
+		var to_model := model.global_transform.affine_inverse() * sk.global_transform * sk.get_bone_global_rest(bone)
+		for side in [-1, 1]:
+			var eye := _glow(_ball(0.08), Color(0.8, 1.0, 1.0), 6.0)
+			eye.reparent(head, false)
+			eye.position = to_model.affine_inverse() * (WOLF_EYE * Vector3(side, 1, 1))
+			eye.scale = Vector3.ONE / to_model.basis.get_scale().x
 	return wolf
 
 
@@ -760,8 +995,9 @@ func _model(path: String, anim: String, shader: Shader, strength: float, tint :=
 	add_child(node)
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
-	if shader == GHOST_SHADER:
-		mat.set_shader_parameter("farbe", tint)
+	if shader == GHOST_SHADER or shader == GLOW_SHADER:
+		if shader == GHOST_SHADER:
+			mat.set_shader_parameter("farbe", tint)
 		mat.set_shader_parameter("staerke", strength)
 	else:
 		mat.set_shader_parameter("leuchten", strength)
