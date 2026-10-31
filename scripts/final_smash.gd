@@ -31,7 +31,7 @@ const DRAGON_SHADER := preload("res://scripts/drache.gdshader")
 const GLOW_SHADER := preload("res://scripts/glut.gdshader")
 ## Golem-Modell (Flux + Trellis, keine Knochen) und seine Höhe im Spiel.
 const GOLEM_MODEL := "res://assets/final_smash/golem/golem.glb"
-const GOLEM_SCALE := 9.0
+const GOLEM_SCALE := 12.0
 ## Golem mit Skelett (Mixamo): Sprung-Schlag und Stand-Animation. Das Rig ist winzig (ca. 0,007 groß), daher der Faktor.
 const GOLEM_RIG := "res://assets/final_smash/golem/schlag.fbx"
 const GOLEM_IDLE := "res://assets/final_smash/golem/idle.fbx"
@@ -948,7 +948,7 @@ func _brummbart() -> void:
 	var base := Vector3(aim.x - 4.5, -14.0, -4.5)
 	var rise_y := 2.2
 	if has_model:
-		base = Vector3(aim.x - (0.0 if has_rig else 3.0), area.position.y - GOLEM_SCALE - 2.0, -5.0 if has_rig else -4.5)
+		base = Vector3(aim.x - (0.0 if has_rig else 3.0), area.position.y - GOLEM_SCALE - 2.0, -11.5 if has_rig else -4.5)
 		rise_y = area.position.y - 0.8
 	else:
 		golem.scale = Vector3.ONE * 1.4
