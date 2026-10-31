@@ -29,6 +29,9 @@ const FIRE_SHADER := preload("res://scripts/feuer.gdshader")
 const GHOST_SHADER := preload("res://scripts/geist.gdshader")
 const DRAGON_SHADER := preload("res://scripts/drache.gdshader")
 const GLOW_SHADER := preload("res://scripts/glut.gdshader")
+## Golem-Modell (Flux + Trellis, keine Knochen) und seine Höhe im Spiel.
+const GOLEM_MODEL := "res://assets/final_smash/golem/golem.glb"
+const GOLEM_SCALE := 9.0
 ## Größe des Drachenkopf-Modells (Modell ist ca. 1 Einheit groß).
 const HEAD_SCALE := 1.9
 ## Ordner mit den Flux-Texturen des Drachen (schuppen.png, bauch.png, flosse.png, je mit _normal.png).
@@ -881,6 +884,21 @@ func _brummbart() -> void:
 	player._play("special", 0.8)
 	var golem := Node3D.new()
 	add_child(golem)
+	# Echtes Golem-Modell (Flux + Trellis), wenn es im Projekt liegt: steht auf dem Ursprung, schaut zur Kamera (+z).
+	var has_model := ResourceLoader.exists(GOLEM_MODEL)
+	var body := Node3D.new()
+	golem.add_child(body)
+	if has_model:
+		var model: Node3D = load(GOLEM_MODEL).instantiate()
+		body.add_child(model)
+		model.scale = Vector3.ONE * GOLEM_SCALE
+		model.position.y = GOLEM_SCALE * 0.5
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for side in [-1, 1]:
+			var eye := _glow(_ball(0.2), glow_eye, 6.0)
+			eye.reparent(body, false)
+			eye.position = Vector3(side * GOLEM_SCALE * 0.06, GOLEM_SCALE * 0.9, GOLEM_SCALE * 0.17)
 	var torso := _solid(_box(Vector3(5.0, 5.5, 3.0)), stone)
 	torso.reparent(golem, false)
 	var head := _solid(_box(Vector3(2.6, 2.2, 2.4)), stone.darkened(0.1))
@@ -902,6 +920,9 @@ func _brummbart() -> void:
 	var rune := _glow(_box(Vector3(1.4, 0.3, 0.1)), glow_eye, 3.0)
 	rune.reparent(golem, false)
 	rune.position = Vector3(0, 0.8, 1.55)
+	if has_model:
+		for part in [torso, head, rune, arm_pivot]:
+			part.queue_free()
 	# Ziel: der nächste Gegner.
 	var enemies := _enemies()
 	var aim := Vector3(player.global_position.x + player.facing * 4.0, player.global_position.y, 0)
@@ -910,12 +931,17 @@ func _brummbart() -> void:
 		aim = enemies[0].global_position
 	# Groß und hinter der Bühne, damit er über Mauern und Türme hinausragt.
 	var base := Vector3(aim.x - 4.5, -14.0, -4.5)
-	golem.scale = Vector3.ONE * 1.4
+	var rise_y := 2.2
+	if has_model:
+		base = Vector3(aim.x - 3.0, area.position.y - GOLEM_SCALE - 2.0, -4.5)
+		rise_y = area.position.y - 0.8
+	else:
+		golem.scale = Vector3.ONE * 1.4
 	golem.global_position = base
 	_cam(Vector3(aim.x, aim.y + 3.0, 0), 18.0, 0.5)
 	Audio.sfx("boulder", 0.5)
 	SpecialFX.shake(player, 0.6, 1.0)
-	golem.create_tween().tween_property(golem, "global_position:y", 2.2, 0.9).set_ease(Tween.EASE_OUT)
+	golem.create_tween().tween_property(golem, "global_position:y", rise_y, 0.9).set_ease(Tween.EASE_OUT)
 	await _wait(0.9)
 	# Schatten am Boden, dann holt er aus und schlägt zu.
 	var shadow := _glow(_torus(1.6, 2.0), Color(1, 0.2, 0.1), 3.0)
@@ -923,11 +949,17 @@ func _brummbart() -> void:
 	shadow.rotation.x = PI / 2.0
 	for e in _enemies_near(aim + Vector3(0, 1.0, 0), 3.5, 3.0):
 		_catch(e)
-	arm_pivot.create_tween().tween_property(arm_pivot, "rotation:z", 0.5, 0.35)
+	if has_model:
+		body.create_tween().tween_property(body, "rotation:x", -0.3, 0.35).set_ease(Tween.EASE_OUT)
+	else:
+		arm_pivot.create_tween().tween_property(arm_pivot, "rotation:z", 0.5, 0.35)
 	Audio.sfx("warning", 0.8, -4.0)
 	await _wait(0.4)
-	var slam := arm_pivot.create_tween()
-	slam.tween_property(arm_pivot, "rotation:z", -1.75, 0.18).set_ease(Tween.EASE_IN)
+	var slam := (body if has_model else arm_pivot).create_tween()
+	if has_model:
+		slam.tween_property(body, "rotation:x", 0.45, 0.18).set_ease(Tween.EASE_IN)
+	else:
+		slam.tween_property(arm_pivot, "rotation:z", -1.75, 0.18).set_ease(Tween.EASE_IN)
 	golem.create_tween().tween_property(golem, "global_position:z", -1.0, 0.18)
 	await _wait(0.18)
 	shadow.queue_free()
