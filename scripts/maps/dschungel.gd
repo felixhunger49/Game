@@ -33,7 +33,8 @@ func _ready() -> void:
 	var trunk := MapFX.surface("rinde", Color(0.35, 0.25, 0.18), 1.0)
 	var water := MapLook.mat(Color(0.55, 0.85, 1.0, 0.7), 0.1, 0.0, 0.6)
 	var gold := MapFX.surface("gold", Color(0.95, 0.75, 0.25), 0.3, 0.8)
-	$Spawn1.position = Vector3(-6.0, 0.2, 0)
+	# Nicht auf der Riesenblüte (x -5.6) starten, sonst hüpft man schon in der Auswahl dauernd.
+	$Spawn1.position = Vector3(-3.5, 0.2, 0)
 	$Spawn2.position = Vector3(5.0, 0.2, 0)
 	MapLook.stage_area(self, Rect2(-CAVE_HALF, CAVE_Y, CAVE_HALF * 2.0, 7.6 - CAVE_Y), HALF)
 
