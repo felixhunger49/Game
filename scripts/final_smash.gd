@@ -29,6 +29,8 @@ const FIRE_SHADER := preload("res://scripts/feuer.gdshader")
 const GHOST_SHADER := preload("res://scripts/geist.gdshader")
 const DRAGON_SHADER := preload("res://scripts/drache.gdshader")
 const GLOW_SHADER := preload("res://scripts/glut.gdshader")
+## Größe des Drachenkopf-Modells (Modell ist ca. 1 Einheit groß).
+const HEAD_SCALE := 1.9
 ## Ordner mit den Flux-Texturen des Drachen (schuppen.png, bauch.png, flosse.png, je mit _normal.png).
 const DRAGON_TEX := "res://assets/final_smash/drache/"
 ## Lage eines Wolfsauges im Wolf-Modell (x = seitlich, z = nach vorne zur Schnauze).
@@ -595,6 +597,16 @@ func _moench() -> void:
 func _dragon_head(red: Color, gold: Color) -> Array:
 	var root := Node3D.new()
 	add_child(root)
+	# Echter Kopf (Flux + Trellis), wenn er im Projekt liegt. Das Modell schaut nach +z, im Spiel geht es nach +x.
+	if ResourceLoader.exists(DRAGON_TEX + "kopf.glb"):
+		var model: Node3D = load(DRAGON_TEX + "kopf.glb").instantiate()
+		root.add_child(model)
+		model.rotation.y = PI / 2.0
+		model.scale = Vector3.ONE * HEAD_SCALE
+		model.position = Vector3(HEAD_SCALE * 0.34, 0.05, 0)
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		return [root, Node3D.new()]
 	var parts := [
 		[_box(Vector3(1.0, 0.72, 0.8)), red, Vector3(0, 0.12, 0), 0.0],
 		[_box(Vector3(1.0, 0.42, 0.62)), red, Vector3(0.85, 0.0, 0), 0.0],
