@@ -32,6 +32,12 @@ const GLOW_SHADER := preload("res://scripts/glut.gdshader")
 ## Golem-Modell (Flux + Trellis, keine Knochen) und seine Höhe im Spiel.
 const GOLEM_MODEL := "res://assets/final_smash/golem/golem.glb"
 const GOLEM_SCALE := 9.0
+## Golem mit Skelett (Mixamo): Sprung-Schlag und Stand-Animation. Das Rig ist winzig (ca. 0,007 groß), daher der Faktor.
+const GOLEM_RIG := "res://assets/final_smash/golem/schlag.fbx"
+const GOLEM_IDLE := "res://assets/final_smash/golem/idle.fbx"
+const GOLEM_RIG_UNIT := 140.0
+## Sekunde im Schlag, in der die Fäuste den Boden treffen.
+const GOLEM_HIT_TIME := 1.7
 ## Größe des Drachenkopf-Modells (Modell ist ca. 1 Einheit groß).
 const HEAD_SCALE := 1.9
 ## Ordner mit den Flux-Texturen des Drachen (schuppen.png, bauch.png, flosse.png, je mit _normal.png).
@@ -885,10 +891,19 @@ func _brummbart() -> void:
 	var golem := Node3D.new()
 	add_child(golem)
 	# Echtes Golem-Modell (Flux + Trellis), wenn es im Projekt liegt: steht auf dem Ursprung, schaut zur Kamera (+z).
-	var has_model := ResourceLoader.exists(GOLEM_MODEL)
+	var has_rig := ResourceLoader.exists(GOLEM_RIG)
+	var has_model := has_rig or ResourceLoader.exists(GOLEM_MODEL)
 	var body := Node3D.new()
 	golem.add_child(body)
-	if has_model:
+	var rig: AnimationPlayer = null
+	if has_rig:
+		var model: Node3D = load(GOLEM_RIG).instantiate()
+		body.add_child(model)
+		model.scale = Vector3.ONE * GOLEM_SCALE * GOLEM_RIG_UNIT
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		rig = _golem_animations(model)
+	elif has_model:
 		var model: Node3D = load(GOLEM_MODEL).instantiate()
 		body.add_child(model)
 		model.scale = Vector3.ONE * GOLEM_SCALE
@@ -933,7 +948,7 @@ func _brummbart() -> void:
 	var base := Vector3(aim.x - 4.5, -14.0, -4.5)
 	var rise_y := 2.2
 	if has_model:
-		base = Vector3(aim.x - 3.0, area.position.y - GOLEM_SCALE - 2.0, -4.5)
+		base = Vector3(aim.x - (0.0 if has_rig else 3.0), area.position.y - GOLEM_SCALE - 2.0, -5.0 if has_rig else -4.5)
 		rise_y = area.position.y - 0.8
 	else:
 		golem.scale = Vector3.ONE * 1.4
@@ -949,11 +964,30 @@ func _brummbart() -> void:
 	shadow.rotation.x = PI / 2.0
 	for e in _enemies_near(aim + Vector3(0, 1.0, 0), 3.5, 3.0):
 		_catch(e)
+	Audio.sfx("warning", 0.8, -4.0)
+	if rig:
+		# Mixamo-Sprungschlag: ab hier läuft die Animation, die Fäuste treffen nach GOLEM_HIT_TIME.
+		rig.play("schlag")
+		await _wait(GOLEM_HIT_TIME - 0.18)
+		shadow.queue_free()
+		await _wait(0.18)
+		_boom(aim + Vector3(0, 0.6, 0), glow_eye, 2.4)
+		SpecialFX.quake(player)
+		SpecialFX.shake(player, 1.3, 0.6)
+		for i in 6:
+			_tick_all(stone, 2.5)
+			SpecialFX._sparks(world, aim + Vector3(randf_range(-2, 2), 0.5, 0.5), stone.lightened(0.3), 12, 7.0, 0.6)
+			await _wait(0.06)
+		_launch_all(Vector2(0.3, 1.0))
+		await _wait(0.5)
+		rig.play("idle")
+		golem.create_tween().tween_property(golem, "global_position:y", -GOLEM_SCALE - 4.0, 0.9).set_ease(Tween.EASE_IN)
+		await _wait(0.6)
+		return
 	if has_model:
 		body.create_tween().tween_property(body, "rotation:x", -0.3, 0.35).set_ease(Tween.EASE_OUT)
 	else:
 		arm_pivot.create_tween().tween_property(arm_pivot, "rotation:z", 0.5, 0.35)
-	Audio.sfx("warning", 0.8, -4.0)
 	await _wait(0.4)
 	var slam := (body if has_model else arm_pivot).create_tween()
 	if has_model:
@@ -974,6 +1008,37 @@ func _brummbart() -> void:
 	await _wait(0.3)
 	golem.create_tween().tween_property(golem, "global_position:y", -16.0, 0.7).set_ease(Tween.EASE_IN)
 	await _wait(0.5)
+
+
+## Schlag- und Stand-Animation des Golems laden. Der Sprung wird auf der Stelle gespielt (x und z der Hüfte bleiben
+## am Anfang), damit der Golem hinter der Bühne bleibt. Stand-Animation läuft sofort.
+func _golem_animations(model: Node3D) -> AnimationPlayer:
+	var players := model.find_children("*", "AnimationPlayer", true, false)
+	if players.is_empty():
+		return null
+	var ap: AnimationPlayer = players[0]
+	var lib: AnimationLibrary = ap.get_animation_library("")
+	var hit: Animation = ap.get_animation(ap.get_animation_list()[0]).duplicate()
+	for t in hit.get_track_count():
+		if str(hit.track_get_path(t)).ends_with("Hips") and hit.track_get_type(t) == Animation.TYPE_POSITION_3D:
+			var first: Vector3 = hit.track_get_key_value(t, 0)
+			for k in hit.track_get_key_count(t):
+				var v: Vector3 = hit.track_get_key_value(t, k)
+				# Sprunghöhe halbieren, damit der Golem nicht aus dem Bild springt.
+				hit.track_set_key_value(t, k, Vector3(first.x, first.y + (v.y - first.y) * 0.5, first.z))
+	hit.loop_mode = Animation.LOOP_NONE
+	lib.add_animation("schlag", hit)
+	if ResourceLoader.exists(GOLEM_IDLE):
+		var idle_scene: Node = load(GOLEM_IDLE).instantiate()
+		var idle_players := idle_scene.find_children("*", "AnimationPlayer", true, false)
+		if not idle_players.is_empty():
+			var idle: Animation = idle_players[0].get_animation(idle_players[0].get_animation_list()[0]).duplicate()
+			idle.loop_mode = Animation.LOOP_LINEAR
+			lib.add_animation("idle", idle)
+		idle_scene.free()
+	if lib.has_animation("idle"):
+		ap.play("idle")
+	return ap
 
 
 ## Jägerin: heult, und ein Rudel leuchtender Geisterwölfe jagt über die Bühne; der Leitwolf springt zum Schluss.
