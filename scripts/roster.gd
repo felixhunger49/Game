@@ -134,7 +134,7 @@ const FIGHTERS := [
 		# Eigene Figur aus ComfyUI (Flux + Trellis), Zauber-Animationen von Mixamo (Magier-Paket),
 		# Fallen/Landen/Tritt/Block/Rolle/Taumeln/Jubel vom Kampfroboter. Zauberstab und Buch von der KayKit-Hexe.
 		"name": "Hexe", "passive": "gleiten", "flip": "schweben", "voice": 1.25,
-		"scene": "res://assets/hexe/modell.fbx", "anim_dir": "res://assets/hexe/", "scale": 190.0, "special": "schwein",
+		"scene": "res://assets/hexe/modell.fbx", "anim_dir": "res://assets/hexe/", "scale": 190.0, "special": "schwein", "zauber": true,
 		"anim_speeds": {"weak": 2.4, "strong": 1.6, "kick": 1.6, "special": 1.2},
 		"anim_trim": {"weak": [0.30, 1.40], "strong": [0.80, 2.30], "kick": [0.25, 1.30], "special": [0.20, 1.45]},
 		"attach_from": {
@@ -181,7 +181,7 @@ const FIGHTERS := [
 		# modell.fbx: in Blender hängen die Haare nur am Kopf (vorher zogen die Arme sie übers Gesicht).
 		"name": "Magierin", "passive": "arkan", "flip": "pirouette", "voice": 1.2,
 		"scene": "res://assets/magierin/modell.fbx", "anim_dir": "res://assets/magierin/", "scale": 195.0,
-		"special": "feuerball",
+		"special": "feuerball", "zauber": true,
 		"anim_speeds": {"weak": 2.0, "strong": 1.6, "kick": 1.6, "special": 1.3},
 		"anim_trim": {"strong": [0.20, 1.90], "kick": [0.30, 1.30], "special": [0.10, 1.50]},
 	},

@@ -962,6 +962,18 @@ func _update_pending_attack(delta: float) -> void:
 				pfeil[key] *= atk.damage / ATTACKS.strong.damage
 		arrow.launch(self, pfeil, global_position + Vector3(0.7 * facing, 1.2, 0), facing)
 		return
+	# Magierin und Hexe: der starke Angriff schießt eine Zauberkugel quer über die Arena (aufgeladen stärker).
+	if kind == "strong" and fighter.get("zauber", false):
+		var bolt := Projectile.new()
+		get_parent().add_child(bolt)
+		var zauber: Dictionary = ATTACKS.pfeil
+		if atk.damage > ATTACKS.strong.damage:
+			zauber = zauber.duplicate()
+			for key in ["damage", "base", "scale"]:
+				zauber[key] *= atk.damage / ATTACKS.strong.damage
+		bolt.launch(self, zauber, global_position + Vector3(0.8 * facing, 1.2, 0), facing)
+		Audio.sfx("fireball", 1.2)
+		return
 	match kind:
 		"feuerball", "frost", "schwein":
 			var ball := Projectile.new()
