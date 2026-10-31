@@ -189,6 +189,11 @@ func _spawn_position(map: Node3D, i: int) -> Vector3:
 	return a.lerp(b, 0.7) + Vector3(0, 1.0, 0)
 
 
+func _exit_tree() -> void:
+	# Nie in Zeitlupe aus dem Kampf gehen (Esc, Neustart, Menü).
+	SpecialFX.reset_time()
+
+
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("back"):
 		get_tree().change_scene_to_file("res://scenes/menu.tscn")
