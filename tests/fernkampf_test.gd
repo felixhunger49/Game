@@ -1,9 +1,9 @@
 extends Node
-## Test: Jägerin, Magierin und Hexe schießen mit dem starken Angriff (Pfeil bzw. Zauberkugel), Nahkämpfer nicht.
+## Test: Jägerin, Magierin und Hexe schießen mit dem starken Angriff (Pfeil, Arkanblitz, Fluchkugel), Nahkämpfer nicht.
 ## Aufruf: godot --headless res://tests/fernkampf_test.tscn
 
 var fight: Node
-var names := ["Jaegerin", "Magierin", "Hexe", "Barbar"]
+var names := ["Jägerin", "Magierin", "Hexe", "Barbar"]
 var step := 0
 var t := 0.0
 var failed := 0
@@ -48,7 +48,7 @@ func _physics_process(delta: float) -> void:
 	if t > 0.2 and t < 0.25:
 		p.start_attack("strong")
 	for c in fight.get_children():
-		if c is Projectile or c is ArrowShot:
+		if c is FernSchuss:
 			seen = true
 	if t > 2.0:
 		var want: bool = names[step] != "Barbar"

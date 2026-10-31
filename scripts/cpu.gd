@@ -397,6 +397,15 @@ func _decide(to_foe: Vector3, dist: float, toward: String) -> void:
 			_turn_to(toward)
 			_tap("special")
 			return
+	# Fernkämpfer: aus der Ferne den starken Angriff verschießen (manchmal aufgeladen), schräg nach oben, wenn der Gegner höher ist.
+	if me.fighter.has("fernschuss") and me.is_on_floor() and dist > 2.5 and dist < 11.0 and randf() < level.aggression * 0.6:
+		var up := to_foe.y > 1.5 and to_foe.y < dist * 2.5
+		if up or absf(to_foe.y) < (2.0 if me.fighter.fernschuss == "fluch" else 1.0):
+			_turn_to(toward)
+			if up:
+				_tap("up", 0.15)
+			_tap("strong", 0.06 if randf() < 0.5 else 0.3 + randf() * 0.7)
+			return
 	# Gegner wehrt ab (oder steht einfach dicht davor): packen, denn Greifen geht durch den Schild.
 	if me.is_on_floor() and dist < 1.3 and absf(to_foe.y) < 1.0 and (foe.shielding and randf() < level.aggression \
 			or randf() < 0.12):

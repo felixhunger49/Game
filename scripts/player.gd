@@ -26,8 +26,11 @@ const ATTACKS := {
 		"cooldown": 0.25, "angle": Vector2(1, 0.35), "anim_speed": 2.2},
 	"strong": {"damage": 13.0, "base": 6.5, "scale": 0.22, "range": Vector2(1.9, 1.4), "startup": 0.3,
 		"cooldown": 0.75, "angle": Vector2(1, 0.7), "anim_speed": 1.4},
-	# Pfeilschuss der Jägerin (starker Angriff aus der Ferne, daher etwas schwächer als ein Schlag).
+	# Fernkämpfer (Jägerin, Magierin, Hexe): der starke Angriff ist ein Geschoss (siehe FernSchuss),
+	# aus der Ferne, daher etwas schwächer als ein Schlag. Die Fluchkugel lenkt zum Gegner und ist darum schwächer.
 	"pfeil": {"damage": 9.0, "base": 5.0, "scale": 0.15, "startup": 0.3, "cooldown": 0.75, "angle": Vector2(1, 0.4)},
+	"arkan": {"damage": 10.0, "base": 5.0, "scale": 0.15, "startup": 0.3, "cooldown": 0.75, "angle": Vector2(1, 0.45)},
+	"fluch": {"damage": 8.0, "base": 4.5, "scale": 0.14, "startup": 0.3, "cooldown": 0.75, "angle": Vector2(1, 0.5)},
 	"kick": {"damage": 8.0, "base": 5.0, "scale": 0.15, "range": Vector2(1.7, 1.0), "startup": 0.12,
 		"cooldown": 0.45, "angle": Vector2(1, 0.25), "anim_speed": 1.8},
 	"feuerball": {"damage": 9.0, "base": 4.0, "scale": 0.12, "startup": 0.2, "cooldown": 1.0,
@@ -944,35 +947,18 @@ func _update_pending_attack(delta: float) -> void:
 			# Daneben gegriffen: kurz ungeschützt.
 			grab_lag = 0.4
 		return
+	var ladung := 0.0
 	if kind.begins_with("strong") and charge_time > 0.0:
 		# Aufgeladener Smash-Angriff: mehr Schaden und Rückstoß.
-		var bonus := 1.0 + CHARGE_BONUS * charge_time / CHARGE_MAX
+		ladung = charge_time / CHARGE_MAX
+		var bonus := 1.0 + CHARGE_BONUS * ladung
 		charge_time = 0.0
 		atk = atk.duplicate()
 		for key in ["damage", "base", "scale"]:
 			atk[key] *= bonus
-	# Jägerin: der starke Angriff ist ein Pfeilschuss quer über die Arena.
-	if kind == "strong" and fighter.get("bow", false):
-		var arrow := ArrowShot.new()
-		get_parent().add_child(arrow)
-		var pfeil: Dictionary = ATTACKS.pfeil
-		if atk.damage > ATTACKS.strong.damage:
-			pfeil = pfeil.duplicate()
-			for key in ["damage", "base", "scale"]:
-				pfeil[key] *= atk.damage / ATTACKS.strong.damage
-		arrow.launch(self, pfeil, global_position + Vector3(0.7 * facing, 1.2, 0), facing)
-		return
-	# Magierin und Hexe: der starke Angriff schießt eine Zauberkugel quer über die Arena (aufgeladen stärker).
-	if kind == "strong" and fighter.get("zauber", false):
-		var bolt := Projectile.new()
-		get_parent().add_child(bolt)
-		var zauber: Dictionary = ATTACKS.pfeil
-		if atk.damage > ATTACKS.strong.damage:
-			zauber = zauber.duplicate()
-			for key in ["damage", "base", "scale"]:
-				zauber[key] *= atk.damage / ATTACKS.strong.damage
-		bolt.launch(self, zauber, global_position + Vector3(0.8 * facing, 1.2, 0), facing)
-		Audio.sfx("fireball", 1.2)
+	# Fernkämpfer: der starke Angriff (auch hoch/tief) verschießt ein Geschoss, aufgeladen schneller und stärker.
+	if kind.begins_with("strong") and fighter.has("fernschuss"):
+		_fire_shot(kind, ladung)
 		return
 	match kind:
 		"feuerball", "frost", "schwein":
@@ -1012,6 +998,27 @@ func _update_pending_attack(delta: float) -> void:
 			_try_hit(atk, true)
 		_:
 			_try_hit(atk, false)
+
+
+## Geschoss der Fernkämpfer: nach vorne, schräg nach oben (strong_hoch) oder flach über den Boden (strong_tief).
+func _fire_shot(kind: String, ladung: float) -> void:
+	var art: String = fighter.fernschuss
+	var shot_atk: Dictionary = ATTACKS[art].duplicate()
+	var bonus := 1.0 + CHARGE_BONUS * ladung
+	for key in ["damage", "base", "scale"]:
+		shot_atk[key] *= bonus
+	var dir := Vector2(facing, 0)
+	var start := Vector3(0.7 * facing, 1.2, 0)
+	if kind == "strong_hoch":
+		dir = Vector2(0.55 * facing, 1)
+		start = Vector3(0.4 * facing, 1.7, 0)
+		shot_atk.angle = Vector2(0.3, 1)
+	elif kind == "strong_tief":
+		start = Vector3(0.7 * facing, 0.45, 0)
+		shot_atk.angle = Vector2(1, 0.25)
+	var shot := FernSchuss.new()
+	get_parent().add_child(shot)
+	shot.launch(self, shot_atk, global_position + start, dir, art, ladung)
 
 
 func _update_dash(delta: float) -> void:

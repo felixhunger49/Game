@@ -134,7 +134,8 @@ const FIGHTERS := [
 		# Eigene Figur aus ComfyUI (Flux + Trellis), Zauber-Animationen von Mixamo (Magier-Paket),
 		# Fallen/Landen/Tritt/Block/Rolle/Taumeln/Jubel vom Kampfroboter. Zauberstab und Buch von der KayKit-Hexe.
 		"name": "Hexe", "passive": "gleiten", "flip": "schweben", "voice": 1.25,
-		"scene": "res://assets/hexe/modell.fbx", "anim_dir": "res://assets/hexe/", "scale": 190.0, "special": "schwein", "zauber": true,
+		"scene": "res://assets/hexe/modell.fbx", "anim_dir": "res://assets/hexe/", "scale": 190.0, "special": "schwein",
+		"fernschuss": "fluch",
 		"anim_speeds": {"weak": 2.4, "strong": 1.6, "kick": 1.6, "special": 1.2},
 		"anim_trim": {"weak": [0.30, 1.40], "strong": [0.80, 2.30], "kick": [0.25, 1.30], "special": [0.20, 1.45]},
 		"attach_from": {
@@ -147,7 +148,7 @@ const FIGHTERS := [
 		# modell.fbx: in Blender hängt der ganze Kopf mit Kapuze am Kopfknochen (Haare stechen nicht mehr durch).
 		"name": "Jägerin", "passive": "flink", "flip": "doppel_rueckwaerts", "voice": 1.3,
 		"scene": "res://assets/jaegerin/modell.fbx", "anim_dir": "res://assets/jaegerin/", "scale": 185.0,
-		"special": "pfeilregen", "bow": true,
+		"special": "pfeilregen", "fernschuss": "pfeil",
 		"anim_speeds": {"weak": 1.8, "strong": 1.2, "kick": 1.4, "special": 1.0},
 		"anim_trim": {"weak": [0.10, 0.85], "strong": [0.20, 1.00], "kick": [0.20, 1.05], "special": [0.00, 1.50]},
 		# Selbst gebauter Bogen in der linken Hand (Einstellungen wie bei attach_from).
@@ -181,7 +182,7 @@ const FIGHTERS := [
 		# modell.fbx: in Blender hängen die Haare nur am Kopf (vorher zogen die Arme sie übers Gesicht).
 		"name": "Magierin", "passive": "arkan", "flip": "pirouette", "voice": 1.2,
 		"scene": "res://assets/magierin/modell.fbx", "anim_dir": "res://assets/magierin/", "scale": 195.0,
-		"special": "feuerball", "zauber": true,
+		"special": "feuerball", "fernschuss": "arkan",
 		"anim_speeds": {"weak": 2.0, "strong": 1.6, "kick": 1.6, "special": 1.3},
 		"anim_trim": {"strong": [0.20, 1.90], "kick": [0.30, 1.30], "special": [0.10, 1.50]},
 	},
