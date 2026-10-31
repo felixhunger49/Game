@@ -351,26 +351,47 @@ static func popup(player: Node3D, text: String, color: Color) -> void:
 static var _ko_until := 0
 
 
-## Bis wann (Echtzeit in ms) die zuletzt gestartete Zeitlupe läuft. Der Zeitgeber einer älteren
-## Zeitlupe beendet sie dann nicht zu früh.
+## Bis wann (Echtzeit in ms) die Zeitlupe läuft (das späteste Ende aller gestarteten Zeitlupen).
 static var _slow_until := 0
+
+## Nummer der zuletzt gestarteten Zeitlupe: nur deren Zeitgeber setzt die Zeit zurück.
+## (Ein Zeitgeber meldet sich oft ein paar Millisekunden vor dem errechneten Ende, ein Zeitvergleich
+## ließ die Zeit deshalb manchmal für immer in Zeitlupe hängen.)
+static var _slow_id := 0
 
 
 ## Kurze Zeitlupe für alles (in Echtzeit-Sekunden).
 static func slow_motion(node: Node, scale: float, seconds: float) -> void:
+	var tree := node.get_tree() if node else null
+	if tree == null:
+		return
 	var now := Time.get_ticks_msec()
 	var until := now + int(seconds * 1000.0)
 	if now < _ko_until:
 		return
-	if now < _slow_until and Engine.time_scale <= scale and until <= _slow_until:
+	var running := now < _slow_until
+	if running and Engine.time_scale <= scale and until <= _slow_until:
 		# Ein mindestens so starker, längerer Treffer-Stopp läuft schon.
 		return
+	if running:
+		# Überlappende Zeitlupen: die Zeit bleibt bis zum spätesten Ende langsam.
+		until = maxi(until, _slow_until)
 	Engine.time_scale = scale
 	_slow_until = until
-	node.get_tree().create_timer(seconds, true, false, true).timeout.connect(func():
-		var later := Time.get_ticks_msec()
-		if later >= _ko_until and later >= _slow_until - 5:
+	_slow_id += 1
+	var id := _slow_id
+	tree.create_timer(maxf(until - now, 1) / 1000.0, true, false, true).timeout.connect(func():
+		if id == _slow_id and Time.get_ticks_msec() >= _ko_until:
+			_slow_until = 0
 			Engine.time_scale = 1.0)
+
+
+## Zeit sofort wieder normal (z. B. beim Verlassen des Kampfes).
+static func reset_time() -> void:
+	_slow_id += 1
+	_slow_until = 0
+	_ko_until = 0
+	Engine.time_scale = 1.0
 
 
 ## Der entscheidende Treffer (die Figur fliegt gleich aus der Arena): starke Zeitlupe, Lichtblitz und Knall.
@@ -385,8 +406,10 @@ static func ko_moment(player: Node3D, seconds: float) -> void:
 	Audio.sfx("special_hit", 0.8)
 	_ko_until = Time.get_ticks_msec() + int(seconds * 1000.0)
 	Engine.time_scale = 0.12
+	_slow_id += 1
 	player.get_tree().create_timer(seconds, true, false, true).timeout.connect(func():
 		_ko_until = 0
+		_slow_until = 0
 		Engine.time_scale = 1.0)
 
 
