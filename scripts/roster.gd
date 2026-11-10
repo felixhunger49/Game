@@ -189,6 +189,17 @@ const FIGHTERS := [
 ]
 
 
+## Dateiname für einen Kämpfer, z. B. "Jägerin" -> "jaegerin".
+static func slug(fighter_name: String) -> String:
+	return fighter_name.to_lower().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace(" ", "_")
+
+
+## Kopfbild eines Kämpfers für die Anzeige im Kampf (null, wenn es keins gibt).
+static func portrait(fighter: Dictionary) -> Texture2D:
+	var path := "res://assets/portraits/%s.png" % slug(fighter.get("name", ""))
+	return load(path) if ResourceLoader.exists(path) else null
+
+
 static func count() -> int:
 	return FIGHTERS.size()
 

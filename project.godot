@@ -23,6 +23,7 @@ config/icon="res://icon.svg"
 
 Settings="*res://scripts/settings.gd"
 Audio="*res://scripts/audio.gd"
+Blende="*res://scripts/blende.gd"
 
 [display]
 
