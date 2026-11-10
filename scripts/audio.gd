@@ -135,10 +135,13 @@ func has_music(track: String) -> bool:
 	return _music_stream(track) != null
 
 
-## Neue Musik liegt als MP3 vor, ältere Stücke als WAV.
+## Neueste Musik liegt als OGG vor (wiederholt ohne Lücke), ältere als MP3 oder WAV.
 func _music_stream(track: String) -> AudioStream:
-	var stream := _load(MUSIC_DIR + track + ".mp3")
-	return stream if stream else _load(MUSIC_DIR + track + ".wav")
+	for ending in [".ogg", ".mp3", ".wav"]:
+		var stream := _load(MUSIC_DIR + track + ending)
+		if stream:
+			return stream
+	return null
 
 
 func apply_volume() -> void:
