@@ -404,6 +404,7 @@ static func ko_moment(player: Node3D, seconds: float) -> void:
 	_sparks(world, pos, Color(1, 0.9, 0.5), 70, 10.0, 0.8)
 	_flash_light(world, pos, Color(1, 0.95, 0.8), 16.0, 10.0, 0.6)
 	Audio.sfx("special_hit", 0.8)
+	Audio.duck(seconds + 0.3)
 	_ko_until = Time.get_ticks_msec() + int(seconds * 1000.0)
 	Engine.time_scale = 0.12
 	_slow_id += 1

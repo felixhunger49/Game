@@ -395,14 +395,14 @@ func _activate(entry: String) -> void:
 			Settings.boss_mode = entry == "boss"
 			Settings.horde_mode = entry == "horde"
 			Audio.sfx("menu_select")
-			get_tree().change_scene_to_file("res://scenes/fight.tscn")
+			Blende.to("res://scenes/fight.tscn")
 		"campaign", "campaign_new":
 			if entry == "campaign_new" or Settings.campaign_opponents.is_empty():
 				Settings.new_campaign()
 			Settings.campaign = true
 			Settings.horde_mode = false
 			Audio.sfx("menu_select")
-			get_tree().change_scene_to_file("res://scenes/fight.tscn")
+			Blende.to("res://scenes/fight.tscn")
 		"options":
 			Audio.sfx("menu_select")
 			_open(Page.OPTIONS)

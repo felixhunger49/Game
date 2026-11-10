@@ -438,6 +438,107 @@ func set_fighter(index: int) -> void:
 
 func _process(_delta: float) -> void:
 	_aim_two_hand_weapon()
+	_update_ground_mark()
+
+
+## Die ganze Figur blitzt kurz hell auf (bei jedem Treffer), so spürt man den Schlag.
+var _flash_material: StandardMaterial3D
+var _flash_tween: Tween
+
+func hit_flash(tint: Color, seconds: float) -> void:
+	if _flash_material == null:
+		_flash_material = StandardMaterial3D.new()
+		_flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_flash_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		_flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var meshes := model_root.find_children("*", "MeshInstance3D", true, false)
+	# Manche Figuren haben schon einen Überzug (Schattenkrieger, Endboss): danach wieder herstellen.
+	for m in meshes:
+		if m.material_overlay != _flash_material:
+			m.set_meta("overlay_before", m.material_overlay)
+			m.material_overlay = _flash_material
+	_flash_material.albedo_color = Color(tint, 0.75)
+	if _flash_tween:
+		_flash_tween.kill()
+	_flash_tween = create_tween()
+	_flash_tween.tween_property(_flash_material, "albedo_color:a", 0.0, seconds)
+	_flash_tween.tween_callback(func():
+		for m in meshes:
+			if is_instance_valid(m) and m.material_overlay == _flash_material:
+				m.material_overlay = m.get_meta("overlay_before", null))
+
+
+## Weicher Schatten und ein Ring in der Spielerfarbe auf dem Boden unter der Figur: so sieht man
+## im Sprung, wo man landet, und erkennt im Getümmel, wer wer ist.
+var ground_mark: Node3D
+var ground_ring: MeshInstance3D
+static var _ring_tex: Texture2D
+const GROUND_MARK_REACH := 14.0
+
+func _create_ground_mark() -> void:
+	ground_mark = Node3D.new()
+	ground_mark.top_level = true
+	add_child(ground_mark)
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1.7, 1.7)
+	quad.orientation = PlaneMesh.FACE_Y
+	var shadow := MeshInstance3D.new()
+	shadow.mesh = quad
+	shadow.material_override = _mark_material(SpecialFX.soft_dot(), Color(0, 0, 0, 0.55))
+	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ground_mark.add_child(shadow)
+	if _ring_tex == null:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.62, 0.8, 0.9, 1.0])
+		g.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.9), Color(1, 1, 1, 0.25), Color(1, 1, 1, 0)])
+		var tex := GradientTexture2D.new()
+		tex.gradient = g
+		tex.fill = GradientTexture2D.FILL_RADIAL
+		tex.fill_from = Vector2(0.5, 0.5)
+		tex.fill_to = Vector2(1.0, 0.5)
+		tex.width = 128
+		tex.height = 128
+		_ring_tex = tex
+	ground_ring = MeshInstance3D.new()
+	ground_ring.mesh = quad
+	ground_ring.position.y = 0.01
+	ground_ring.material_override = _mark_material(_ring_tex, Color(color, 0.8))
+	ground_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ground_mark.add_child(ground_ring)
+
+
+func _mark_material(texture: Texture2D, tint: Color) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_texture = texture
+	m.albedo_color = tint
+	m.disable_receive_shadows = true
+	m.render_priority = 1
+	return m
+
+
+func _update_ground_mark() -> void:
+	if ground_mark == null:
+		if not is_inside_tree():
+			return
+		_create_ground_mark()
+	var show := is_visible_in_tree() and controls_enabled and not caught
+	if show:
+		var from := global_position + Vector3(0, 0.6, 0)
+		var query := PhysicsRayQueryParameters3D.create(from, from + Vector3(0, -GROUND_MARK_REACH, 0), 3)
+		# In der Luft zählen auch dünne Plattformen; steht man selbst darin, nicht.
+		query.exclude = [get_rid()]
+		var hit := get_world_3d().direct_space_state.intersect_ray(query)
+		show = not hit.is_empty()
+		if show:
+			var height: float = from.y - 0.6 - hit.position.y
+			var fade := clampf(1.0 - height / GROUND_MARK_REACH, 0.0, 1.0)
+			ground_mark.global_position = hit.position + Vector3(0, 0.04, 0)
+			ground_mark.scale = Vector3.ONE * size_scale * lerpf(0.55, 1.0, fade)
+			(ground_ring.material_override as StandardMaterial3D).albedo_color = Color(color, 0.8 * fade)
+			ground_ring.visible = not minion
+	ground_mark.visible = show
 
 
 ## Zweihandwaffe zwischen beide Hände legen: Stiel von der rechten zur linken Hand, Kopf darüber hinaus.
@@ -1164,6 +1265,7 @@ func take_hit(atk: Dictionary, direction: Vector3, powered := false, attacker_mu
 		SpecialFX.hit_stop(self, clampf(0.03 + knockback * 0.004, 0.09, 0.16))
 		SpecialFX.shake(self, clampf(knockback * 0.015, 0.2, 0.5), 0.35)
 	_play_hit(direction, knockback)
+	hit_flash(Color(1, 1, 1), clampf(0.1 + knockback * 0.006, 0.12, 0.25))
 	if knockback > 13.0 and not boss and _flies_out():
 		ko_hit.emit(self)
 	add_special_energy(atk.damage * SPECIAL_PER_DAMAGE_TAKEN)

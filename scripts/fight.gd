@@ -22,6 +22,8 @@ var countdown_time := 0.0
 var countdown_step := -1
 var map_events: MapEvents
 var energy_bars: Array[ProgressBar] = []
+## Anzeige je Kämpfer im Kampf: Kopfbild, große Prozentzahl, Leben (siehe FightHud).
+var huds: Array[FightHud] = []
 ## Computer-Spieler: im Solo-Modus Spieler 2, im Mehrspieler-Kampf Spieler 3 und 4 ohne Controller.
 var cpus: Array[CpuPlayer] = []
 var map_node: Node3D
@@ -148,9 +150,11 @@ func _ready() -> void:
 	_create_select_ui()
 	_reset_item_timer()
 	_create_energy_bars()
+	_create_huds()
 	if Settings.campaign:
 		_create_campaign_label()
-	Audio.music(Settings.current_map().music)
+	# Der Ansturm hat sein eigenes, düsteres Stück; sonst spielt die Musik der Map.
+	Audio.music("ansturm" if Settings.horde_mode and Audio.has_music("ansturm") else Settings.current_map().music)
 
 
 ## Mehrspieler-Kampf mit mehr als zwei Kämpfern (nicht Solo, Ziele, Endboss oder Ansturm).
@@ -213,7 +217,7 @@ func _exit_tree() -> void:
 
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("back"):
-		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+		Blende.to("res://scenes/menu.tscn")
 		return
 	match state:
 		State.SELECT:
@@ -227,7 +231,7 @@ func _process(delta: float) -> void:
 			if Settings.campaign:
 				_handle_campaign_continue()
 			elif Input.is_action_just_pressed("restart"):
-				get_tree().reload_current_scene()
+				Blende.reload()
 	_update_hud()
 	_update_camera(delta)
 
@@ -283,9 +287,20 @@ func _update_countdown(delta: float) -> void:
 		countdown_step = step
 		center_label.text = COUNTDOWN_STEPS[step]
 		center_label.add_theme_font_size_override("font_size", 110 if step < 3 else 90)
+		_pop_center(UiStyle.GOLD if step < 3 else Color(1, 0.45, 0.25))
 		Audio.voice(COUNTDOWN_VOICES[step])
 		if step == COUNTDOWN_STEPS.size() - 1:
 			_begin_fight()
+
+
+## Die große Schrift in der Mitte springt groß herein und wird dann ruhig (3, 2, 1, KAMPF!).
+func _pop_center(color: Color) -> void:
+	center_label.pivot_offset = center_label.size / 2.0
+	center_label.scale = Vector2(2.2, 2.2)
+	center_label.modulate = Color(color, 0.0)
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(center_label, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(center_label, "modulate", color, 0.12)
 
 
 func _begin_fight() -> void:
@@ -298,6 +313,7 @@ func _begin_fight() -> void:
 	get_tree().create_timer(0.7).timeout.connect(func():
 		if state == State.FIGHT:
 			center_label.text = ""
+			center_label.modulate = Color.WHITE
 			center_label.remove_theme_font_size_override("font_size"))
 	if Settings.target_mode:
 		_spawn_targets()
@@ -453,10 +469,11 @@ func _update_hud() -> void:
 			_update_select_card(i)
 			labels[i].text = ""
 			energy_bars[i].visible = false
+			huds[i].visible = false
 			continue
-		else:
-			text = "%s: %s\n%d %%   %s" % [_player_name(i), text, p.damage, "" if Settings.target_mode else "●".repeat(p.stocks)]
-		labels[i].text = text
+		# Sonderfälle weiter unten (Ansturm, Endboss, Ziele) zeigen statt der Tafel einen Text.
+		huds[i].visible = false
+		labels[i].text = ""
 		if Settings.horde_mode and not p.visible:
 			# Ansturm allein: kein Spieler 2. Zu zweit: wer raus ist, wartet auf den nächsten Riesen.
 			labels[i].text = "" if Settings.solo else "%s
@@ -478,12 +495,13 @@ Rekord: %s" % [targets_total - targets_left, targets_total,
 				_time_text(target_time), _time_text(best) if best < INF else "–"]
 			energy_bars[1].visible = false
 			continue
-		var bar := energy_bars[i]
-		bar.visible = Settings.special_charge and state != State.SELECT
-		bar.value = p.special_energy
-		# Volle Leiste blinkt: Spezialattacke bereit.
-		var full: bool = p.special_energy >= p.SPECIAL_MAX
-		bar.modulate = Color(1, 1, 1, 0.55 + 0.45 * absf(sin(Time.get_ticks_msec() * 0.008))) if full else Color.WHITE
+		# Normalfall: die Tafel mit Kopfbild, Prozenten, Leben und Spezial-Leiste.
+		energy_bars[i].visible = false
+		var hud := huds[i]
+		hud.visible = true
+		hud.title = "%s · %s" % [_player_name(i), text]
+		hud.show_stocks = not Settings.target_mode
+		hud.show_energy = Settings.special_charge
 
 
 ## Unter jedem Namen eine Leiste für die Spezial-Energie.
@@ -510,6 +528,23 @@ func _create_energy_bars() -> void:
 			bar.fill_mode = ProgressBar.FILL_END_TO_BEGIN
 		labels[i].get_parent().add_child(bar)
 		energy_bars.append(bar)
+
+
+## Je Kämpfer eine Tafel oben im Bild, an derselben Stelle wie bisher der Text.
+func _create_huds() -> void:
+	for i in players.size():
+		var hud := FightHud.new()
+		var label: Label = labels[i]
+		var rect := Rect2(24, 10, 270, FightHud.HEIGHT)
+		var right := i == 1 and players.size() == 2
+		if right:
+			rect.position.x = 1280 - 24 - rect.size.x
+		elif players.size() > 2:
+			rect = Rect2(label.offset_left, 10, minf(270.0, label.offset_right - label.offset_left), FightHud.HEIGHT)
+		hud.visible = false
+		label.get_parent().add_child(hud)
+		hud.setup(players[i], rect, right)
+		huds.append(hud)
 
 
 func _controls_hint() -> String:
@@ -677,6 +712,7 @@ func _on_player_fell_off(player: CharacterBody3D) -> void:
 	if map_events:
 		map_events.stop()
 	var winner: CharacterBody3D = alive[0] if not alive.is_empty() else players[0]
+	_pop_center(Color(1, 0.95, 0.75))
 	for p in alive:
 		p.cheer()
 	Audio.jingle("sieg")
@@ -958,6 +994,6 @@ func _handle_campaign_continue() -> void:
 		return
 	Audio.sfx("menu_select")
 	if campaign_finished:
-		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+		Blende.to("res://scenes/menu.tscn")
 	else:
-		get_tree().reload_current_scene()
+		Blende.reload()
