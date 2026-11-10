@@ -56,6 +56,10 @@ func _physics_process(delta: float) -> void:
 	var nearest: CharacterBody3D = me.opponent
 	if nearest:
 		foe = nearest
+	if foe == null or not is_instance_valid(foe):
+		# Gerade kein Gegner da (Ansturm zwischen zwei Wellen): abwarten.
+		_hold([])
+		return
 	shield_time = maxf(shield_time - delta, 0.0)
 	think_timer -= delta
 	var want: Array = []

@@ -60,6 +60,16 @@ fährt heran und der Name erscheint. Jede Figur hat ihren eigenen:
 - **Endboss: Riesen-Kampfroboter**: allein gegen einen 1,7-mal so großen Kampfroboter mit Lebensleiste (220) statt Prozent.
   Er wird kaum weggeschleudert, schießt regelmäßig seinen Laser (drüberspringen!), lässt Raketen regnen (rote Kreise am Boden
   zeigen, wo sie einschlagen) und entlädt Overcharge. Ab halber Leiste wird er WÜTEND: glüht rot, ist schneller und schießt öfter.
+- **Ansturm (Schatten-Wellen überleben)** (Bilder: [docs/ansturm.jpg](docs/ansturm.jpg)): Schattenkrieger strömen Welle um Welle aus leuchtenden Portalen.
+  Im Modus „Zwei Spieler“ kämpft ihr zu zweit im selben Team, im Solo-Modus allein (auf der Map, die im Menü gewählt ist).
+  - Schatten sind dunkle Kopien der Kämpfer. Sie kommen schon angeschlagen an: oft reicht ein starker Schlag oder ein Tritt.
+  - Drei Sorten: lila Schatten (normal), türkise Flinke (klein, schnell, fliegen sofort weg) und orange Brocken (groß und zäh).
+  - Jede 5. Welle kommt ein **Schatten-Riese** mit Lebensleiste. Wer ihn besiegt, bekommt ein Leben dazu; ein Mitspieler,
+    der schon raus war, kommt mit einem Leben zurück.
+  - Mehrere K. o. kurz hintereinander geben eine **Kombo** (Doppel-, Dreifach-, Mega-K.-o.) und bis zu 5-fache Punkte.
+  - Nach jeder Welle erholen sich alle etwas. Items, Smash-Kugel und Map-Effekte gibt es wie im normalen Kampf
+    (Bomben und Map-Ereignisse treffen auch die Schatten).
+  - Der Rekord (Welle und Punkte) wird je Map gespeichert.
 - **Map**: Burg, Dorf, Friedhof, Vulkan, Piratenschiff, Eiswelt oder Wolkentempel. Jede Map hat ihren eigenen Effekt (siehe unten).
 - **Optionen**: Items an oder aus, wie oft Items erscheinen (selten, normal, oft), die Anzahl der Leben,
   Map-Effekte an oder aus, Spezial aufladen an oder aus, Lautstärke von Musik und Geräuschen.

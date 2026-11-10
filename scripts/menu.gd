@@ -18,7 +18,7 @@ const SELECTED_SHIFT := 18.0
 ## Farbe jeder Kachel.
 const COLORS := {
 	"play": Color(0.9, 0.18, 0.2), "campaign": Color(0.9, 0.18, 0.2), "campaign_new": Color(0.95, 0.5, 0.12),
-	"targets": Color(0.2, 0.68, 0.3), "boss": Color(0.55, 0.28, 0.85),
+	"targets": Color(0.2, 0.68, 0.3), "boss": Color(0.55, 0.28, 0.85), "horde": Color(0.42, 0.16, 0.72),
 	"options": Color(0.18, 0.48, 0.95), "controls": Color(0.08, 0.62, 0.68), "quit": Color(0.42, 0.42, 0.5),
 	"back": Color(0.42, 0.42, 0.5), "reset": Color(0.95, 0.5, 0.12),
 }
@@ -28,6 +28,7 @@ const TILE_TEXTS := {
 	"play": ["KAMPF", "Zwei Spieler, eine Arena"],
 	"targets": ["ZIELE", "Gegen die Uhr"],
 	"boss": ["ENDBOSS", "Riesen-Kampfroboter"],
+	"horde": ["ANSTURM", "Schatten-Wellen überleben"],
 	"campaign_new": ["NEU BEGINNEN", "Kampagne von vorne"],
 	"options": ["OPTIONEN", ""],
 	"controls": ["STEUERUNG", ""],
@@ -161,10 +162,11 @@ func _rows() -> Array:
 			return list
 	if Settings.solo:
 		# Solo ist eine durchgehende Kampagne: keine Map- oder Gegnerauswahl.
+		# Nur der Ansturm findet auf der gewählten Map statt, deshalb steht die Map-Leiste direkt darüber.
 		if Settings.campaign_stage > 0:
-			return [["mode"], ["campaign"], ["campaign_new"], ["options", "controls", "quit"]]
-		return [["mode"], ["campaign"], ["options", "controls", "quit"]]
-	return [["mode"], ["map"], ["play"], ["targets", "boss"], ["options", "controls", "quit"]]
+			return [["mode"], ["campaign"], ["campaign_new"], ["map"], ["horde"], ["options", "controls", "quit"]]
+		return [["mode"], ["campaign"], ["map"], ["horde"], ["options", "controls", "quit"]]
+	return [["mode"], ["map"], ["play"], ["horde"], ["targets", "boss"], ["options", "controls", "quit"]]
 
 
 ## Alle Einträge der Seite hintereinander.
@@ -185,7 +187,7 @@ func _current() -> String:
 func _gap_before(entry: String) -> bool:
 	if page == Page.OPTIONS:
 		return entry == "back"
-	return entry in ["play", "campaign", "options", "reset"]
+	return entry in ["play", "campaign", "options", "reset"] or (entry == "map" and Settings.solo)
 
 
 func _is_selector(entry: String) -> bool:
@@ -200,8 +202,10 @@ func _tile_height(entry: String) -> float:
 	if page == Page.OPTIONS:
 		return 44.0
 	match entry:
-		"play", "campaign": return 110.0
-		"targets", "boss", "campaign_new": return 84.0
+		"play", "campaign": return 100.0
+		"horde": return 78.0
+		"targets", "boss": return 70.0
+		"campaign_new": return 62.0
 		"options", "controls", "quit": return 62.0
 	return 58.0
 
@@ -267,6 +271,7 @@ func _info(entry: String) -> Dictionary:
 		"play": return {"title": "Kampf", "text": "2 bis 4 Kämpfer auf der gewählten Map (Anzahl und Team-Modus in den Optionen). Je mehr Schaden, desto weiter fliegt man. Wer alle Leben verliert, ist raus."}
 		"campaign", "campaign_new": return {"title": "Kampagne", "text": _campaign_info(entry == "campaign_new")}
 		"targets": return {"title": "Ziele zerstören", "text": "Zerschlage alle Ziele der Map so schnell du kannst. Deine Bestzeit wird für jeden Kämpfer gespeichert."}
+		"horde": return {"title": "Ansturm", "text": _horde_info()}
 		"boss": return {"title": "Endboss", "text": "Allein gegen den Riesen-Kampfroboter mit Raketen und Laser. Schaffst du es, seine Lebensleiste zu leeren?"}
 		"map":
 			var map := Settings.current_map()
@@ -385,15 +390,17 @@ func _activate(entry: String) -> void:
 		_refresh()
 		return
 	match entry:
-		"play", "targets", "boss":
+		"play", "targets", "boss", "horde":
 			Settings.target_mode = entry == "targets"
 			Settings.boss_mode = entry == "boss"
+			Settings.horde_mode = entry == "horde"
 			Audio.sfx("menu_select")
 			get_tree().change_scene_to_file("res://scenes/fight.tscn")
 		"campaign", "campaign_new":
 			if entry == "campaign_new" or Settings.campaign_opponents.is_empty():
 				Settings.new_campaign()
 			Settings.campaign = true
+			Settings.horde_mode = false
 			Audio.sfx("menu_select")
 			get_tree().change_scene_to_file("res://scenes/fight.tscn")
 		"options":
@@ -713,6 +720,18 @@ func _campaign_info(fresh: bool) -> String:
 	if Settings.campaign_wins > 0:
 		text += "   Schon %d× geschafft!" % Settings.campaign_wins
 	return text
+
+
+## Beschreibung des Ansturm-Modus mit dem Rekord auf der gewählten Map.
+func _horde_info() -> String:
+	var text := "Schattenkrieger strömen Welle um Welle aus Portalen. %s Jede 5. Welle kommt ein Schatten-Riese. Viele K. o. hintereinander geben Kombo-Punkte." % (
+		"Allein gegen alle!" if Settings.solo else "Zu zweit im selben Team!")
+	var record: Dictionary = Settings.horde_records.get(Settings.current_map().name, {})
+	if record.is_empty():
+		return text + "
+Noch kein Rekord auf dieser Map."
+	return text + "
+Rekord hier: Welle %d, %s Punkte" % [int(record.get("welle", 0)), Ansturm._points(int(record.get("punkte", 0)))]
 
 
 func _bar(level: int) -> String:
