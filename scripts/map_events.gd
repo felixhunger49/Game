@@ -74,17 +74,25 @@ func setup(event_kind: String, all_players: Array, label: Label) -> void:
 	var map: Node = get_parent().get_child(0) if get_parent() else null
 	if map:
 		stage_half = map.get_meta("event_half", stage_half)
-	if kind == "geister":
-		for p in players:
-			p.gravity *= GHOST_GRAVITY
-	if kind == "eis":
-		for p in players:
-			p.ground_grip = ICE_GRIP
-	if kind == "blasen":
-		for p in players:
-			p.gravity *= WATER_GRAVITY
 	for p in players:
-		base_values[p] = [p.speed, p.jump_velocity]
+		adopt(p)
+
+
+## Regeln der Map für einen Kämpfer einschalten (auch für alle, die später dazukommen, z. B. im Ansturm).
+## Wer dazukommt, muss außerdem in der Liste stehen, die bei setup übergeben wurde.
+func adopt(p: CharacterBody3D) -> void:
+	if kind == "geister":
+		p.gravity *= GHOST_GRAVITY
+	if kind == "eis":
+		p.ground_grip = ICE_GRIP
+	if kind == "blasen":
+		p.gravity *= WATER_GRAVITY
+	base_values[p] = [p.speed, p.jump_velocity]
+
+
+## Ein Kämpfer verlässt den Kampf endgültig (Ansturm): nichts mehr über ihn merken.
+func forget(p: CharacterBody3D) -> void:
+	base_values.erase(p)
 
 
 func _physics_process(delta: float) -> void:
@@ -185,7 +193,7 @@ func _start_event() -> void:
 			var marker := _ground_marker(target.position.x, Color(1.0, 0.1, 0.1, 0.8), 0.35)
 			events.append({"phase": "aim", "time": 0.0, "target": target, "x": target.position.x, "floor": target.position.y,
 				"drone": drone, "marker": marker, "hit": []})
-			hud_label.text = "Die Drohne zielt auf %s!" % ("Spieler %d" % target.player_id)
+			hud_label.text = "Die Drohne zielt auf %s!" % ("einen Schatten" if target.minion else "Spieler %d" % target.player_id)
 			Audio.sfx("warning", 1.2)
 		"felsbrocken":
 			timer = randf_range(9.0, 13.0)

@@ -68,7 +68,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	for p in players:
-		if p.visible and p.controls_enabled and (p.global_position + Vector3(0, 0.6, 0)).distance_to(global_position) < PICKUP_RADIUS:
+		if p.visible and p.controls_enabled and not p.minion and (p.global_position + Vector3(0, 0.6, 0)).distance_to(global_position) < PICKUP_RADIUS:
 			_pick_up(p)
 			return
 

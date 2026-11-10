@@ -34,6 +34,10 @@ const BOSS_HP := 220.0
 const BOSS_SIZE := 1.7
 var boss_ai: BossAI
 var boss_bar: ProgressBar
+## Ansturm-Modus: Wellen von Schattenkriegern (siehe Ansturm). `arena` sind alle, die gerade in der Arena
+## sind (für Map-Ereignisse und Bomben); ohne Ansturm ist das dieselbe Liste wie `players`.
+var ansturm: Ansturm
+var arena: Array = []
 ## Kämpferauswahl: je Spieler eine Karte (Name, Spezial, Passive) und was dafür ausgeblendet wird.
 var select_cards: Array[Dictionary] = []
 var select_shade: MeshInstance3D
@@ -74,6 +78,7 @@ func _ready() -> void:
 		Settings.solo = true
 		Settings.target_mode = step.type == "ziele"
 		Settings.boss_mode = step.type == "boss"
+		Settings.horde_mode = false
 	var map: Node3D = load(Settings.current_map().scene).instantiate()
 	add_child(map)
 	move_child(map, 0)
@@ -101,7 +106,13 @@ func _ready() -> void:
 		p.set_fighter(Settings.choices[i])
 		p.fell_off.connect(_on_player_fell_off)
 		p.ko_hit.connect(_on_ko_hit)
-	if Settings.boss_mode:
+	arena = players
+	if Settings.horde_mode:
+		# Ansturm: allein (Spieler 2 ist nicht dabei) oder zu zweit im selben Team gegen die Schatten.
+		if Settings.solo:
+			_remove_player_two()
+		arena = players.filter(func(p): return p.visible)
+	elif Settings.boss_mode:
 		# Spieler 2 wird zum Riesen-Kampfroboter und ist sofort bereit.
 		var index := Roster.FIGHTERS.map(func(x): return x.name).find("Kampfroboter")
 		Settings.choices[1] = maxi(index, 0)
@@ -112,10 +123,7 @@ func _ready() -> void:
 		_create_boss_bar()
 	elif Settings.target_mode:
 		# Allein gegen die Uhr: Spieler 2 ist nicht dabei, Leben spielen keine Rolle.
-		players[1].visible = false
-		players[1].process_mode = Node.PROCESS_MODE_DISABLED
-		players[1].position = Vector3(0, -50, 0)
-		ready_flags[1] = true
+		_remove_player_two()
 		players[0].stocks = 99
 	elif Settings.solo:
 		# Der Computer nimmt einen anderen Kämpfer und ist sofort bereit.
@@ -145,9 +153,18 @@ func _ready() -> void:
 	Audio.music(Settings.current_map().music)
 
 
-## Mehrspieler-Kampf mit mehr als zwei Kämpfern (nicht Solo, Ziele oder Endboss).
+## Mehrspieler-Kampf mit mehr als zwei Kämpfern (nicht Solo, Ziele, Endboss oder Ansturm).
 func _multi() -> bool:
-	return Settings.fighters > 2 and not (Settings.solo or Settings.campaign or Settings.target_mode or Settings.boss_mode)
+	return Settings.fighters > 2 and not (Settings.solo or Settings.campaign or Settings.target_mode
+		or Settings.boss_mode or Settings.horde_mode)
+
+
+## Spieler 2 spielt nicht mit (Ziele zerstören, Ansturm allein): unsichtbar, weit weg und sofort bereit.
+func _remove_player_two() -> void:
+	players[1].visible = false
+	players[1].process_mode = Node.PROCESS_MODE_DISABLED
+	players[1].position = Vector3(0, -50, 0)
+	ready_flags[1] = true
 
 
 ## Spieler 3 und 4 als Kopien von Spieler 1, mit eigener Farbe und Anzeige oben.
@@ -218,7 +235,7 @@ func _process(delta: float) -> void:
 func _handle_select() -> void:
 	for i in players.size():
 		var prefix := "p%d_" % (i + 1)
-		if ready_flags[i] or (Settings.solo and i == 1) or not Settings.is_human(i + 1):
+		if ready_flags[i] or (Settings.solo and i == 1) or not Settings.is_human(i + 1) or not players[i].visible:
 			continue
 		var step := 0
 		if Input.is_action_just_pressed(prefix + "left"):
@@ -284,6 +301,15 @@ func _begin_fight() -> void:
 			center_label.remove_theme_font_size_override("font_size"))
 	if Settings.target_mode:
 		_spawn_targets()
+		return
+	if Settings.horde_mode:
+		if Settings.map_effects:
+			map_events = MapEvents.new()
+			add_child(map_events)
+			map_events.setup(Settings.current_map().event, arena, bottom_label)
+		ansturm = Ansturm.new()
+		add_child(ansturm)
+		ansturm.setup(self, arena.duplicate(), arena)
 		return
 	if Settings.boss_mode:
 		boss_ai = BossAI.new()
@@ -391,7 +417,7 @@ func _update_items(delta: float) -> void:
 	_reset_item_timer()
 	var item := Item.new()
 	add_child(item)
-	item.setup(Item.TYPES.keys().pick_random(), players)
+	item.setup(Item.TYPES.keys().pick_random(), arena)
 	var area := MapLook.area_of(map_node)
 	item.position = Vector3(randf_range(area.position.x + 1.0, area.end.x - 1.0), area.end.y + 4.0, 0.0)
 
@@ -431,6 +457,12 @@ func _update_hud() -> void:
 		else:
 			text = "%s: %s\n%d %%   %s" % [_player_name(i), text, p.damage, "" if Settings.target_mode else "●".repeat(p.stocks)]
 		labels[i].text = text
+		if Settings.horde_mode and not p.visible:
+			# Ansturm allein: kein Spieler 2. Zu zweit: wer raus ist, wartet auf den nächsten Riesen.
+			labels[i].text = "" if Settings.solo else "%s
+raus – wartet auf den Riesen" % _player_name(i)
+			energy_bars[i].visible = false
+			continue
 		if Settings.boss_mode and i == 1:
 			labels[1].text = "RIESEN-KAMPFROBOTER
 %d / %d" % [ceili(players[1].boss_hp), BOSS_HP]
@@ -529,6 +561,9 @@ func _add_vignette() -> void:
 func _on_ko_hit(player: CharacterBody3D) -> void:
 	if state != State.FIGHT:
 		return
+	if player.minion and not (ansturm and ansturm.is_last(player)):
+		# Im Ansturm fliegen ständig Schatten raus: Zeitlupe nur beim letzten der Welle.
+		return
 	ko_focus = player
 	ko_focus_time = KO_FOCUS_SECONDS
 	SpecialFX.ko_moment(player, KO_FOCUS_SECONDS)
@@ -538,6 +573,8 @@ func _update_camera(delta: float) -> void:
 	# Wackeln läuft auch während Final Smash und Zeitlupe (in Echtzeit).
 	SpecialFX.apply_shake(camera, delta / maxf(Engine.time_scale, 0.01))
 	var visible_players := players.filter(func(p): return p.visible)
+	if ansturm:
+		visible_players.append_array(ansturm.minions.filter(func(m): return m.visible))
 	if visible_players.is_empty():
 		return
 	if not get_tree().get_nodes_in_group(FinalSmash.GROUP).is_empty():
@@ -621,6 +658,9 @@ func _fit_distance(look: Vector2, box: Rect2, pad: Vector2) -> float:
 func _on_player_fell_off(player: CharacterBody3D) -> void:
 	if player.stocks > 0 or state == State.GAME_OVER:
 		return
+	if ansturm:
+		ansturm.human_fell(player)
+		return
 	# Wer noch Leben hat; im Team-Modus zählt, ob vom Team noch jemand übrig ist.
 	var alive := players.filter(func(p): return p.stocks > 0 and p.visible)
 	var sides := {}
@@ -668,6 +708,8 @@ func _create_select_ui() -> void:
 	center_label.text = ""
 	var hud: Node = center_label.get_parent()
 	var title := UiStyle.label("WÄHLT EURE KÄMPFER!", 46, UiStyle.GOLD, true, 16)
+	if Settings.horde_mode:
+		title.text = "ANSTURM · %s" % Settings.current_map().name.to_upper()
 	if Settings.campaign:
 		title.text = "KAMPF %d / %d · %s" % [Settings.campaign_stage + 1, Settings.CAMPAIGN.size(), Settings.current_map().name.to_upper()]
 	title.add_theme_color_override("font_outline_color", Color(0.22, 0.07, 0.0))
@@ -695,7 +737,7 @@ func _create_select_ui() -> void:
 	select_cards.append({"node": help})
 	select_cards.append({"node": bottom_shade})
 	for i in players.size():
-		if Settings.target_mode and i == 1:
+		if not players[i].visible:
 			continue
 		var panel := PanelContainer.new()
 		panel.position = Vector2(24 if i % 2 == 0 else 1280 - 24 - 440, 100 if i < 2 else 390)
@@ -844,7 +886,7 @@ func _remove_select_ui() -> void:
 
 ## "Spieler 1", "Spieler 2" oder im Solo-Modus "Computer (Mittel)".
 func _player_name(i: int) -> String:
-	if Settings.solo and i == 1:
+	if Settings.solo and i == 1 and not Settings.horde_mode:
 		return "Computer (%s)" % CpuPlayer.LEVELS[Settings.cpu_difficulty()].name
 	if not Settings.is_human(i + 1):
 		return "Computer %d" % (i + 1)

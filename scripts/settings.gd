@@ -86,6 +86,10 @@ var target_mode := false
 ## Endboss: allein gegen den Riesen-Kampfroboter.
 var boss_mode := false
 var target_records := {}
+## Ansturm: Wellen von Schattenkriegern überleben (allein oder zu zweit im Team).
+## Rekord je Map: {"welle": erreichte Welle, "punkte": Punkte, "kos": besiegte Schatten}.
+var horde_mode := false
+var horde_records := {}
 ## Kampagne: true, solange ein Kampagnen-Kampf läuft (nur im Kampf, nicht im Menü).
 var campaign := false
 ## Gespeicherter Fortschritt: nächster Kampf (Index in CAMPAIGN), Gegner-Reihenfolge (Namen),
@@ -132,6 +136,7 @@ func _ready() -> void:
 	solo = cfg.get_value("game", "solo", solo)
 	cpu_level = cfg.get_value("game", "cpu_level", cpu_level)
 	target_records = cfg.get_value("game", "target_records", target_records)
+	horde_records = cfg.get_value("game", "horde_records", horde_records)
 	campaign_stage = clampi(cfg.get_value("campaign", "stage", campaign_stage), 0, CAMPAIGN.size() - 1)
 	campaign_opponents = cfg.get_value("campaign", "opponents", campaign_opponents)
 	campaign_losses = cfg.get_value("campaign", "losses", campaign_losses)
@@ -161,6 +166,7 @@ func save() -> void:
 	cfg.set_value("game", "teams", teams)
 	cfg.set_value("game", "cpu_level", cpu_level)
 	cfg.set_value("game", "target_records", target_records)
+	cfg.set_value("game", "horde_records", horde_records)
 	cfg.set_value("campaign", "stage", campaign_stage)
 	cfg.set_value("campaign", "opponents", campaign_opponents)
 	cfg.set_value("campaign", "losses", campaign_losses)

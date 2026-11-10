@@ -324,6 +324,14 @@ var boss_hp := 0.0
 var boss_hp_max := 0.0
 var reach_scale := 1.0
 var size_scale := 1.0
+## Ansturm-Modus: Schattenkrieger aus den Portalen. Sie teilen weniger aus (deal_scale),
+## fliegen leichter weg (launch_scale), haben kein Namensschild und bekommen keinen Final Smash.
+var minion := false
+var deal_scale := 1.0
+var launch_scale := 1.0
+## Fertig geladene Animationen je Kämpfer: beim zweiten Mal (z. B. viele Schatten) ohne Ladepause.
+static var _anim_cache := {}
+static var _scene_cache := {}
 var overcharge_time := 0.0
 var overcharge_warned := false
 var counter_time := 0.0
@@ -398,7 +406,9 @@ func set_fighter(index: int) -> void:
 	flip_pivot = Node3D.new()
 	flip_pivot.position.y = FLIP_PIVOT_HEIGHT
 	model_root.add_child(flip_pivot)
-	var model: Node3D = load(fighter.scene).instantiate()
+	if not _scene_cache.has(fighter.scene):
+		_scene_cache[fighter.scene] = load(fighter.scene)
+	var model: Node3D = _scene_cache[fighter.scene].instantiate()
 	flip_pivot.add_child(model)
 	model.position.y = -FLIP_PIVOT_HEIGHT
 	_setup_weapons(model)
@@ -699,7 +709,7 @@ func start_attack(kind: String) -> void:
 
 ## Smash-Kugel zerschlagen: leuchtende Aura, bis man den Final Smash auslöst.
 func gain_final_smash() -> void:
-	if final_smash_ready or boss:
+	if final_smash_ready or boss or minion:
 		return
 	final_smash_ready = true
 	SpecialFX.popup(self, "FINAL SMASH!", color)
@@ -1231,9 +1241,17 @@ func make_boss(hp: float, size: float) -> void:
 	boss = true
 	boss_hp = hp
 	boss_hp_max = hp
-	reach_scale = size * 0.65
-	size_scale = size
 	stocks = 99
+	set_size(size)
+	reach_scale = size * 0.65
+	$Shield.visible = false
+
+
+## Figur größer oder kleiner machen (Modell, Körper, Namensschild). Nur einmal je Figur aufrufen.
+func set_size(size: float) -> void:
+	# Große Figuren reichen nicht im selben Maß weiter, sonst trifft man sie kaum noch.
+	reach_scale = size if size <= 1.0 else 1.0 + (size - 1.0) * 0.5
+	size_scale = size
 	model_root.scale *= size
 	var shape := ($CollisionShape3D.shape as CapsuleShape3D).duplicate()
 	shape.radius *= size
@@ -1241,7 +1259,8 @@ func make_boss(hp: float, size: float) -> void:
 	$CollisionShape3D.shape = shape
 	$CollisionShape3D.position.y *= size
 	$Tag.position.y *= size
-	$Shield.visible = false
+	$Shield.scale *= size
+	$Shield.position.y *= size
 
 
 ## Treffer auf den Endboss: zieht Lebenspunkte ab, er wankt nur kurz.
@@ -1347,7 +1366,7 @@ func _update_visuals(delta: float) -> void:
 
 	shield_bubble.visible = shielding
 	var shield_left := shield_hp / SHIELD_MAX
-	shield_bubble.scale = Vector3.ONE * lerpf(0.35, 1.0, shield_left)
+	shield_bubble.scale = Vector3.ONE * lerpf(0.35, 1.0, shield_left) * size_scale
 	if shielding:
 		# Fast leeres Schild wird rot und flackert.
 		var mat := shield_bubble.material_override as StandardMaterial3D
@@ -1384,7 +1403,7 @@ func _update_visuals(delta: float) -> void:
 		text += "\nTempo!"
 	elif Settings.special_charge and special_energy >= SPECIAL_MAX and controls_enabled:
 		text += "\nSpezial bereit!"
-	tag.text = text
+	tag.text = "" if minion else text
 	if ready_aura:
 		ready_aura.emitting = controls_enabled and special_ready() and Settings.special_charge
 
@@ -1440,6 +1459,12 @@ func _load_anim_files() -> void:
 	var dir: String = fighter.get("anim_dir", "")
 	if dir == "" or anim_player == null:
 		return
+	var cache_key: String = fighter.get("name", dir)
+	if _anim_cache.has(cache_key):
+		if anim_player.has_animation_library(Roster.ANIM_LIB):
+			anim_player.remove_animation_library(Roster.ANIM_LIB)
+		anim_player.add_animation_library(Roster.ANIM_LIB, _anim_cache[cache_key])
+		return
 	var lib := AnimationLibrary.new()
 	for action in ["idle", "run", "jump", "fall", "weak", "strong", "kick", "special", "shield",
 			"hit", "stunned", "dodge", "cheer", "luft"] + SMASH_ANIMS.keys() + DIR_ATTACKS.keys():
@@ -1464,6 +1489,7 @@ func _load_anim_files() -> void:
 	if anim_player.has_animation_library(Roster.ANIM_LIB):
 		anim_player.remove_animation_library(Roster.ANIM_LIB)
 	anim_player.add_animation_library(Roster.ANIM_LIB, lib)
+	_anim_cache[cache_key] = lib
 
 
 ## keep_height false: auch das Hoch und Runter der Hüfte entfernen (Luftangriffe, die im Original springen).
@@ -1929,7 +1955,7 @@ func _apply_passive() -> void:
 
 ## Zusätzlicher Schaden, den dieser Kämpfer austeilt.
 func outgoing_multiplier() -> float:
-	var m := 0.85 if boss else 1.0
+	var m := (0.85 if boss else 1.0) * deal_scale
 	match passive:
 		"berserker":
 			# Je mehr Schaden er hat, desto härter schlägt er zu (bis +40 % bei 100 %).
@@ -1954,9 +1980,9 @@ func _damage_taken_multiplier() -> float:
 
 func _knockback_multiplier() -> float:
 	match passive:
-		"schwergewicht": return 0.75
-		"panzerung": return 0.9
-	return 1.0
+		"schwergewicht": return 0.75 * launch_scale
+		"panzerung": return 0.9 * launch_scale
+	return launch_scale
 
 
 ## Wird aufgerufen, wenn dieser Kämpfer jemanden getroffen hat.
